@@ -1,0 +1,3 @@
+This is a dummy model file for testing the download and caching flow.
+It is not a real Gemma model and will fail when MediaPipe tries to initialize it.
+Replace this with the real 1.5GB .bin file from Kaggle.

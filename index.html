@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sync 727">
+    <meta name="google-site-verification" content="PfVC0O8jbjZxeMGiEkSIGQKvkuBLY2c5xTnpVt4-yco" />
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/AppLogo.png?v=6">
+    <link rel="apple-touch-startup-image" href="/logo.png?v=2">
+    <title>שופט וירטואלי | Sync 727</title>
+    <script async src="https://js.puter.com/v2/"></script>
+    <script>
+      // Suppress benign WebSocket errors caused by disabled HMR in this environment
+      window.addEventListener('error', (event) => {
+        if (event.message === 'Script error.' || (event.message && (event.message.includes('WebSocket closed without opened') || event.message.includes('failed to connect to websocket')))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('unhandledrejection', (event) => {
+        if (event.reason && (event.reason.message && (event.reason.message.includes('WebSocket closed without opened') || event.reason.message.includes('failed to connect to websocket')))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main-app.tsx"></script>
+  </body>
+</html>
+
