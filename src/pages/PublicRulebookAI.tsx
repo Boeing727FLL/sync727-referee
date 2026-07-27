@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, X, FileText, Camera, Radio, Gavel, BookOpen, Zap, Search, Eye, Scale, History, Upload as UploadIcon, AlertTriangle } from 'lucide-react';
+import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -25,6 +25,7 @@ export default function PublicRulebookAI() {
   });
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
+  const [chatStarted, setChatStarted] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
@@ -57,6 +58,23 @@ export default function PublicRulebookAI() {
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
   
+  useEffect(() => {
+    const token = localStorage.getItem('google_access_token');
+    if (!token) return;
+    // Already have picture stored
+    if (localStorage.getItem('user_picture')) return;
+    // Fetch from Google
+    fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.picture) localStorage.setItem('user_picture', data.picture);
+        if (data.name) localStorage.setItem('user_name', data.name);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     // --- Aggressive Auto-Update/Auto-Refresh Logic ---
     const checkForUpdates = async () => {
@@ -137,6 +155,7 @@ export default function PublicRulebookAI() {
     if (res.success || localStorage.getItem('google_access_token')) {
       setHasGoogleToken(true);
       setShowIntro(false);
+      setChatStarted(true);
     } else if (res.error) {
       setLoginError(res.error);
     }
@@ -159,9 +178,7 @@ export default function PublicRulebookAI() {
   const [seasonName, setSeasonName] = useState<string>('SUBMERGED');
   const [selectedModel] = useState<string>('gemma-4-31b-it');
   const [tripleJudgeMode] = useState<boolean>(true);
-  const [thinkingConfigLevel] = useState<'HIGH' | 'OFF'>('HIGH');
-  const [pendingFiles, setPendingFiles] = useState<{ url: string, key: string, base64?: string, actualFile?: File }[]>([]);
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -169,7 +186,6 @@ export default function PublicRulebookAI() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -220,6 +236,35 @@ export default function PublicRulebookAI() {
     }
   }, [messages, loading]);
 
+  const typewriterTargetRef = useRef(0);
+  const [typewriterCount, setTypewriterCount] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTypewriterCount(prev => {
+        if (prev >= typewriterTargetRef.current) return prev;
+        return prev + 1;
+      });
+    }, 35);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (loading) {
+      setTypewriterCount(0);
+      typewriterTargetRef.current = 0;
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (chatStarted) {
+      setTypewriterCount(0);
+      typewriterTargetRef.current = 0;
+    }
+  }, [chatStarted]);
+
+  const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
+
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'app_config', 'rulebook'), (docSnap) => {
       if (docSnap.exists()) {
@@ -243,49 +288,7 @@ export default function PublicRulebookAI() {
     return () => unsubSettings();
   }, [seasonName]);
 
-  const handleRobotImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    if (pendingFiles.length + files.length > 10) {
-      alert('ניתן להעלות עד 10 קבצים בו זמנית.');
-      return;
-    }
-
-    setIsProcessingImage(true);
-
-    try {
-      const newFiles: { url: string, key: string, base64?: string, actualFile?: File }[] = [];
-      
-      for (const file of files as File[]) {
-        // Convert to base64 for preview and fallback (direct AI vision processing local)
-        const base64data = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-        
-        // Use local object URL for preview instead of R2 URL
-        const localUrl = URL.createObjectURL(file);
-        newFiles.push({ 
-          url: localUrl, 
-          key: `local_${Date.now()}_${file.name}`, // Dummy key for internal tracking
-          base64: base64data,
-          actualFile: file
-        });
-      }
-      
-      setPendingFiles(prev => [...prev, ...newFiles]);
-    } catch (error: any) {
-      console.error('Local file processing error:', error);
-      alert('שגיאה בעיבוד הקבצים: ' + error.message);
-    } finally {
-      setIsProcessingImage(false);
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
-    }
-  };
-
-  const fetchLatestRulebook = async () => {
+const fetchLatestRulebook = async () => {
     try {
       let files = [];
       try {
@@ -457,20 +460,17 @@ export default function PublicRulebookAI() {
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
     
-    if ((!textToSend.trim() && pendingFiles.length === 0) || loading) return;
+    if (!textToSend.trim() || loading) return;
 
     const userMessage = textToSend.trim();
-    const filesToSend = [...pendingFiles];
     
     setInput('');
-    setPendingFiles([]);
     
     setMessages(prev => [
       ...prev, 
       { 
         role: 'user', 
-        text: userMessage || (filesToSend.length > 0 ? '📷 שלח קבצים לבדיקה' : ''),
-        files: filesToSend.length > 0 ? filesToSend : undefined
+        text: userMessage
       }
     ]);
     
@@ -478,59 +478,27 @@ export default function PublicRulebookAI() {
 
     try {
       let relevantMessages = messages;
-      
-      // Find the index of the last user message that contained files
-      let lastFileMsgIndex = -1;
-      for (let i = messages.length - 1; i >= 0; i--) {
-          if (messages[i].files && messages[i].files!.length > 0) {
-              lastFileMsgIndex = i;
-              break;
-          }
-      }
-      
-      // If the CURRENT request has files, it starts a new context -> no history
-      if (filesToSend.length > 0) {
-          relevantMessages = [];
-      } else if (lastFileMsgIndex >= 0) {
-          // If it's a follow-up, only send messages from the last file upload onwards
-          relevantMessages = messages.slice(lastFileMsgIndex);
-      } else {
-          relevantMessages = messages;
-      }
 
-      let finalPrompt = userMessage;
-      
-      if (filesToSend.length > 0 && !userMessage) {
-        finalPrompt = "אנא התבונן בקבצים אלו בעיון רב, באופן בלתי תלוי ומופרד לחלוטין מכל משימה או תמונה שדיברנו עליה קודם בשיחה (התעלם מהיסטוריית הצ'אט!). שים לב לכל הפרטים. זהה במדויק איזו משימה או מצב מגרש מוצגים ונתח אותם בהקשר של חוקי FLL.";
-      } else if (filesToSend.length > 0 && userMessage) {
-        finalPrompt = userMessage + "\n\n(הנחיה חמורה לשופט: **התעלם לחלוטין ושכח** מכל משימה, תמונה, או ניקוד שנדונו מוקדם יותר בשיחה הזו! זוהי בקשה חדשה שמנותקת לגמרי מההיסטוריה. נתח את הראיות החדשות באובייקטיביות מוחלטת, כאילו הרגע התחלנו לדבר. אל תשליך נתונים ממשימה למשימה.)";
-      } else {
-        finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
-      }
-      
-      let isFirstChunk = true;
+      let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
       const response = await GeminiService.askRulebook(
         finalPrompt, 
         relevantMessages, 
         activeRulebookFiles,
         seasonName, 
-        filesToSend,
+        [], // no files - text only
         selectedModel,
         (chunkText) => {
           setMessages(prev => {
             const newMessages = [...prev];
-            if (isFirstChunk) {
-              newMessages.push({ role: 'model', text: chunkText });
-              isFirstChunk = false;
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg?.role === 'model') {
+              newMessages[newMessages.length - 1] = {
+                ...lastMsg,
+                text: lastMsg.text + chunkText
+              };
             } else {
-              const lastMsgIndex = newMessages.length - 1;
-              if (newMessages[lastMsgIndex].role === 'model') {
-                newMessages[lastMsgIndex] = {
-                  ...newMessages[lastMsgIndex],
-                  text: newMessages[lastMsgIndex].text + chunkText
-                };
-              }
+              newMessages.push({ role: 'model', text: chunkText });
             }
             return newMessages;
           });
@@ -539,16 +507,10 @@ export default function PublicRulebookAI() {
         thinkingConfigLevel
       );
       
-      if (isFirstChunk) {
-          // If we got here and isFirstChunk is still true, we didn't get any chunks via callback but we might have a full response
-          setMessages(prev => [...prev, { role: 'model', text: response || 'שגיאת תקשורת. אנא נסה שוב.' }]);
-      }
-
-      // Revoke local object URLs to free memory
-      filesToSend.forEach(file => {
-        if (file.url.startsWith('blob:')) {
-          URL.revokeObjectURL(file.url);
-        }
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg?.role === 'model') return prev;
+        return [...prev, { role: 'model', text: response || 'שגיאת תקשורת. אנא נסה שוב.' }];
       });
     } catch (error: any) {
       const errMsg = error?.message || 'אבד הקשר. נסה שוב מאוחר יותר.';
@@ -616,11 +578,11 @@ export default function PublicRulebookAI() {
   const handleWhistleBlow = () => {
     playWhistleSound();
     const refereeTips = [
-      "📋 **הנחיית שופט ראשי:** רוח ספורטיבית (Gracious Professionalism) קודמת לכל הישג! כבדו את חבריכם ואת קבוצות היריב.",
+      "📋 **הנחיית שופט וירטואלי:** רוח ספורטיבית (Gracious Professionalism) קודמת לכל הישג! כבדו את חבריכם ואת קבוצות היריב.",
       "⏱️ **חוקי הזירה:** ברגע שהגעתם לשולחן, יש לכם בדיוק 2:30 דקות להפעיל את כל המשימות שתרגלתם. בהצלחה!",
       "⚙️ **טיפ מקצועי:** זכרו, אם הרובוט יוצא מאזור הבית או משתבש במרכז המגרש - החזרתו לבית באקט ידני תגרור סימון עונש (דיסק משימה פנוי שעובר למשבצת העונשים).",
       "📏 **חוקי המבנה:** כל הציוד שלכם (כולל רובוט, אביזרים חלופיים וחלקי חילוף) חייב להיכנס במלואו לתחום אזור הבית או אזור השיגור קודם תחילת המקצה!",
-      "🎯 **הוגנות השיפוט:** החלטתו של השופט הראשי בזירה היא סופית ומחייבת, אך אנו תמיד זמינים להסביר בסבלנות ובחיוך בגמר המקצה."
+      "🎯 **שימו לב:** השופט הווירטואלי מבוסס על בינה מלאכותית ומסתמך על ספר החוקים הרשמי. במקרה של ספק, מומלץ לפנות לשופט זירה אנושי."
     ];
     const quote = refereeTips[Math.floor(Math.random() * refereeTips.length)];
     setMessages(prev => [
@@ -656,13 +618,13 @@ export default function PublicRulebookAI() {
           </div>
           <div className="min-w-0">
             <h1 onClick={handleTitleClick} className="text-sm md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none">
-              שופט זירה ראשי <span className="text-xs bg-slate-900 text-yellow-400 px-2 py-0.5 rounded-full font-extrabold uppercase animate-pulse border border-yellow-400">Head Referee</span>
+              שופט וירטואלי <span className="text-xs bg-slate-900 text-yellow-400 px-2 py-0.5 rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
             </h1>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-700">
                 <span className={`w-2.5 h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
                 <span className="text-[9px] md:text-[10px] font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-2 py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-                  צוות שיפוט רשמי
+                  צוות שיפוט וירטואלי
                 </span>
                 <span className="truncate pr-1 pr-2 font-black text-slate-950 border-r border-slate-300">
                   {isLearning ? 'מעדכן נתונים...' : `עונת ${seasonName} ⏱️`}
@@ -673,12 +635,12 @@ export default function PublicRulebookAI() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Enhanced Boeing 727 Credit - More Prominent */}
+          {/* Boeing 727 + Yuval Margalit Credit */}
           <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-1.5 bg-white/80 rounded-xl border-2 border-slate-950 mr-1 md:mr-3 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
             <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-9 w-auto object-contain group-hover:scale-110 transition-transform" />
             <div className="hidden sm:flex flex-col leading-none">
               <span className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Developed By</span>
-              <span className="text-xs md:text-sm font-black text-slate-950 italic">Boeing <span className="text-red-600">727</span></span>
+              <span className="text-xs md:text-sm font-black text-slate-950 italic">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[10px] md:text-xs mx-1">&</span><span className="text-slate-600 font-bold not-italic text-[10px] md:text-xs">Yuval Margalit</span></span>
             </div>
           </div>
 
@@ -735,16 +697,31 @@ export default function PublicRulebookAI() {
       {/* Chat Area - Green field canvas background */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
         
-        {/* Arena Warning Watermark Banner */}
-        <div className="rounded-2xl border-2 border-dashed border-emerald-400/50 bg-emerald-500/5 p-4 text-center select-none">
-          <div className="text-xs font-black text-emerald-800 tracking-wider">שולחן המקצה הציבורי - זירת FLL</div>
-          <p className="text-[10px] text-emerald-600 font-bold mt-1">כל השאלות והתשובות מסתמכות על חוקי עונת {seasonName}</p>
-        </div>
-
-        {messages.map((msg, idx) => {
-          const isThinking = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
+        {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && !chatStarted)).map((msg, idx) => {
+          const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
+          const isThinking = isOpenThink && loading && idx === messages.length - 1;
           const thinkContent = msg.text.includes('<think>') ? msg.text.split('<think>')[1]?.split('</think>')[0]?.trim() || '' : '';
-          const finalRenderText = msg.role === 'model' ? msg.text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim() : msg.text.replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '');
+          const _tOpen = '<think>';
+          const _tClose = '</think>';
+          const _thinkRe = new RegExp(_tOpen + '[\\s\\S]*' + _tClose, 'g');
+          let finalRenderText = msg.role === 'model'
+            ? msg.text.replace(_thinkRe, '').replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim()
+            : msg.text.replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '');
+          if (!finalRenderText && msg.role === 'model') {
+            if (thinkContent) {
+              finalRenderText = thinkContent.replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim();
+            } else if (msg.text.includes('<think>')) {
+              finalRenderText = msg.text.replace('<think>', '').replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim();
+            }
+          }
+
+          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0) {
+            typewriterTargetRef.current = finalRenderText.length;
+          }
+          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterCount < typewriterTargetRef.current;
+          if (isTypewriting) {
+            finalRenderText = finalRenderText.substring(0, typewriterCount);
+          }
 
           if (isThinking) {
             return (
@@ -761,7 +738,7 @@ export default function PublicRulebookAI() {
                       <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-yellow-400 rounded-full border border-slate-950" />
                       <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-slate-950 rounded-full border border-white" />
                     </div>
-                    <span className="text-xs font-black text-slate-900">השופט הראשי מעיין בסעיפי החוק...</span>
+                    <span className="text-xs font-black text-slate-900">השופט הווירטואלי חושב...</span>
                   </div>
                   {thinkContent && (
                     <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap px-1 max-h-48 overflow-y-auto">
@@ -782,13 +759,17 @@ export default function PublicRulebookAI() {
               className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Referee or User Avatar Badge */}
-              <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative ${
+              <div className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
                 msg.role === 'user' 
                   ? 'bg-slate-100 text-slate-800' 
                   : 'bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)]'
               }`}>
                 {msg.role === 'user' ? (
-                  <User className="w-5 h-5 text-slate-850" />
+                  (user?.picture || localStorage.getItem('user_picture')) ? (
+                    <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                    <User className="w-5 h-5 text-slate-850" />
+                  )
                 ) : (
                   <div className="absolute inset-0.5 bg-yellow-400 rounded-[6px] border border-slate-950/20 flex items-center justify-center text-slate-950 text-xs font-black">
                     📢
@@ -807,11 +788,11 @@ export default function PublicRulebookAI() {
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1 mb-2">
                       <span className="text-[10px] font-black tracking-tight text-slate-905 bg-yellow-400 border border-slate-950 px-2 py-0.5 rounded shadow-[1px_1px_0px_#000] flex items-center gap-1 uppercase">
-                        📋 שופט ראשי
+                        📋 שופט וירטואלי
                       </span>
                       {finalRenderText.includes("שריקה") && (
                         <span className="text-[10px] font-black text-white bg-red-600 border border-slate-950 px-2 py-0.5 rounded shadow-[1px_1px_0px_#000]">
-                          🚨 כרטיס שופט ראשי
+                           🚨 כרטיס שופט וירטואלי
                         </span>
                       )}
                     </div>
@@ -838,8 +819,17 @@ export default function PublicRulebookAI() {
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
                       <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-headings:font-black prose-a:text-blue-600 prose-strong:text-slate-900 prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 rtl:text-right">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {finalRenderText}
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            em: ({children, ...props}) => {
+                              const txt = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null;
+                              if (txt === '█') return <span className="typewriter-cursor">█</span>;
+                              return <em {...props}>{children}</em>;
+                            }
+                          }}
+                        >
+                          {isTypewriting ? finalRenderText + '*█*' : finalRenderText}
                         </ReactMarkdown>
                       </div>
                     )}
@@ -879,7 +869,7 @@ export default function PublicRulebookAI() {
                 <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-yellow-400 rounded-full border border-slate-950" />
                 <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-slate-950 rounded-full border border-white" />
               </div>
-              <span className="text-xs font-black text-slate-900">השופט הראשי מעיין בסעיפי החוק...</span>
+              <span className="text-xs font-black text-slate-900">השופט הווירטואלי חושב...</span>
             </div>
           </motion.div>
         )}
@@ -891,7 +881,7 @@ export default function PublicRulebookAI() {
           <button
             key={i}
             onClick={() => handleSend(q)}
-            disabled={loading || isLearning}
+            disabled={loading || isLearning || isTypewriterActive}
             className="whitespace-nowrap px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 border-2 border-slate-950 rounded-xl text-xs font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ⚠️ {q}
@@ -902,94 +892,26 @@ export default function PublicRulebookAI() {
       {/* Input Area */}
       <div className="p-3 md:p-4 bg-white border-t-2 border-slate-950 pb-safe">
         
-        {/* Pending Files Preview */}
-        <AnimatePresence>
-          {pendingFiles.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
-              exit={{ opacity: 0, y: 10, height: 0 }}
-              className="mb-2 md:mb-3 overflow-hidden"
-            >
-              <div className="flex flex-wrap items-center gap-2 md:gap-3 bg-slate-100 p-1.5 md:p-2 rounded-xl border-2 border-slate-950 w-fit">
-                {pendingFiles.map((file, index) => (
-                  <div key={index} className="relative group">
-                    {(file.key.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.url.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.base64?.startsWith('data:image')) ? (
-                      <img 
-                        src={file.url} 
-                        alt="Preview" 
-                        className="h-12 w-12 md:h-16 md:w-16 object-cover rounded-lg border-2 border-slate-950 shadow-sm"
-                      />
-                    ) : (file.key.match(/\.(mp4|webm|mov|avi)/i) || file.url.match(/\.(mp4|webm|mov|avi)/i) || file.base64?.startsWith('data:video')) ? (
-                      <div className="h-12 w-12 md:h-16 md:w-16 bg-slate-200 rounded-lg border-2 border-slate-950 shadow-sm flex items-center justify-center overflow-hidden">
-                        <video src={file.url} className="h-full w-full object-cover" />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
-                          <Radio className="w-4 h-4 animate-pulse" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-12 w-12 md:h-16 md:w-16 flex items-center justify-center bg-slate-200 rounded-lg border-2 border-slate-950 shadow-sm">
-                        <FileText className="w-6 h-6 text-slate-500" />
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setPendingFiles(prev => prev.filter((_, i) => i !== index))}
-                      className="absolute -top-2 -right-2 bg-red-650 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-750 z-10 border border-slate-950"
-                    >
-                      <X className="w-3 h-3 md:w-4 md:h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isLearning ? "השופט חוקר חוקים וסרטים..." : pendingFiles.length > 0 ? "רשום הערה על הקובץ שהעלית..." : "שאל את השופט הראשי על משימה, חוק או תלונה (צרף תמונה להוכחה)..."}
-            disabled={loading || isLearning}
-            className="flex-1 bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2.5 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-sm md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
+            placeholder={isLearning ? "השופט חוקר חוקים וסרטים..." : "שאל את השופט הווירטואלי על משימה, חוק או תלונה..."}
+            disabled={loading || isLearning || isTypewriterActive}
+            style={{ flex: 1, minWidth: 0 }}
+            className="bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2.5 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-sm md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
           />
           
-          {/* Attachment Button */}
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*,video/*,application/pdf,text/plain,.txt"
-            multiple
-            onChange={handleRobotImageUpload}
-            className="hidden"
-          />
-          <div className="flex gap-1 md:gap-2">
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={loading || isProcessingImage || isLearning}
-              className="bg-yellow-400 hover:bg-yellow-500 text-slate-950 p-2.5 md:p-3 rounded-xl transition-all disabled:opacity-50 flex flex-col items-center justify-center shrink-0 min-w-[50px] md:min-w-[65px] border-2 border-slate-950 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:scale-95 text-xs font-black disabled:cursor-not-allowed"
-              title="העלה קובץ, מצלמה או סרטון"
-            >
-              {isProcessingImage ? (
-                <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" />
-              ) : (
-                <>
-                  <Camera className="w-5 h-5 md:w-6 md:h-6" />
-                  <span className="text-[9px] font-black mt-1 uppercase">צלם</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={() => handleSend()}
-              disabled={loading || isLearning || (!input.trim() && pendingFiles.length === 0)}
-              className="bg-red-600 hover:bg-red-700 text-white p-2.5 md:p-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5 shrink-0"
-            >
-              <Send className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-          </div>
+          <button
+            onClick={() => handleSend()}
+            disabled={loading || isLearning || isTypewriterActive || !input.trim()}
+            style={{ flexShrink: 0 }}
+            className="bg-red-600 hover:bg-red-700 text-white p-2.5 md:p-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5"
+          >
+            <Send className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
         </div>
       </div>
 
@@ -1065,7 +987,7 @@ export default function PublicRulebookAI() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 md:p-6 overflow-y-auto"
+            className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 md:p-0 overflow-y-auto"
             dir="rtl"
           >
             <AnimatePresence mode="wait">
@@ -1076,7 +998,7 @@ export default function PublicRulebookAI() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -15 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-slate-900 border-2 border-slate-800 shadow-[0_0_30px_rgba(250,204,21,0.05)] rounded-3xl max-w-lg w-full text-center relative overflow-hidden my-auto"
+                  className="bg-slate-900 border-2 border-slate-800 shadow-[0_0_30px_rgba(250,204,21,0.05)] rounded-3xl max-w-lg w-full text-center relative overflow-hidden my-auto md:max-w-none md:rounded-none md:h-full md:overflow-y-auto"
                 >
                   <div className="h-2 bg-yellow-400 w-full" />
                   
@@ -1099,59 +1021,49 @@ export default function PublicRulebookAI() {
                     </div>
                   </div>
 
-                  <div className="p-6 md:p-8">
+                  <div className="p-6 md:p-12 md:pt-8">
                     {/* Digital Assistant Badge */}
                     <span className="inline-block bg-slate-950 text-yellow-400 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-6 border border-yellow-400/30 shadow-[0_0_15px_rgba(250,204,21,0.05)]">
                       Digital Referee Assistant • FIRST Israel
                     </span>
                     
-                    <h2 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tighter italic uppercase">שופט זירה וירטואלי</h2>
+                    <h2 className="text-4xl md:text-7xl font-black text-white mb-4 tracking-tighter italic uppercase">שופט זירה וירטואלי</h2>
                     
-                    <p className="text-slate-400 text-sm md:text-base font-medium mb-6 max-w-lg mx-auto leading-relaxed">
+                    <p className="text-slate-400 text-sm md:text-xl font-medium mb-6 max-w-lg md:max-w-3xl mx-auto leading-relaxed">
                       מערכת בינה מלאכותית מתקדמת שנבנתה במיוחד עבור קהילת <span className="text-yellow-400 font-extrabold">FIRST ישראל</span> על ידי קבוצת <span className="text-white font-bold italic">Boeing <span className="text-primary not-italic">727</span></span>. 
                       הפרויקט נולד מתוך רצון לתרום לקהילה, להנגיש את חוקי המשחק המורכבים בזמן אמת ולאפשר לכל קבוצה להגיע למצוינות מקצועית דרך ניתוח מצבים מדויק, פתרון קונפליקטים וקבלת החלטות מבוססת נתונים.
                     </p>
 
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-8 text-right max-w-lg mx-auto flex items-start gap-3">
-                      <div className="text-red-400 shrink-0 mt-0.5">
-                        <AlertTriangle className="w-5 h-5" />
+                    {/* Features Container */}
+                    <div className="space-y-4 md:space-y-6 text-right mb-10 md:mb-14">
+                      <div className="p-5 md:p-6 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
+                        <div className="p-3 md:p-4 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
+                          <Scale className="w-7 h-7 md:w-9 md:h-9" />
+                        </div>
+                        <div>
+                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">בירור חוקי המשחק</h4>
+                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">קבלת תשובות ישירות ומדויקות לגבי מה מותר ומה אסור לעשות במהלך המשחק.</p>
+                        </div>
                       </div>
-                      <p className="text-red-400 text-xs md:text-sm font-medium leading-relaxed">
-                        <strong className="font-bold">שים לב:</strong> השופט הווירטואלי מבוסס על מודל בינה מלאכותית ועלול לטעות או לדייק פחות במקרי קצה מורכבים. מומלץ תמיד לוודא את נכונות התשובות והפסיקות מול ספר החוקים הרשמי או שופט זירה אנושי.
-                      </p>
+
+                      <div className="p-5 md:p-6 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
+                        <div className="p-3 md:p-4 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
+                          <Zap className="w-7 h-7 md:w-9 md:h-9" />
+                        </div>
+                        <div>
+                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">גישה מהירה לעדכוני שיפוט</h4>
+                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">צפייה מהירה בהבהרות, פסיקות ושינויים שפורסמו לאורך העונה.</p>
+                        </div>
+                      </div>
+
                     </div>
 
-                    {/* Features Container */}
-                    <div className="space-y-4 text-right mb-10">
-                      <div className="p-5 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
-                        <div className="p-3 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
-                          <Scale className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-lg font-black text-slate-100 group-hover:text-yellow-400 transition-colors">בירור חוקי המשחק</h4>
-                          <p className="text-xs md:text-sm text-slate-500 leading-relaxed font-medium mt-1">קבלת תשובות ישירות ומדויקות לגבי מה מותר ומה אסור לעשות במהלך המשחק.</p>
-                        </div>
-                      </div>
-
-                      <div className="p-5 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
-                        <div className="p-3 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
-                          <Zap className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-lg font-black text-slate-100 group-hover:text-yellow-400 transition-colors">גישה מהירה לעדכוני שיפוט</h4>
-                          <p className="text-xs md:text-sm text-slate-500 leading-relaxed font-medium mt-1">צפייה מהירה בהבהרות, פסיקות ושינויים שפורסמו לאורך העונה.</p>
-                        </div>
-                      </div>
-
-                      <div className="p-5 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
-                        <div className="p-3 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
-                          <Eye className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-lg font-black text-slate-100 group-hover:text-yellow-400 transition-colors">ניתוח מצבים ויזואלי</h4>
-                          <p className="text-xs md:text-sm text-slate-500 leading-relaxed font-medium mt-1">העלאת תמונות של מצבי זירה או משימות לקבלת חוות דעת מנומקת מבוססת חוקים.</p>
-                        </div>
-                      </div>
+                    {/* Disclaimer */}
+                    <div className="bg-red-950/50 border-2 border-red-500/40 rounded-2xl px-5 py-4 md:px-8 md:py-5 mb-6 md:mb-8 text-center shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                      <p className="text-sm md:text-lg text-red-300 leading-relaxed font-bold">
+                        <span className="text-red-400 font-black">⚠️ שימו לב:</span>{' '}
+                        השופט הווירטואלי עלול לטעות או לפספס פרטים מסוימים. ככל שיגיעו עדכונים ושיפורים, התשובות יהיו מדויקות ואמינות יותר. זה חלק מתהליך ההתפתחות של המערכת.
+                      </p>
                     </div>
 
                     {/* Action Button */}
@@ -1160,26 +1072,19 @@ export default function PublicRulebookAI() {
                         onClick={() => {
                           if (hasGoogleToken || user) {
                             setShowIntro(false);
+      setChatStarted(true);
                           } else {
                             handleGoogleLogin();
                           }
                         }}
-                        className="w-full relative overflow-hidden group bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-4 px-6 rounded-2xl transition-all shadow-[0_10px_20px_rgba(250,204,21,0.15)] hover:shadow-[0_15px_30px_rgba(250,204,21,0.25)] hover:-translate-y-1 flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10 active:scale-[0.98]"
+                        className="w-full relative overflow-hidden group bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-4 md:py-5 px-6 rounded-2xl transition-all shadow-[0_10px_20px_rgba(250,204,21,0.15)] hover:shadow-[0_15px_30px_rgba(250,204,21,0.25)] hover:-translate-y-1 flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10 active:scale-[0.98]"
                       >
-                        <span className="text-base md:text-lg">
+                        <span className="text-base md:text-2xl">
                           {hasGoogleToken || user ? 'המשך לאפליקציה' : 'המשך לכניסה'}
                         </span>
                         <span className="text-xl group-hover:translate-x-1 transition-transform">🚀</span>
                       </button>
 
-                      {(!hasGoogleToken && !user) && (
-                        <button
-                          onClick={() => setShowIntro(false)}
-                          className="w-full bg-slate-950 hover:bg-slate-900 text-slate-400 font-bold py-3.5 px-6 rounded-2xl transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer border border-slate-800 text-xs tracking-wide"
-                        >
-                          <span>המשך כאורח 👤</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -1249,3 +1154,4 @@ export default function PublicRulebookAI() {
     </div>
   );
 }
+

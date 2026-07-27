@@ -437,6 +437,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         console.log("Sending token to server...");
         localStorage.setItem('google_access_token', token);
+
+        // Store user picture/name in localStorage IMMEDIATELY (before server session)
+        if (result.user.photoURL) {
+          localStorage.setItem('user_picture', result.user.photoURL);
+        }
+        if (result.user.displayName) {
+          localStorage.setItem('user_name', result.user.displayName);
+        }
+
+        // Set user state immediately so components can access it
+        const isMentor = result.user.email === 'boeing727.il@gmail.com';
+        const updatedUser: User = {
+          ...(user || {}),
+          uid: result.user.uid,
+          name: result.user.displayName || user?.name || 'boeing727',
+          picture: result.user.photoURL || user?.picture || '',
+          email: result.user.email || user?.email || '',
+          role: isMentor ? 'mentor' : (user?.role || 'member'),
+          isAdmin: user?.isAdmin
+        };
+        setUser(updatedUser);
         
         const res = await fetch('/api/auth/session', {
           method: 'POST',
@@ -451,23 +472,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!res.ok) {
           const errText = await res.text();
           console.error("Server rejected session:", errText);
-          return { success: false, error: "Server session error: " + res.status };
+          // Don't return early - user state is already set
+        } else {
+          console.log("Server session established.");
         }
-        
-        console.log("Server session established.");
-        
-        const isMentor = result.user.email === 'boeing727.il@gmail.com';
-        const updatedUser: User = {
-          ...(user || {}),
-          uid: result.user.uid,
-          name: result.user.displayName || user?.name || 'boeing727',
-          picture: result.user.photoURL || user?.picture || '',
-          email: result.user.email || user?.email || '',
-          role: isMentor ? 'mentor' : (user?.role || 'member'),
-          isAdmin: user?.isAdmin
-        };
-        
-        setUser(updatedUser);
         
         // Attempt to subscribe to push notifications
         setTimeout(() => {
@@ -512,6 +520,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('google_access_token');
       localStorage.removeItem('team_user');
       localStorage.removeItem('saved_user_info');
+      localStorage.removeItem('user_picture');
+      localStorage.removeItem('user_name');
     } catch (e) {
       console.error("Local storage cleanup failed:", e);
     }

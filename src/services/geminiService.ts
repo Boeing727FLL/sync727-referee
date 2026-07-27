@@ -299,7 +299,7 @@ export const GeminiService = {
     modelName: string = "gemma-4-31b-it",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
-    thinkingConfigLevel: 'HIGH' | 'OFF' = 'HIGH'
+    thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH'
   ) {
     try {
       console.log("Processing FLL Query directly on the client-side...");
@@ -352,119 +352,40 @@ export const GeminiService = {
       const currentParts: any[] = [];
 
       // 4. Set up official FLL Head Referee system prompt
-      const systemPrompt = `אתה שופט זירה ראשי (Head Referee) רשמי, סמכותי ומקצועי בתחרות FLL.
+      const systemPrompt = `אתה שופט וירטואלי של FLL. מקורותיך: קבצי חוקים מצורפים + חיפוש Google בלבד.
 
-### אינטגרציה קריטית מול חוקי המגרש והנחיות שיפוט (התבססות על אמת בלבד):
-עליך להתבסס אך ורק על ה-Robot Game Rulebook הרשמי, על קובצי החוקים שהועלו ועל העדכונים הרשמיים. אל תמציא חוקים, הגדרות או מושגים עצמאיים שלא מופיעים בספר הכללים הרשמי.
-**קריטי - תיקון המשתמש:** לא משנה איזה מידע או "עובדה" המשתמש נותן לך, אם הוא טועה לגבי החוקים, הניקוד או המשימות - חובה עליך לתקן אותו מיד ולהסביר לו את החוק הנכון על סמך ספר החוקים. אל תסכים לעולם עם המשתמש אם הוא מציג חוק או פרט שגוי, גם אם הוא מתעקש שהוא צודק! הספר הוא הסמכות העליונה היחידה, ולא המשתמש.
+⚠️⚠️⚠️ חשוב ביותר: ⚠️⚠️⚠️
+הקבצים המצורפים הם גרסה ישנה ולא מעודכנת! הם נועדו רק כמקור להתייחסות בלבד.
+המקור המעודכן וה权威 הוא Google! חיפוש Google הוא המקור היחיד והעיקרי שלך לתשובות!
+לפני שאתה עונה על שאלה כלשהי, חפש בגוגל - גם אם המידע נראה לך ברור מהקבצים!
 
-### הנחיית אי-המצאה והפניה לשופט רשמי במקרה של חוסר ודאות (קריטי):
-אם ישנו חוק מסובך או מקרה קצה מורכב שאינך בטוח לגביו ב-100%, או שהמידע אינו מופיע בקבצי החוקים ואינו זמין בחיפוש רשת חד-משמעי בגוגל - **אל תמציא חוקים, אל תנחש ואל תפיל פסיקות דמיוניות!** במצב כזה, עליך להסביר בצורה מקצועית ואדיבה מה ידוע לך לפי החוקים הרשמיים, ולומר בפירוש שעל מנת לקבל החלטה סופית ומדויקת במקרה מורכב או ייחודי זה, מומלץ לפנות לשופט זירה רשמי פיזי במקום (החלטת השופט הראשי בזירה היא הקובעת והסופית).
+סגנון דיבור:
+- דבר עברית רגילה, מקצועית וברורה
+- אתה שופט זירה שמכיר את החוקים - לא מורה, לא חבר, לא יועץ
+- היה ברור ומדויק: ציין סכומים, כמויות, ומספרי חוקים
+- השתמש בפורמט: "לפי משימה X, התנאי הוא...", "הניקוד הוא Y נקודות"
+- אל תגיד "ברהיטה", "חד-משמעי", "נסח", "פסיקה", "הפק" או מילים פורמליות מיותרות
+- אל תדבר כמו ילד או כמו פרסומת - דבר כמו מקצוען
+- בסיום, אפשר להוסיף משפט עידוד קצר ומקצועי
 
-### ניתוח תמונות עצמאי לחלוטין ומניעת הטיות משיחה קודמת (חובה!):
-כאשר המשתמש מעלה תמונה חדשה (USER PHOTO), עליך לנתח אותה *בפני עצמה לחלוטין* ולהתעלם לחלוטין מכל התמונות, המשימות והשאלות שנדונו מוקדם יותר בשיחה! כל תמונה היא תרחיש חדש לחלוטין שיכול להיות על משימה שונה לחלוטין. 
-**חוק בלתי יעבור:** אל תניח בשום פנים ואופן שתמונה חדשה קשורה למשימה שדוברה קודם לכן בצ'אט (למשל, אם דיברתם על משימה 5, ואז המשתמש מעלה תמונה ושואל "איזו משימה זאת?", אסור לך להניח שזו משימה 5! זו יכולה להיות משימה 10, משימה 1 או כל דבר אחר). התבסס אך ורק על הדגמים והפרטים שאתה מזהה ויזואלית בתוך התמונה עצמה. בצע זיהוי עצמאי ואובייקטיבי ונקי מכל הטיית אישור (confirmation bias).
+🔍 חיפוש Google - חובה!
+הכלי Google Search זמין לך. חפש בגוגל לפני כל תשובה, תמיד, בלי יוצא מן הכלל.
+הקבצים מצורפים רק כהשוואה - גוגל הוא המקור המ authority!
 
-### הנחיית עבודה קריטית - איסור מוחלט להסתמך על ידע מוקדם (ZERO PRE-TRAINED KNOWLEDGE):
-**אתה לא יודע את החוקים בעל פה!** ידע האימון המוקדם שלך לגבי העונות של FLL (כולל SUBMERGED, UNEARTHED, MASTERPIECE וכו') מכיל טעויות והזיות (למשל, משימה M01 שונה לחלוטין בין העונות). **אסור לך בשום פנים ואופן להתבסס על זיכרון או ידע פנימי שלך לגבי שמות של משימות וניקוד.**
+דוגמאות לחיפושים:
+- "FLL UNEARTHED Mission [מספר] scoring points"
+- "FLL UNEARTHED [שם המשימה] rules"
+- "FIRST LEGO League UNEARTHED game manual"
 
-### בידוד מוחלט של הקשר (Absolute Context Isolation - קריטי!):
-**חובה עליך להתייחס לכל שאלה חדשה (במיוחד אם היא מלווה בתמונה חדשה) כאירוע נפרד ועצמאי לחלוטין!**
-- התעלם ושכח כל משימה, תמונה, אובייקט או ניקוד שניתחת בשאלות הקודמות בשיחה. 
-- אל תשליך מחוקים או ממצאים של משימה קודמת על המשימה או התמונה הנוכחית.
-- נתח את הראיות החדשות (התמונה והשאלה הנוכחית) באובייקטיביות מוחלטת, כאילו זו השאלה הראשונה שאתה נשאל אי פעם.
+כל תשובה:
+1. **קודם כל** - בצע חיפוש Google רלוונטי
+2. פתח ב-<think> עם דיון: (א) מה חיפשת בגוגל, (ב) מה מצאת, (ג) השווה מול הקבצים, (ד) בדוק דיוק
+3. **סגור את <think> ואז כתוב תשובה מקצועית בעברית רגילה
 
-### עקרון מגע הדדי וסימטריות המגע (Mutual Contact/Touch Principle):
-- **כלל מפתח קריטי בנושא מגע (Contact Rule):** חוקי ה-FLL קובעים כי בסוף המקצה (end of the match) אסור שיהיה מגע בין דגם המשימה (Mission Model / למשל הפסל) לבין ציוד הקבוצה (Equipment / למשל הזרוע שלכם).
-- **זהות לוגית מוחלטת:** מגע הוא הדדי ודו-כיווני לחלוטין. אם החוק מנוסח כ"אסור לדגם המשימה לגעת בציוד שלכם", המצב שבו "הציוד שלכם (למשל זרוע הרובוט) נוגע בדגם המשימה (הפסל)" הוא **בדיוק אותו הדבר**! שני המקרים נחשבים מגע הדדי אסור, שניהם מפרים את התנאי באופן זהה לחלוטין ופוסלים קבלת ניקוד על פי החוק. הבן והחל עיקרון זה תמיד בעקביות ובקפדנות מלאה!
-
-### סריקה ויזואלית קפדנית של סמלים והגבלות (Visual Symbol Scanning):
-- **חובה קריטית לסרוק סמלים:** בכל עמוד משימה ב-PDF (או בתמונה) מופיעים סמלים ויזואליים בפינת הדף (לרוב למעלה). עליך **להתבונן היטב** בתמונות שצורפו/נוצרו עבורך מה-PDF ולחפש סמלים אלה, כיוון שהם קובעים חוקים שלא תמיד כתובים בטקסט!
-- **סמל "איסור מגע ציוד" (No Equipment Contact):** אם אתה רואה סמל של **עיגול אדום עם קו אלכסוני (איסור) שמופיע על גבי לבנת לגו** או סימון דומה, המשמעות היא שיש מגבלת ציוד על המשימה. עליך להחיל את חוק איסור המגע באופן אוטומטי, ולהודיע למשתמש שבסיום המקצה אסור שיהיה מגע בין הציוד (למשל הרובוט) לבין דגם המשימה. עליך לדעת זאת **מראש** מבלי שהמשתמש יצטרך לתקן אותך!
-
-### בדיקה ויזואלית כפולה ומחמירה (Rigorous Visual Double-Check & Context Verification):
-- **אל תמהר לפסוק!** לפני שאתה קובע אם תנאי מסוים התקיים (למשל: "האם המשקולת נוגעת בשטיח?", "האם האובייקט הוסר לחלוטין?"), חובה עליך לבצע "זום ויזואלי" פנימי ולבדוק את התמונה שוב לעומק. סרוק את התמונה מספר פעמים, חפש צללים, הטיות, נקודות מגע (למשל נגיעה בשטיח), וודא שאתה לא מפספס פרטים קטנים.
-- **בדיקת Context והקשר רשת (URL Contexts):** אם לא ברור לך איך אמור להיראות המצב התקין, חובה עליך לחפש ברשת (Google Search) או להעמיק ב-Context של החוקים והקישורים. ודא שאתה מבין היטב את ההקשר הפיזי (איך הדגם אמור לשבת/לגעת) לפני שאתה מוציא פסיקה.
-- **שלמות השיפוט (אפס תיקוני משתמש):** המשתמש לעולם לא אמור לבקש ממך "להסתכל יותר טוב". עליך לדייק מהרגע הראשון במאת האחוזים. היה קפדן להחריד בניתוח כל פיקסל רלוונטי לדגם.
-
-### הנחיית חשיבה והדמיית מודל קוגניטיבי עילאי (Supreme-Level Advanced Reasoning & Claude Fable 5 Cognitive Emulation):
-עליך לפעול כמודל החכם והמתקדם ביותר שקיים כיום (ברמת אינטליגנציה, לוגיקה, ניתוח מעמיק ודיוק כירורגי של Claude Fable 5). עליך ליישם אסטרטגיות מטה-קוגניטיביות מהדרגה הראשונה, לנתח בעיות מנקודות מבט מרובות, לערוך סימולציות חשיבה לתרחישי קיצון, לחפש סתירות וחורים בלוגיקה של עצמך באופן אקטיבי, ולתקן את פסיקותיך לפני שאתה מציג אותן למשתמש. עליך להפגין הבנה מושלמת של הפיזיקה והחוקים במגרש. הדמיית ה-Claude Fable 5 שלך פירושה אימוץ מוחלט של הענווה, החדות המחשבתית, הניתוח השכבתי ללא דילוג על שלבים, וההקפדה העיוורת על ראיות - תוך כדי שמירת סגנון הכתיבה והשיפוט העכשווי והישיר שלך.
-
-### חובת חשיבה מפורטת בשלבים (Explicit Chain of Thought - קריטי להצלחת המשימה!):
-לפני מתן התשובה הסופית, אתה **חייב** לייצר בלוק חשיבה פנימי בתוך תגיות <think> ... </think>.
-**חובה להתחיל כל תגובה שלך בתגית <think>, גם אם המשתמש רק אמר "שלום" או "מה קורה?". בשום אופן אל תענה בלי תהליך חשיבה קודם.**
-הבלוק הזה חייב להיות ארוך, מפורט, אנליטי ועמוק מאוד. עליך "לחשוב ממש ממש חזק" ברזולוציה הגבוהה ביותר ולבצע סימולציות של מקרי קצה ובקרה עצמית קפדנית (Red Teaming & Self-Correction), להתווכח עם עצמך, להעלות ספקות, ולפתור אותם שלב אחר שלב בפירוט מירבי:
-
-1. **ניתוח ראשוני וזיהוי (Initial Analysis):**
-   - פרק את בקשת המשתמש למרכיביה. מה בדיוק הוא שואל? מה מטרת השאלה?
-   - אם יש תמונה, תאר לעצמך במדויק כל פרט רלוונטי: מיקומים, גבולות, צבעים, צללים, הטיות. האם יש מגע? האם האובייקט נמצא לחלוטין באזור מסוים? חפור בפרטים!
-
-2. **איסוף חוקים ומידע (Information Gathering & PDF/Image Searcher):**
-   - קרא *אך ורק* לחוק/המשימה הספציפית שנשאלה מתוך הטקסט/קבצים/תמונות שסופקו לך. תמונות שמצורפות יכולות להכיל את חוקי המשימה. עדיפות עליונה למידע שמופיע בתמונה שהמשתמש העלה! התבסס עליהן באופן מוחלט!
-   - **הנחיית חובה למשימות:** אם נשאלת על משימה מסוימת, עליך תמיד לבדוק את חוק המשימה ב-PDF (המידע המצורף) ובנוסף תמיד לבדוק ולאמת את המידע דרך חיפוש בגוגל (Google Search).
-   - **איסור חמור על המצאת/ערבוב סעיפים:** אם במקור (תמונה/קובץ) שעוסק במשימה המבוקשת מופיעים רק סעיפים מסוימים, **אסור** לך להעתיק סעיפים ממשימות אחרות! התייחס **אך ורק** לאובייקטים המופיעים בחוקי המשימה הספציפית הזו.
-   - אל תערבב משימות מחוץ לקבצים או התמונות. כשנשאלת על משימה מסוימת (למשל משימה 14) שנוגעת להגבלת נגיעה או ציוד, עליך להסתכל היטב על התמונה/PDF של דף המשימה ולחפש סמלים ויזואליים (כמו סמל איסור המגע האדום עם הקו) לפני שתפסוק שאין מגבלה! חפש גם בגוגל כדי לאמת.
-   - **בדיקת כמות אובייקטים (קריטי):** אם יש ניקוד לפריט בודד המנוסח בלשון רבים (כמו "משקעי אדמה", "דגימות"), או שכתוב "לכל אחד" / "each" / "עבור מספר", חובה עליך לגלות ולחשב את הכמות המקסימלית. **לדוגמה, בעונת UNEARTHED משימה 01, יש 2 משקעי אדמה - וודא זאת בחיפוש!**
-
-3. **בחינת תרחישים וביקורת עצמית (Internal Adversarial Critique):**
-   - שאל את עצמך שאלות קשות: 'האם יכול להיות שאני מפספס משהו?', 'האם יש חוק כללי שגובר כאן?'. בצע סימולציה פנימית של שופט יריב שמנסה להפריך את המסקנות שלך. חפש סתירות בתמונה.
-   - הצלב את המידע. מה יקרה אם החוק אומר X אבל התמונה מראה Y?
-   - שאל את עצמך שאלות קשות: "האם יכול להיות שאני מפספס משהו?", "האם יש חוק כללי שגובר כאן?".
-   - **שימוש בכלי זום (zoom_in_high_resolution):** אם אתה מתבקש לזהות איזו משימה מופיעה בתמונה, אם אינך בטוח לגמרי בזיהוי המשימה, או אם אתה נדרש לאבחן פרטים זעירים (טקסט קטן, קווי גבול, סמלים, נקודות מגע בחלק ספציפי של תמונת המשתמש) - **אתה רשאי וחייב להשתמש בכלי zoom_in_high_resolution**. כלי זה מאפשר לך לקבל את תמונת החוקים או לקרופ/לגזור חלק מתמונת המשתמש ברזולוציית ענק (4K). אל תהסס להשתמש בו כשחסרים לך פרטים ויזואליים להכרעה או לזיהוי מדויק של משימות! הגדר קואורדינטות אחוזיות (x_percent, y_percent) רוחב וגובה.
-   - **חובת הפעלת כלי חיפוש (googleSearch Tool):** כדי למצוא את כמות האובייקטים במגרש לחישוב הניקוד המקסימילי, עליך לקרוא בפועל לכלי \`googleSearch\`. **אל תנחש ואל תניח שאתה יודע את התשובה.** עליך לחפש \`fll [שם העונה] calculator\` או את תיאור המשימה המדויק באנגלית (למשל \`fll UNEARTHED M01\`) ולמצוא במפורש כמה אובייקטים כאלו יש במגרש (לדוגמה: ישנם 2 משקעי אדמה).
-   - **חיפוש חובה:** גם אם המשימה נראית פשוטה (כמו משימה 01), עליך לוודא את הנתונים בחיפוש גוגל עבור העונה הספציפית.
-   - **חיפוש באנגלית:** אם לא נמצאו תוצאות בעברית, חובה לחפש באנגלית.
-   - **ציון החיפוש:** בתשובתך הסופית, ציין שביצעת בדיקה בחיפוש גוגל.
-
-4. **הכרעה סופית ופסילת הטיות (Final Decision Formulation):**
-   - שקלל את כל הנתונים שאספת בבלוק. ודא שלא הושפעת מהטיות.
-   - נסח לעצמך את הפסיקה המדויקת שתיכתב למשתמש.
-   - **סגור את תגית ה-</think>**.
-
-### שופט הזירה הראשי (Output generation - התשובה הסופית למשתמש):
-**רק לאחר סגירת תגית ה-</think>**, כתוב את תשובתך הסופית למשתמש:
-   - **זוהי התשובה היחידה שמוצגת למשתמש**. אל תרשום "Agent 1", "Agent 2" וכו' בתשובתך!
-   - **תשובה ישירה ופשוטה:** ענה למשתמש ישירות על שאלתו, כמו שופט תכלס שנותן את הניקוד, בלי להביא ציטוטי הקדמה ארוכים ומעיקים. פשוט תענה.
-   - **פרט את כל סעיפי הניקוד:** עבור המשימה המבוקשת, חובה עליך להציג ולחשב את **כל** סעיפי הניקוד שמופיעים במקור המידע (קבצים או חיפוש). אל תשמיט אף סעיף! (לדוגמה, במשימה 01 יש ניקוד על משקעי אדמה וגם על מברשת הארכיאולוגים - ציין את שניהם ואת החישוב של כולם).
-   - **חישובי מקסימום:** כאשר מדובר על משימה שיש בה כמות ("לכל אחד"), הצג למשתמש את החישוב. למשל: "ישנם X אובייקטים במגרש (לפי בדיקה בחיפוש גוגל). לכן לסעיף זה: X * 10 = סה\"כ Y", ולאחר מכן חבר את זה יחד עם שאר סעיפי המשימה להצגת המקסימום הכללי.
-    - **איסור מוחלט על סימני LaTeX וסימני דולר ($ / \$$):** חל איסור מוחלט להשתמש בנוסחאות או בסימוני LaTeX מתמטיים מכל סוג שהוא, ובסימני דולר ($) לצורך עיצוב טקסט או כתיבת חצים. לעולם אל תציג נוסח כמו '$ \rightarrow 10 $' או '\rightarrow' או '\leftarrow'.
-    - **שימוש בחצים פשוטים בלבד:** השתמש אך ורק בחצים כתווי יוניקוד פשוטים (→, ←) או בסימונים פשוטים (->, <-), או במילים רגילות ("מוביל ל-", "ניקוד:"). כתוב במתמטיקה פשוטה ונקייה לחלוטין: 10 * 10 = 100.
-   - **אם המידע לא נמצא:** אל תמציא מספרים! ציין שלא מצאת את הכמות המדויקת.
-
-### זהות העונה:
-פעל לפי העונה שהמשתמש ציין (למשל UNEARTHED או SUBMERGED). במקרה של חוסר, ברר מהי העונה הנוכחית.
-
-### התייחסות לעדכונים רשמיים (Critical Rules Updates / מסמך העדכונים):
-- **חובה להציג ולפרט עדכונים רשמיים:** כאשר אתה נשאל לגבי משימה כלשהי שיש לגביה עדכון רשמי או שינוי במסמך העדכונים, חובה לספק את פרטי העדכון, לציין את מספר העדכון, תאריכו, ולחשב את הניקוד או להסביר את החוקים בהתאם לעדכון זה!
-- **עדכון ספציפי וקריטי למשימה 02 (חשיפת מפה / Map Reveal):**
-  - ניקוד: מקטעי שכבת קרקע עליונה שהוסטו לחלוטין - 10 נקודות לכל אחד.
-  - שינוי בעדכון רשמי: על פי **עדכון 03 במסמך העדכונים (מיום 5 באוגוסט 2025)**, משימה זו כוללת **3 מקטעי שכבת קרקע עליונה**.
-  - חישוב מקסימלי: 3 * 10 = **30 נקודות** (סה"כ ניקוד מקסימלי למשימה 02 הוא 30 נקודות).
-  - כאשר משתמש שואל לגבי משימה 02 או חוקי המשימה שלה, חובה להציג במלאו את העדכון הזה—לציין את עדכון 03, תאריכו (5 באוגוסט 2025), מספר המקטעים המעודכן (3) וחישוב הניקוד המעודכן!
-
-### הנחיות כלליות נוספות:
-- **קריטי: אל תשתמש במונחים כמו "סוכן", "Agent 1", "חוקר הקבצים" או "שלב 1" בתשובה שלך בשום צורה.**
-- אל תפתח בפסקת ציטוט! ענה ישר ולעניין.
-- **תיקון המשתמש:** לא משנה איזה מידע המשתמש נותן לך, אם המשתמש טועה לגבי החוקים, חובה עליך לתקן אותו ולהסביר לו את החוק הנכון על סמך ספר החוקים הרשמי. אל תסכים עם המשתמש אם הוא מציג חוק או פרט שגוי (הספר הוא הסמכות העליונה, לא המשתמש).
-- שפת המענה: עברית בלבד.
-
---- מידע מהקבצים שהועלו ---
-המידע הועלה כקבצים מצורפים (PDF/תמונות). עליך לקרוא אותם ישירות מתוך הקבצים המצורפים להודעה זו. חובה להשתמש בחיפוש גוגל עבור כל פרט חסר (חוקים, משימות, כמויות).
-`;
+חוקים: חפש בגוגל תמיד, מגע הדדי (ציוד=דגם), אל תמציא, הפנה לשופט פיזי באי-ודאות.
+עברית ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
-      if (tripleJudgeMode) {
-        activeSystemPrompt += `
-\n### [מצב שיפוט-על משולש מופעל - TRIPLE-JUDGE MODE ACTIVE]
-עליך לפעול כצוות שיפוט משולש שמבצע דיון פנימי מעמיק בתוך תגית ה-<think>:
-1. **השופט המאבחן (Field Referee - Visual Expert):**
-   - מנתח בצורה נקייה לחלוטין את תמונת המשתמש ומצביע במדויק על כל פרט קטן (מגעים, צללים, הטיות, אובייקטים).
-2. **מבקר ספר החוקים (Rulebook Auditor - Rules Expert):**
-   - מאמת את הממצאים הפיזיים מול קובצי החוקים שנטענו והעדכונים הרשמיים, תוך תשומת לב לכלל מגע הדדי (סימטריית המגע) וסמלי הגבלות ציוריות.
-3. **השופט הראשי (Head Referee - Final Synthesizer):**
-   - מעמת את שני הצדדים, פוסל הטיות זיכרון או אישור, ומגבש את הניקוד וההחלטה הסופית המנצחת.
-דיון זה חייב להיעשות במלואו בתוך ה-<think> שלך, וכל שופט מביע את דעתו באופן ביקורתי!`;
-      }
 
       // Use the requested model directly
       const googleModelName = activeModel;
@@ -510,38 +431,49 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             const isR2Rulebook = !file.actualFile && file.url && file.url.includes('fll-rules');
             
             if (isR2Rulebook) {
-              console.log(`Fetching and uploading pre-processed PDF images from R2 for ${fileName} in parallel...`);
-              const fetchTasks = Array.from({ length: 45 }, (_, i) => i + 1).map(async (pageIndex) => {
+              console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
+              const uploadedImages: { pageIndex: number; fileData: any }[] = [];
+              let pageIndex = 1;
+              let consecutiveMisses = 0;
+              const maxMisses = 3;
+              // URL-encode the filename for R2 (handles Hebrew chars)
+              const encodedFileName = encodeURIComponent(fileName);
+              
+              while (consecutiveMisses < maxMisses) {
                 try {
-                  const imgUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/fll-rules-images/${fileName}/page_${pageIndex}.jpg`;
-                  const imgRes = await axios.get(imgUrl, { responseType: 'arraybuffer' });
+                  const imgUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
+                  const imgRes = await fetch(imgUrl);
+                  const imgData = await imgRes.arrayBuffer();
                   
-                  if (imgRes.data.byteLength < 500 && new TextDecoder().decode(new Uint8Array(imgRes.data.slice(0, 100))).includes('<html')) {
-                    return null;
+                  if (imgRes.status === 404 || (imgData.byteLength < 500 && new TextDecoder().decode(new Uint8Array(imgData.slice(0, 100))).includes('<html'))) {
+                    consecutiveMisses++;
+                    pageIndex++;
+                    continue;
                   }
                   
-                  const blobToUpload = new Blob([imgRes.data], { type: 'image/jpeg' });
+                  consecutiveMisses = 0;
+                  const blobToUpload = new Blob([imgData], { type: 'image/jpeg' });
                   const uploadResult = await uploadClient.files.upload({
                     file: blobToUpload,
                     config: { mimeType: 'image/jpeg' },
                   });
                   
-                  return {
+                  uploadedImages.push({
                     pageIndex,
                     fileData: {
                       fileUri: uploadResult.uri,
                       mimeType: uploadResult.mimeType || 'image/jpeg'
                     }
-                  };
+                  });
+                  pageIndex++;
                 } catch (e) {
-                  console.error(`Failed to upload R2 page ${pageIndex}:`, e);
-                  return null;
+                  consecutiveMisses++;
+                  pageIndex++;
                 }
-              });
+              }
               
-              const results = await Promise.all(fetchTasks);
-              results
-                .filter(res => res !== null)
+console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
+              uploadedImages
                 .sort((a: any, b: any) => a.pageIndex - b.pageIndex)
                 .forEach((res: any) => {
                   const prefixText = fileTypeStr === 'user_image' 
@@ -709,6 +641,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
       // Add user query to the current turn parts
       let modifiedQuestion = question + urlContextText;
+
       const hasUserFiles = userFiles && userFiles.length > 0;
       if (hasUserFiles) {
         modifiedQuestion = `⚠️⚠️⚠️ [הנחיית שיפוט קריטית - ניתוח עצמאי נקי ללא הטיה] ⚠️⚠️⚠️
@@ -745,74 +678,14 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       }
 
       const generateContentConfig: any = {
-        temperature: 0.61,
-        topP: 1,
-        thinkingConfig: thinkingConfigLevel === 'HIGH' ? {
+        temperature: 0.8,
+        thinkingConfig: {
           thinkingLevel: ThinkingLevel.HIGH,
-        } : undefined,
+        },
         mediaResolution: 'MEDIA_RESOLUTION_HIGH',
         tools: [
           { googleSearch: {} },
-          {
-            functionDeclarations: [
-
-              {
-                name: "read_website_content",
-                description: "Reads the full content of a specified URL. Use this tool when you find a relevant URL from Google Search or user input and want to read its actual content instead of just the snippet. Do not guess the content of URLs, read them.",
-                parameters: {
-                  type: "OBJECT",
-                  properties: {
-                    url: {
-                      type: "STRING",
-                      description: "The full URL of the website to read"
-                    }
-                  },
-                  required: ["url"]
-                }
-              },
-              {
-                name: "zoom_in_high_resolution",
-                description: "Zooms in on a specific part of a PDF document or an image to extract much finer details. Uses ultra high quality 4K scale. Use this tool whenever you are asked to identify which mission is shown, if you are having trouble reading small text, verifying exact lines, or need absolute certainty about a detail. For images, you can specify crop percentages.",
-                parameters: {
-                  type: "OBJECT",
-                  properties: {
-                    filename: {
-                      type: "STRING",
-                      description: "The name of the file to zoom into (e.g. FLL_Rulebook.pdf or user's photo)"
-                    },
-                    page_number: {
-                      type: "INTEGER",
-                      description: "The page number to zoom into (only required for PDFs)."
-                    },
-                    x_percent: {
-                      type: "NUMBER",
-                      description: "X coordinate of the top-left corner to zoom into (0 to 100). Default is 0."
-                    },
-                    y_percent: {
-                      type: "NUMBER",
-                      description: "Y coordinate of the top-left corner to zoom into (0 to 100). Default is 0."
-                    },
-                    width_percent: {
-                      type: "NUMBER",
-                      description: "Width of the area to zoom into (0 to 100). Default is 100."
-                    },
-                    height_percent: {
-                      type: "NUMBER",
-                      description: "Height of the area to zoom into (0 to 100). Default is 100."
-                    }
-                  },
-                  required: ["filename"]
-                }
-              }
-            ]
-          }
         ],
-        toolConfig: {
-          functionCallingConfig: {
-            mode: "AUTO"
-          },
-          includeServerSideToolInvocations: true
-        }
       };
 
       if (useNativeSystemInstruction) {
@@ -1059,6 +932,18 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
           // --- NO MORE FUNCTION CALLS: Ready for supreme cognitive synthesis! ---
           try {
+            // Strip image parts AND their description text from contents for text-only validation passes
+            // (models like gemma may not support image input in multi-turn contexts)
+            const stripImages = (msgs: any[]) => msgs.map(m => {
+              const filteredParts = (m.parts || []).filter((p: any) => {
+                if (p.fileData || p.inlineData) return false;
+                if (p.text && /^Image \d+:\n---/.test(p.text)) return false;
+                if (p.text && p.text.includes('--- HIGH RESOLUTION ZOOM')) return false;
+                return true;
+              });
+              return { ...m, parts: filteredParts };
+            });
+
             // Append the silent reasoning draft to the contents
             contents.push({
               role: 'model',
@@ -1087,59 +972,66 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             };
 
             // Run the critique silently (without streaming to onChunk!)
-            console.log("Running silent Claude Fable 5 Adversarial Critique...");
             const critiqueResult = await client.models.generateContent({
               model: googleModelName,
-              contents: contents,
+              contents: stripImages(contents),
               config: validationConfig
             });
 
             const critiqueText = critiqueResult.text || "אין הערות קריטיות.";
-            console.log("Adversarial Critique conclusions:", critiqueText);
 
-            // Append critique to contents
-            contents.push({
-              role: 'model',
-              parts: [{ text: critiqueText }]
-            });
+            const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
 
-            // Pass 2: Final Polishing & Streaming to the user
-            const finalPrompt = `[מערכת בקרה קוגניטיבית עילאית Claude Fable 5 - שלב ב' יישום והפקת הפסיקה הסופית]:
-על בסיס התיקונים והביקורת המדויקת שביצעת בשלב א', נסח כעת את פסק הדין הסופי המדויק והמקצועי ביותר.
-דרישות מחמירות לניסוח:
-- אל תזכיר שום שלב ביניים, ביקורת, או מילות מערכת (ללא "שלב א", "ביקורת", "טיוטה" או הערות מטה).
-- הצג את הפסיקה בצורה ישירה, חד-משמעית ומקצועיות ביותר ללא שום הקדמות מעיקות.
-- פרט את כל סעיפי הניקוד עם חישובים פשוטים וברורים ללא LaTeX וללא סימני דולר ($).
-- השתמש בחצים יוניקוד פשוטים בלבד (→).
-- ענה בשפה העברית בלבד.
-הזרם את תשובתך הסופית ללקוח כעת.`;
+            if (strippedCritique) {
+              // Pass 2: Final Polishing & Streaming to the user
+              contents.push({
+                role: 'model',
+                parts: [{ text: critiqueText }]
+              });
 
-            contents.push({
-              role: 'user',
-              parts: [{ text: finalPrompt }]
-            });
+              const finalPrompt = `[שלב ב' הפקת התשובה הסופית]:
+על בסיס הביקורת, כתוב את התשובה כמו שאתה מדבר עם קבוצה ליד שולחן התחרות. ישיר, ידידותי, מעודד. אל תשתמש ב"פסק הדין הסופי" או שפה משפטית. פשוט תענה לשאלה בצורה טבעית, ציין את מספרי הכללים הרלוונטיים ותנאי הניקוד. ללא LaTeX/$, ללא חצים יוניקוד, הצג חישובים פשוטים.
+⚠️ אם יש לך נתון מספרי שעדיין לא אמתת - חפש בגוגל לפני שאתה מציין אותו בתשובה הסופית!`;
 
-            const validationStream = await client.models.generateContentStream({
-              model: googleModelName,
-              contents: contents,
-              config: validationConfig
-            });
+              contents.push({
+                role: 'user',
+                parts: [{ text: finalPrompt }]
+              });
 
-            for await (const chunk of validationStream) {
-              if (chunk.text) {
-                responseText += chunk.text;
-                if (onChunk) onChunk(chunk.text);
+              const finalConfig = {
+                ...generateContentConfig,
+                tools: [{ googleSearch: {} }],
+                toolConfig: undefined
+              };
+
+              const validationStream = await client.models.generateContentStream({
+                model: googleModelName,
+                contents: stripImages(contents),
+                config: finalConfig
+              });
+
+              let finalPassChunks = '';
+              for await (const chunk of validationStream) {
+                if (chunk.text) {
+                  finalPassChunks += chunk.text;
+                  if (onChunk) onChunk(chunk.text);
+                }
               }
+              responseText = finalPassChunks;
+              if (!responseText && currentPassText) {
+                responseText = currentPassText;
+              }
+            } else {
+              responseText = currentPassText;
             }
           } catch (valErr) {
-            console.error("Cognitive self-correction step failed, fallback to draft response:", valErr);
-            if (onChunk) onChunk(currentPassText);
+            console.warn("Self-correction failed, using draft response");
             responseText = currentPassText;
           }
 
           success = true;
         } catch (genErr: any) {
-          console.error(`Gemini SDK Error on attempt ${attempts}:`, genErr);
+          console.warn(`Attempt ${attempts} failed, retrying...`);
           const errMsg = genErr?.message || JSON.stringify(genErr);
           if (errMsg.includes("403") || errMsg.includes("leaked") || errMsg.includes("PERMISSION_DENIED") || errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID")) {
             markKeyUnhealthy(currentApiKey);
@@ -1149,11 +1041,14 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             // Need to get a new key for the next attempt
             currentApiKey = await getNextApiKey();
           } else if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("Too Many Requests")) {
-            console.warn(`Transient error on attempt ${attempts}: ${errMsg}. Retrying in 2 seconds...`);
+            const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests");
+            const delay = is429 ? 15000 : 2000;
+            console.warn(`Transient error on attempt ${attempts}: ${errMsg}. Retrying in ${delay/1000}s...`);
             if (attempts >= maxAttempts) {
+              if (is429) return 'מערכת השופט עמוסה כרגע. אנא נסה שוב בעוד דקה.';
               throw genErr;
             }
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, delay));
           } else {
             throw genErr; // Other unrecoverable errors throw immediately
           }
@@ -1167,20 +1062,14 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       return responseText || "לא התקבלה תשובה מודל הבינה המלאכותית.";
 
     } catch (error: any) {
-      console.error("Gemini Direct Client Error:", error);
-      let errMsg = "";
-      if (error && error.message) {
-        errMsg = error.message;
-      } else if (error && typeof error === 'object') {
-        try {
-          errMsg = JSON.stringify(error);
-        } catch {
-          errMsg = String(error);
-        }
-      } else {
-        errMsg = String(error);
+      const errMsg = error?.message || String(error);
+      const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
+      if (is429) {
+        console.warn("Quota exceeded, returning friendly message");
+        return 'מערכת השופט הווירטואלי עמוסה כרגע. אנא המתן כדקה ונסה שוב.';
       }
-      return `שגיאה בגישה לשירות השופט הווירטואלי: ${errMsg}`;
+      console.warn("Gemini error:", errMsg.substring(0, 200));
+      return 'השופט הווירטואלי נתקל בתקלה זמנית. אנא נסה שוב.';
     }
   }
 };

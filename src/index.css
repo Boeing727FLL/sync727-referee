@@ -95,14 +95,17 @@
   100% { transform: translateY(0%); }
 }
 
-@keyframes typing {
-  from { width: 0 }
-  to { width: 100% }
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-.typing-effect {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  animation: typing 1s steps(30, end);
+.typewriter-cursor {
+  display: inline;
+  animation: blink-cursor 0.8s step-end infinite;
+  font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+  margin: 0;
+  padding: 0;
 }
