@@ -611,51 +611,44 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Header */}
-      <div className="p-2 md:p-4 border-b-2 border-slate-950 bg-amber-50 flex flex-wrap items-center justify-between gap-1 md:gap-3 z-10 shadow-sm">
-        <div className="flex items-center gap-1.5 md:gap-3">
-          <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 shadow-md p-1 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,#000,#000_4px,#fff_4px,#fff_8px)] opacity-20" />
-            <div className="w-full h-full bg-yellow-400 rounded-lg flex items-center justify-center z-10 border border-slate-950/20">
-              <RefereeIcon />
+      <div className="border-b-2 border-slate-950 bg-amber-50 z-10 shadow-sm">
+        {/* Row 1: Logo + Title + User */}
+        <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 shadow-md p-1 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,#000,#000_4px,#fff_4px,#fff_8px)] opacity-20" />
+              <div className="w-full h-full bg-yellow-400 rounded-lg flex items-center justify-center z-10 border border-slate-950/20">
+                <RefereeIcon />
+              </div>
             </div>
-          </div>
-          <div className="min-w-0">
-            <h1 onClick={handleTitleClick} className="text-xs md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none">
-              שופט וירטואלי <span className="text-[8px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-0.5 rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
-            </h1>
-            <div className="flex items-center gap-1 text-[8px] md:text-xs font-bold text-slate-700">
-              <span className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
-              <span className="font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-1.5 py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-                {isLearning ? 'מעדכן...' : `עונת ${seasonName}`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 md:gap-3">
-          <div className="flex items-center gap-1 px-1.5 md:px-3 py-1 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
-            <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-5 md:h-9 w-auto object-contain group-hover:scale-110 transition-transform" />
-            <div className="hidden sm:flex flex-col leading-none">
-              <span className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Developed By</span>
-              <span className="text-xs md:text-sm font-black text-slate-950 italic">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[10px] md:text-xs mx-1">&</span><span className="text-slate-600 font-bold not-italic text-[10px] md:text-xs">Yuval Margalit</span></span>
+            <div className="min-w-0">
+              <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
+                שופט וירטואלי <span className="text-[7px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
+              </h1>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className={`w-[6px] h-[6px] md:w-2.5 md:h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
+                <span className="text-[7px] md:text-[10px] font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-1 md:px-1.5 py-[1px] md:py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
+                  {isLearning ? 'מעדכן...' : seasonName}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 md:gap-3 md:ml-2 md:pl-2 md:border-l md:border-slate-300">
+          <div className="flex items-center gap-1 md:gap-3">
             {hasGoogleToken && user ? (
-              <div className="flex items-center gap-1.5 md:gap-3">
+              <div className="flex items-center gap-1 md:gap-3">
                 <div className="hidden sm:flex flex-col items-end">
                   <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{user.name}</span>
                   <button 
                     onClick={() => setShowLogoutConfirm(true)} 
                     className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
                   >
-                    התנתק 🚪
+                    התנתק
                   </button>
                 </div>
                 <img 
                   src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
-                  alt={user.name} 
+                  alt="" 
                   className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]" 
                 />
               </div>
@@ -664,26 +657,38 @@ const fetchLatestRulebook = async () => {
                 onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : handleGoogleLogin} 
                 className="text-[10px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
               >
-                <span>{hasGoogleToken ? 'התנתק 🚪' : 'התחברות 🔑'}</span>
+                <span>{hasGoogleToken ? 'התנתק' : 'התחברות'}</span>
+              </button>
+            )}
+            {showAdmin && (
+              <button 
+                onClick={() => setShowUploadModal(true)}
+                className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                title="העלה חוקים"
+              >
+                <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </button>
             )}
           </div>
-          {showAdmin && (
-            <button 
-              onClick={() => setShowUploadModal(true)}
-              className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
-              title="העלה חוקים"
-            >
-              <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
-            </button>
-          )}
+        </div>
+
+        {/* Row 2: Credit Bar */}
+        <div className="px-2 pb-1.5 md:px-4 md:pb-2">
+          <div className="flex items-center justify-center gap-2 md:gap-3 px-3 py-1 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
+            <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
+            <div className="h-4 md:h-6 w-px bg-slate-300" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[6px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
+              <span className="text-[9px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[8px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[8px] md:text-xs">Yuval Margalit</span></span>
+            </div>
+          </div>
         </div>
       </div>
 
 
 
       {/* Chat Area - Green field canvas background */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-3 md:p-8 space-y-4 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
         
         {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && !chatStarted)).map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
@@ -744,10 +749,10 @@ const fetchLatestRulebook = async () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex gap-2.5 md:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Referee or User Avatar Badge */}
-              <div className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
+              <div className={`w-7 h-7 md:w-11 md:h-11 rounded-full flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
                 msg.role === 'user' 
                   ? 'bg-slate-100 text-slate-800' 
                   : 'bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)]'
@@ -756,7 +761,7 @@ const fetchLatestRulebook = async () => {
                   (user?.picture || localStorage.getItem('user_picture')) ? (
                     <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full" />
                   ) : (
-                    <User className="w-5 h-5 text-slate-850" />
+                    <User className="w-4 h-4 md:w-5 md:h-5 text-slate-850" />
                   )
                 ) : (
                   <div className="absolute inset-0.5 bg-yellow-400 rounded-[6px] border border-slate-950/20 flex items-center justify-center text-slate-950 text-xs font-black">
@@ -765,8 +770,8 @@ const fetchLatestRulebook = async () => {
                 )}
               </div>
 
-              <div className={`flex flex-col gap-2 max-w-[85%] md:max-w-[75%]`}>
-                <div className={`rounded-2xl p-4 md:p-5 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-2 border-slate-950 relative overflow-hidden ${
+              <div className={`flex flex-col gap-1.5 md:gap-2 max-w-[88%] md:max-w-[75%]`}>
+                <div className={`rounded-2xl p-3 md:p-5 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-2 border-slate-950 relative overflow-hidden ${
                   msg.role === 'user' 
                     ? 'bg-slate-900 text-white rounded-tr-none' 
                     : 'bg-white text-slate-900 rounded-tl-none before:absolute before:top-0 before:right-0 before:left-0 before:h-2 before:bg-[repeating-linear-gradient(-45deg,#000000,#000000_8px,#ffffff_8px,#ffffff_16px)] pt-6'
@@ -774,12 +779,12 @@ const fetchLatestRulebook = async () => {
                   
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
-                    <div className="flex items-center gap-1 mb-2">
-                      <span className="text-[10px] font-black tracking-tight text-slate-905 bg-yellow-400 border border-slate-950 px-2 py-0.5 rounded shadow-[1px_1px_0px_#000] flex items-center gap-1 uppercase">
+                    <div className="flex items-center gap-1 mb-1.5 md:mb-2">
+                      <span className="text-[8px] md:text-[10px] font-black tracking-tight text-slate-905 bg-yellow-400 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000] flex items-center gap-1 uppercase">
                         📋 שופט וירטואלי
                       </span>
                       {finalRenderText.includes("שריקה") && (
-                        <span className="text-[10px] font-black text-white bg-red-600 border border-slate-950 px-2 py-0.5 rounded shadow-[1px_1px_0px_#000]">
+                        <span className="text-[8px] md:text-[10px] font-black text-white bg-red-600 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000]">
                            🚨 כרטיס שופט וירטואלי
                         </span>
                       )}
@@ -789,12 +794,12 @@ const fetchLatestRulebook = async () => {
                   {msg.files && msg.files.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4 bg-black/5 p-2 rounded-2xl">
                       {msg.files.map((file, fIdx) => (
-                        <div key={fIdx} className="relative w-20 h-20 md:w-32 md:h-32 group">
+                        <div key={fIdx} className="relative w-16 h-16 md:w-32 md:h-32 group">
                       {(file.key.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.url.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.base64?.startsWith('data:image')) ? (
                          <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl shadow-md border-2 border-slate-950" />
                       ) : (
-                         <div className="w-full h-full flex items-center justify-center bg-white rounded-xl border-2 border-slate-950 shadow-md">
-                               <FileText className="w-8 h-8 text-slate-400" />
+                          <div className="w-full h-full flex items-center justify-center bg-white rounded-xl border-2 border-slate-950 shadow-md">
+                                <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
                              </div>
                           )}
                         </div>
@@ -802,7 +807,7 @@ const fetchLatestRulebook = async () => {
                     </div>
                   )}
                   
-                  <div className={`text-sm md:text-[17px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
+                  <div className={`text-[13px] md:text-[17px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
@@ -824,18 +829,18 @@ const fetchLatestRulebook = async () => {
                   </div>
                 </div>
                 {msg.role === 'model' && idx > 0 && (
-                  <div className="flex items-center gap-4 px-2">
+                  <div className="flex items-center gap-2 md:gap-4 px-1 md:px-2">
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(finalRenderText);
                         alert("התשובה הועתקה ללוח!");
                       }}
-                      className="text-[10px] font-black text-slate-600 hover:text-red-600 transition-colors bg-white px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                      className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-red-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
                     >
-                      העתק החלטה
+                      העתק
                     </button>
-                    <button className="text-[10px] font-black text-slate-600 hover:text-green-600 transition-colors bg-white px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]">
-                      נקבע נכון! 👍
+                    <button className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-green-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                      👍
                     </button>
                   </div>
                 )}
@@ -845,32 +850,32 @@ const fetchLatestRulebook = async () => {
         })}
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
-            <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)] flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-              <div className="w-7 h-7 bg-yellow-400 rounded-md border border-slate-950/25 flex items-center justify-center text-xs text-slate-950 font-black animate-spin">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-4">
+            <div className="w-7 h-7 md:w-11 md:h-11 rounded-xl bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)] flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
+              <div className="w-5 h-5 md:w-7 md:h-7 bg-yellow-400 rounded-md border border-slate-950/25 flex items-center justify-center text-[10px] md:text-xs text-slate-950 font-black animate-spin">
                 ⏱️
               </div>
             </div>
-            <div className="bg-white border-2 border-slate-950 p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center gap-3">
-              <div className="flex gap-1">
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-red-600 rounded-full border border-slate-950" />
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-yellow-400 rounded-full border border-slate-950" />
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-slate-950 rounded-full border border-white" />
+            <div className="bg-white border-2 border-slate-950 p-2.5 md:p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center gap-2 md:gap-3">
+              <div className="flex gap-0.5 md:gap-1">
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-600 rounded-full border border-slate-950" />
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-yellow-400 rounded-full border border-slate-950" />
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-slate-950 rounded-full border border-white" />
               </div>
-              <span className="text-xs font-black text-slate-900">השופט הווירטואלי חושב...</span>
+              <span className="text-[10px] md:text-xs font-black text-slate-900">חושב...</span>
             </div>
           </motion.div>
         )}
       </div>
 
       {/* Quick Actions - Styled as tactical yellow strategy cards */}
-      <div className="px-3 md:px-4 py-2 md:py-3 bg-amber-50/50 border-t-2 border-slate-950 overflow-x-auto flex gap-2 no-scrollbar">
+      <div className="px-2 md:px-4 py-1.5 md:py-3 bg-amber-50/50 border-t-2 border-slate-950 overflow-x-auto flex gap-1.5 md:gap-2 no-scrollbar">
         {quickQuestions.map((q, i) => (
           <button
             key={i}
             onClick={() => handleSend(q)}
             disabled={loading || isLearning || isTypewriterActive}
-            className="whitespace-nowrap px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 border-2 border-slate-950 rounded-xl text-xs font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="whitespace-nowrap px-3 md:px-4 py-1.5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 border-2 border-slate-950 rounded-xl text-[10px] md:text-xs font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ⚠️ {q}
           </button>
@@ -878,7 +883,7 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-3 md:p-4 bg-white border-t-2 border-slate-950 pb-safe">
+      <div className="px-2.5 py-2 md:px-4 md:p-4 bg-white border-t-2 border-slate-950 pb-safe">
         
         <div className="flex items-center gap-2 md:gap-3">
           <input
@@ -886,19 +891,19 @@ const fetchLatestRulebook = async () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isLearning ? "השופט חוקר חוקים וסרטים..." : "שאל את השופט הווירטואלי על משימה, חוק או תלונה..."}
+            placeholder={isLearning ? "השופט חוקר..." : "שאל את השופט..."}
             disabled={loading || isLearning || isTypewriterActive}
             style={{ flex: 1, minWidth: 0 }}
-            className="bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2.5 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-sm md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
+            className="bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-[13px] md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
           />
           
           <button
             onClick={() => handleSend()}
             disabled={loading || isLearning || isTypewriterActive || !input.trim()}
             style={{ flexShrink: 0 }}
-            className="bg-red-600 hover:bg-red-700 text-white p-2.5 md:p-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5"
+            className="bg-red-600 hover:bg-red-700 text-white p-2 md:p-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5"
           >
-            <Send className="w-5 h-5 md:w-6 md:h-6" />
+            <Send className="w-4 h-4 md:w-6 md:h-6" />
           </button>
         </div>
       </div>
