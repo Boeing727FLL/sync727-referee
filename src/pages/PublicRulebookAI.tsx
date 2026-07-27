@@ -186,6 +186,7 @@ export default function PublicRulebookAI() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -475,6 +476,7 @@ const fetchLatestRulebook = async () => {
     ]);
     
     setLoading(true);
+    try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
       let relevantMessages = messages;
@@ -517,6 +519,7 @@ const fetchLatestRulebook = async () => {
       setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
     } finally {
       setLoading(false);
+      if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
     }
   };
 
@@ -608,85 +611,70 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Header */}
-      <div className="p-3 md:p-4 border-b-2 border-slate-950 bg-amber-50 flex items-center justify-between z-10 shadow-sm">
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 shadow-md p-1 relative overflow-hidden">
+      <div className="p-2 md:p-4 border-b-2 border-slate-950 bg-amber-50 flex flex-wrap items-center justify-between gap-1 md:gap-3 z-10 shadow-sm">
+        <div className="flex items-center gap-1.5 md:gap-3">
+          <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 shadow-md p-1 relative overflow-hidden">
             <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,#000,#000_4px,#fff_4px,#fff_8px)] opacity-20" />
             <div className="w-full h-full bg-yellow-400 rounded-lg flex items-center justify-center z-10 border border-slate-950/20">
               <RefereeIcon />
             </div>
           </div>
           <div className="min-w-0">
-            <h1 onClick={handleTitleClick} className="text-sm md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none">
-              שופט וירטואלי <span className="text-xs bg-slate-900 text-yellow-400 px-2 py-0.5 rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
+            <h1 onClick={handleTitleClick} className="text-xs md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none">
+              שופט וירטואלי <span className="text-[8px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-0.5 rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
             </h1>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs font-bold text-slate-700">
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
-                <span className="text-[9px] md:text-[10px] font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-2 py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-                  צוות שיפוט וירטואלי
-                </span>
-                <span className="truncate pr-1 pr-2 font-black text-slate-950 border-r border-slate-300">
-                  {isLearning ? 'מעדכן נתונים...' : `עונת ${seasonName} ⏱️`}
-                </span>
-              </div>
+            <div className="flex items-center gap-1 text-[8px] md:text-xs font-bold text-slate-700">
+              <span className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
+              <span className="font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-1.5 py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
+                {isLearning ? 'מעדכן...' : `עונת ${seasonName}`}
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Boeing 727 + Yuval Margalit Credit */}
-          <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-1.5 bg-white/80 rounded-xl border-2 border-slate-950 mr-1 md:mr-3 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
-            <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-9 w-auto object-contain group-hover:scale-110 transition-transform" />
+        <div className="flex items-center gap-1.5 md:gap-3">
+          <div className="flex items-center gap-1 px-1.5 md:px-3 py-1 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
+            <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-5 md:h-9 w-auto object-contain group-hover:scale-110 transition-transform" />
             <div className="hidden sm:flex flex-col leading-none">
               <span className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Developed By</span>
               <span className="text-xs md:text-sm font-black text-slate-950 italic">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[10px] md:text-xs mx-1">&</span><span className="text-slate-600 font-bold not-italic text-[10px] md:text-xs">Yuval Margalit</span></span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 ml-2 md:ml-4 pl-2 md:pl-4 border-l border-slate-300">
-            {hasGoogleToken ? (
-              user ? (
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="flex flex-col items-end">
-                    <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{user.name}</span>
-                    <button 
-                      onClick={() => setShowLogoutConfirm(true)} 
-                      className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
-                    >
-                      התנתק 🚪
-                    </button>
-                  </div>
-                  <img 
-                    src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
-                    alt={user.name} 
-                    className="w-8 h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]" 
-                  />
+          <div className="flex items-center gap-1.5 md:gap-3 md:ml-2 md:pl-2 md:border-l md:border-slate-300">
+            {hasGoogleToken && user ? (
+              <div className="flex items-center gap-1.5 md:gap-3">
+                <div className="hidden sm:flex flex-col items-end">
+                  <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{user.name}</span>
+                  <button 
+                    onClick={() => setShowLogoutConfirm(true)} 
+                    className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
+                  >
+                    התנתק 🚪
+                  </button>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => setShowLogoutConfirm(true)} 
-                  className="text-xs bg-red-50 text-red-600 border-2 border-red-200 hover:bg-red-100 font-black px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  התנתק 🚪
-                </button>
-              )
+                <img 
+                  src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
+                  alt={user.name} 
+                  className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]" 
+                />
+              </div>
             ) : (
               <button 
-                onClick={handleGoogleLogin} 
-                className="text-[11px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2.5 py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
+                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : handleGoogleLogin} 
+                className="text-[10px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
               >
-                <span>התחברות 🔑</span>
+                <span>{hasGoogleToken ? 'התנתק 🚪' : 'התחברות 🔑'}</span>
               </button>
             )}
           </div>
           {showAdmin && (
             <button 
               onClick={() => setShowUploadModal(true)}
-              className="p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+              className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
               title="העלה חוקים"
             >
-              <UploadIcon className="w-4 h-4 md:w-5 md:h-5" />
+              <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
             </button>
           )}
         </div>
