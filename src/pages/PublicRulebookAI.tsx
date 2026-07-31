@@ -1,4 +1,5 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
@@ -10,15 +11,20 @@ import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function PublicRulebookAI() {
+  const navigate = useNavigate();
   const { connectDrive, user, logout } = useAuth();
+  const { t, language, isRTL } = useLanguage();
   
   // Local state to check if user has google access token, since PublicRulebookAI might be used without full login
   // Actually, we can just check localStorage for 'google_access_token' or URL bypass params directly to show/hide the overlay
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(() => {
     return !!localStorage.getItem('google_access_token') || 
+      !!localStorage.getItem('auth_user') ||
       window.location.search.includes('verify=true') || 
       window.location.search.includes('bypass=true') || 
       window.location.search.includes('google=true');
@@ -26,6 +32,7 @@ export default function PublicRulebookAI() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [chatStarted, setChatStarted] = useState<boolean>(false);
+  const [showEnterAnimation, setShowEnterAnimation] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
@@ -149,33 +156,34 @@ export default function PublicRulebookAI() {
     };
   }, []);
 
-  const handleGoogleLogin = async () => {
-    setLoginError(null);
-    const res = await connectDrive();
-    if (res.success || localStorage.getItem('google_access_token')) {
-      setHasGoogleToken(true);
+  // Auto-enter chat after login with entrance animation
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
+      setShowEnterAnimation(true);
+      window.history.replaceState({}, '', '/');
       setShowIntro(false);
       setChatStarted(true);
-    } else if (res.error) {
-      setLoginError(res.error);
+      setTimeout(() => setShowEnterAnimation(false), 800);
     }
-  };
+  }, [user, hasGoogleToken]);
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch (err) {}
     localStorage.removeItem('google_access_token');
+    localStorage.removeItem('auth_user');
     setHasGoogleToken(false);
     setShowLogoutConfirm(false);
   };
+  const [seasonName, setSeasonName] = useState<string>('SUBMERGED');
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([
-    { role: 'model', text: 'שלום! אני השופט הווירטואלי. אני מכיר את חוקי עונת Submerged. איך אני יכול לעזור?' }
+    { role: 'model', text: t('chat.greeting').replace('{season}', seasonName) }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
-  const [seasonName, setSeasonName] = useState<string>('SUBMERGED');
   const [selectedModel] = useState<string>('gemma-4-31b-it');
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
@@ -200,7 +208,7 @@ export default function PublicRulebookAI() {
       faviconElement.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='10' rx='2'/%3E%3Ccircle cx='12' cy='5' r='2'/%3E%3Cpath d='M12 7v4'/%3E%3Cline x1='8' y1='16' x2='8' y2='16'/%3E%3Cline x1='16' y1='16' x2='16' y2='16'/%3E%3C/svg%3E";
     }
     
-    document.title = 'שופט וירטואלי | FIRST Israel';
+    document.title = `${t('app.title')} | FIRST Israel`;
 
     return () => {
       document.title = originalTitle;
@@ -267,6 +275,16 @@ export default function PublicRulebookAI() {
   const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
 
   useEffect(() => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages.length > 0 && newMessages[0].role === 'model') {
+        newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', seasonName) };
+      }
+      return newMessages;
+    });
+  }, [language]);
+
+  useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'app_config', 'rulebook'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -275,7 +293,7 @@ export default function PublicRulebookAI() {
           setMessages(prev => {
             const newMessages = [...prev];
             if (newMessages.length > 0 && newMessages[0].role === 'model') {
-              newMessages[0].text = `שלום! אני השופט הווירטואלי. אני מכיר את חוקי עונת ${data.current_season}. איך אני יכול לעזור?`;
+              newMessages[0].text = t('chat.greeting').replace('{season}', data.current_season);
             }
             return newMessages;
           });
@@ -506,16 +524,17 @@ const fetchLatestRulebook = async () => {
           });
         },
         tripleJudgeMode,
-        thinkingConfigLevel
+        thinkingConfigLevel,
+        language
       );
       
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (lastMsg?.role === 'model') return prev;
-        return [...prev, { role: 'model', text: response || 'שגיאת תקשורת. אנא נסה שוב.' }];
+        return [...prev, { role: 'model', text: response || t('chat.commError') }];
       });
     } catch (error: any) {
-      const errMsg = error?.message || 'אבד הקשר. נסה שוב מאוחר יותר.';
+      const errMsg = error?.message || t('chat.connectionLost');
       setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
     } finally {
       setLoading(false);
@@ -524,10 +543,10 @@ const fetchLatestRulebook = async () => {
   };
 
   const quickQuestions = [
-    "האם מותר לרובוט להתרחב?",
-    "מה הניקוד למשימה 1?",
-    "מה העונש על נגיעה ברובוט?",
-    "חוקי אזור השיגור"
+    t('chat.suggestion1'),
+    t('chat.suggestion2'),
+    t('chat.suggestion3'),
+    t('chat.suggestion4')
   ];
 
   const playWhistleSound = () => {
@@ -603,7 +622,12 @@ const fetchLatestRulebook = async () => {
 
 
   return (
-    <div className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl">
+    <motion.div
+      initial={showEnterAnimation ? { opacity: 0, scale: 0.96, filter: 'blur(8px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
+    >
       
       {/* Referee Ribbon */}
       <div className="h-3.5 bg-[repeating-linear-gradient(45deg,#000000,#000000_15px,#ffffff_15px,#ffffff_30px)] border-b border-slate-950 w-full shrink-0 relative">
@@ -622,13 +646,13 @@ const fetchLatestRulebook = async () => {
               </div>
             </div>
             <div className="min-w-0">
-              <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
-                שופט וירטואלי <span className="text-[7px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400">Virtual Referee</span>
-              </h1>
+                <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
+                  {t('app.title')} <span className="text-[7px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400">{t('app.titleEn')}</span>
+                </h1>
               <div className="flex items-center gap-1 mt-0.5">
                 <span className={`w-[6px] h-[6px] md:w-2.5 md:h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
                 <span className="text-[7px] md:text-[10px] font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-1 md:px-1.5 py-[1px] md:py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-                  {isLearning ? 'מעדכן...' : seasonName}
+                  {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
             </div>
@@ -643,8 +667,8 @@ const fetchLatestRulebook = async () => {
                     onClick={() => setShowLogoutConfirm(true)} 
                     className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
                   >
-                    התנתק
-                  </button>
+                    {t('auth.logout')}
+                   </button>
                 </div>
                 <img 
                   src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
@@ -654,21 +678,22 @@ const fetchLatestRulebook = async () => {
               </div>
             ) : (
               <button 
-                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : handleGoogleLogin} 
+                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')} 
                 className="text-[10px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
               >
-                <span>{hasGoogleToken ? 'התנתק' : 'התחברות'}</span>
+                <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
             {showAdmin && (
               <button 
                 onClick={() => setShowUploadModal(true)}
                 className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
-                title="העלה חוקים"
+                title={t('admin.upload')}
               >
                 <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </button>
             )}
+            <LanguageSwitcher />
           </div>
         </div>
 
@@ -731,7 +756,7 @@ const fetchLatestRulebook = async () => {
                       <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-yellow-400 rounded-full border border-slate-950" />
                       <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-slate-950 rounded-full border border-white" />
                     </div>
-                    <span className="text-xs font-black text-slate-900">השופט הווירטואלי חושב...</span>
+                    <span className="text-xs font-black text-slate-900">{t('chat.thinking')}</span>
                   </div>
                   {thinkContent && (
                     <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap px-1 max-h-48 overflow-y-auto">
@@ -781,11 +806,11 @@ const fetchLatestRulebook = async () => {
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1 mb-1.5 md:mb-2">
                       <span className="text-[8px] md:text-[10px] font-black tracking-tight text-slate-905 bg-yellow-400 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000] flex items-center gap-1 uppercase">
-                        📋 שופט וירטואלי
+                         {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
                         <span className="text-[8px] md:text-[10px] font-black text-white bg-red-600 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000]">
-                           🚨 כרטיס שופט וירטואלי
+                            {t('chat.foulTag')}
                         </span>
                       )}
                     </div>
@@ -833,11 +858,11 @@ const fetchLatestRulebook = async () => {
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(finalRenderText);
-                        alert("התשובה הועתקה ללוח!");
+                        alert(t('chat.copied'));
                       }}
                       className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-red-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
                     >
-                      העתק
+                      {t('chat.copy')}
                     </button>
                     <button className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-green-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]">
                       👍
@@ -862,7 +887,7 @@ const fetchLatestRulebook = async () => {
                 <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-yellow-400 rounded-full border border-slate-950" />
                 <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-slate-950 rounded-full border border-white" />
               </div>
-              <span className="text-[10px] md:text-xs font-black text-slate-900">חושב...</span>
+              <span className="text-[10px] md:text-xs font-black text-slate-900">{t('chat.thinking2')}</span>
             </div>
           </motion.div>
         )}
@@ -891,7 +916,7 @@ const fetchLatestRulebook = async () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isLearning ? "השופט חוקר..." : "שאל את השופט..."}
+            placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
             disabled={loading || isLearning || isTypewriterActive}
             style={{ flex: 1, minWidth: 0 }}
             className="bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-[13px] md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
@@ -927,9 +952,9 @@ const fetchLatestRulebook = async () => {
                 <div className="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <UploadIcon className="w-8 h-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">העלאת חוקים חדשים</h3>
+                <h3 className="text-xl font-black text-slate-800">{t('admin.uploadTitle')}</h3>
                 <p className="text-slate-500 text-sm mt-2">
-                  העלה קובץ טקסט או PDF עם החוקים החדשים. ה-AI ילמד אותם מיד.
+                  {t('admin.uploadDesc')}
                 </p>
               </div>
 
@@ -938,7 +963,7 @@ const fetchLatestRulebook = async () => {
                 className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-blue-600/50 hover:bg-blue-600/5 transition-all group"
               >
                 <FileText className="w-10 h-10 text-slate-300 group-hover:text-blue-600 transition-colors" />
-                <span className="text-sm font-bold text-slate-400 group-hover:text-blue-600">לחץ לבחירת קובץ</span>
+                <span className="text-sm font-bold text-slate-400 group-hover:text-blue-600">{t('admin.uploadPick')}</span>
                 <input 
                   ref={fileInputRef}
                   type="file" 
@@ -951,7 +976,7 @@ const fetchLatestRulebook = async () => {
               {uploading && (
                 <div className="w-full space-y-2">
                   <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>מעלה ומעבד...</span>
+                    <span>{t('admin.uploading')}</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -967,7 +992,7 @@ const fetchLatestRulebook = async () => {
                 onClick={() => setShowUploadModal(false)}
                 className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
               >
-                ביטול
+                {t('admin.cancel')}
               </button>
             </motion.div>
           </motion.div>
@@ -1020,11 +1045,10 @@ const fetchLatestRulebook = async () => {
                       Digital Referee Assistant • FIRST Israel
                     </span>
                     
-                    <h2 className="text-4xl md:text-7xl font-black text-white mb-4 tracking-tighter italic uppercase">שופט זירה וירטואלי</h2>
+                    <h2 className="text-4xl md:text-7xl font-black text-white mb-4 tracking-tighter italic uppercase">{t('intro.subtitle')}</h2>
                     
                     <p className="text-slate-400 text-sm md:text-xl font-medium mb-6 max-w-lg md:max-w-3xl mx-auto leading-relaxed">
-                      מערכת בינה מלאכותית מתקדמת שנבנתה במיוחד עבור קהילת <span className="text-yellow-400 font-extrabold">FIRST ישראל</span> על ידי קבוצת <span className="text-white font-bold italic">Boeing <span className="text-primary not-italic">727</span></span>. 
-                      הפרויקט נולד מתוך רצון לתרום לקהילה, להנגיש את חוקי המשחק המורכבים בזמן אמת ולאפשר לכל קבוצה להגיע למצוינות מקצועית דרך ניתוח מצבים מדויק, פתרון קונפליקטים וקבלת החלטות מבוססת נתונים.
+                      {t('intro.descFull')}
                     </p>
 
                     {/* Features Container */}
@@ -1034,8 +1058,8 @@ const fetchLatestRulebook = async () => {
                           <Scale className="w-7 h-7 md:w-9 md:h-9" />
                         </div>
                         <div>
-                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">בירור חוקי המשחק</h4>
-                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">קבלת תשובות ישירות ומדויקות לגבי מה מותר ומה אסור לעשות במהלך המשחק.</p>
+                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">{t('intro.feature1Title')}</h4>
+                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">{t('intro.feature1Desc')}</p>
                         </div>
                       </div>
 
@@ -1044,8 +1068,8 @@ const fetchLatestRulebook = async () => {
                           <Zap className="w-7 h-7 md:w-9 md:h-9" />
                         </div>
                         <div>
-                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">גישה מהירה לעדכוני שיפוט</h4>
-                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">צפייה מהירה בהבהרות, פסיקות ושינויים שפורסמו לאורך העונה.</p>
+                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">{t('intro.feature2Title')}</h4>
+                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">{t('intro.feature2Desc')}</p>
                         </div>
                       </div>
 
@@ -1054,8 +1078,8 @@ const fetchLatestRulebook = async () => {
                     {/* Disclaimer */}
                     <div className="bg-red-950/50 border-2 border-red-500/40 rounded-2xl px-5 py-4 md:px-8 md:py-5 mb-6 md:mb-8 text-center shadow-[0_0_20px_rgba(239,68,68,0.1)]">
                       <p className="text-sm md:text-lg text-red-300 leading-relaxed font-bold">
-                        <span className="text-red-400 font-black">⚠️ שימו לב:</span>{' '}
-                        השופט הווירטואלי עלול לטעות או לפספס פרטים מסוימים. ככל שיגיעו עדכונים ושיפורים, התשובות יהיו מדויקות ואמינות יותר. זה חלק מתהליך ההתפתחות של המערכת.
+                        <span className="text-red-400 font-black">{t('intro.disclaimer')}</span>{' '}
+                        {t('intro.disclaimerDesc')}
                       </p>
                     </div>
 
@@ -1067,13 +1091,13 @@ const fetchLatestRulebook = async () => {
                             setShowIntro(false);
       setChatStarted(true);
                           } else {
-                            handleGoogleLogin();
+                            navigate('/login');
                           }
                         }}
                         className="w-full relative overflow-hidden group bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-4 md:py-5 px-6 rounded-2xl transition-all shadow-[0_10px_20px_rgba(250,204,21,0.15)] hover:shadow-[0_15px_30px_rgba(250,204,21,0.25)] hover:-translate-y-1 flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10 active:scale-[0.98]"
                       >
                         <span className="text-base md:text-2xl">
-                          {hasGoogleToken || user ? 'המשך לאפליקציה' : 'המשך לכניסה'}
+                          {hasGoogleToken || user ? t('intro.continue') : t('intro.continueLogin')}
                         </span>
                         <span className="text-xl group-hover:translate-x-1 transition-transform">🚀</span>
                       </button>
@@ -1095,22 +1119,22 @@ const fetchLatestRulebook = async () => {
                   <button 
                     onClick={() => setShowIntro(true)}
                     className="absolute top-4 right-4 text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors text-xs font-bold"
-                    title="חזרה להסבר"
+                    title={t('auth.back')}
                   >
-                    <span>חזרה ↩</span>
+                    <span>{t('auth.back')}</span>
                   </button>
 
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-700">
                     <Gavel className="w-8 h-8 md:w-10 md:h-10 text-white" />
                   </div>
                   
-                  <h2 className="text-2xl md:text-3xl font-black text-white mb-3 tracking-tight">התחברות מאובטחת</h2>
+                  <h2 className="text-2xl md:text-3xl font-black text-white mb-3 tracking-tight">{t('auth.loginTitle')}</h2>
                   <p className="text-slate-400 font-medium mb-6 text-sm md:text-base leading-relaxed">
-                    כדי להשתמש בבינה המלאכותית בצורה מאובטחת וללא תלות במפתחות פנימיים, אנא התחבר עם חשבון ה-Google שלך. ה-AI ירוץ תחת החשבון האישי שלך באופן אוטומטי!
+                    {t('auth.loginDesc')}
                   </p>
                   
                   <button
-                    onClick={handleGoogleLogin}
+                    onClick={() => navigate('/login')}
                     className="w-full relative overflow-hidden group bg-white text-slate-900 font-black py-4 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:-translate-y-1 cursor-pointer"
                   >
                     <div className="absolute inset-0 bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1118,7 +1142,7 @@ const fetchLatestRulebook = async () => {
                       <svg className="w-6 h-6" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" />
                       </svg>
-                      התחברות מאובטחת עם Google
+                      {t('auth.loginWithEmail')}
                     </span>
                   </button>
                   
@@ -1138,13 +1162,13 @@ const fetchLatestRulebook = async () => {
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={handleLogout}
-        title="התנתקות מהמערכת"
-        message="האם אתה בטוח שברצונך להתנתק מהמערכת?"
-        confirmText="כן, התנתק"
-        cancelText="ביטול"
+        title={t('auth.logoutConfirmTitle')}
+        message={t('auth.logoutConfirmMsg')}
+        confirmText={t('auth.logoutConfirmYes')}
+        cancelText={t('auth.logoutConfirmNo')}
         variant="warning"
       />
-    </div>
+    </motion.div>
   );
 }
 

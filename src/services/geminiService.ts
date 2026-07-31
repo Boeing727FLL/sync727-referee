@@ -299,7 +299,8 @@ export const GeminiService = {
     modelName: string = "gemma-4-31b-it",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
-    thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH'
+    thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
+    language: string = 'he'
   ) {
     try {
       console.log("Processing FLL Query directly on the client-side...");
@@ -352,7 +353,15 @@ export const GeminiService = {
       const currentParts: any[] = [];
 
       // 4. Set up official FLL Head Referee system prompt
-      const systemPrompt = `אתה שופט וירטואלי של FLL. מקורותיך: קבצי חוקים מצורפים + חיפוש Google בלבד.
+      const langNames: Record<string, string> = {
+        he: 'עברית', en: 'English', ar: 'العربية', es: 'Español',
+        fr: 'Français', de: 'Deutsch', ru: 'Русский', pt: 'Português',
+        it: 'Italiano', zh: '中文', ja: '日本語', ko: '한국어',
+      };
+      const langName = langNames[language] || 'English';
+      const systemPrompt = `CRITICAL: You MUST respond in ${langName} (language code: ${language}). ALL your answers must be in ${langName}. This overrides any other language instructions below.
+
+אתה שופט וירטואלי של FLL. מקורותיך: קבצי חוקים מצורפים + חיפוש Google בלבד.
 
 ⚠️⚠️⚠️ חשוב ביותר: ⚠️⚠️⚠️
 הקבצים המצורפים הם גרסה ישנה ולא מעודכנת! הם נועדו רק כמקור להתייחסות בלבד.
@@ -360,7 +369,7 @@ export const GeminiService = {
 לפני שאתה עונה על שאלה כלשהי, חפש בגוגל - גם אם המידע נראה לך ברור מהקבצים!
 
 סגנון דיבור:
-- דבר עברית רגילה, מקצועית וברורה
+- דבר ${langName} רגילה, מקצועית וברורה
 - אתה שופט זירה שמכיר את החוקים - לא מורה, לא חבר, לא יועץ
 - היה ברור ומדויק: ציין סכומים, כמויות, ומספרי חוקים
 - השתמש בפורמט: "לפי משימה X, התנאי הוא...", "הניקוד הוא Y נקודות"
@@ -380,10 +389,10 @@ export const GeminiService = {
 כל תשובה:
 1. **קודם כל** - בצע חיפוש Google רלוונטי
 2. פתח ב-<think> עם דיון: (א) מה חיפשת בגוגל, (ב) מה מצאת, (ג) השווה מול הקבצים, (ד) בדוק דיוק
-3. **סגור את <think> ואז כתוב תשובה מקצועית בעברית רגילה
+3. **סגור את <think> ואז כתוב תשובה מקצועית ב${langName} רגילה
 
 חוקים: חפש בגוגל תמיד, מגע הדדי (ציוד=דגם), אל תמציא, הפנה לשופט פיזי באי-ודאות.
-עברית ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
+${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
 
@@ -669,12 +678,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           role: 'user',
           parts: currentParts
         });
-      }
-
-      // 5. Verify the user is authenticated securely with Google OAuth
-      const userToken = localStorage.getItem('google_access_token');
-      if (!userToken) {
-        throw new Error("⚠️ חובה להתחבר עם חשבון Google כדי להשתמש בבינה המלאכותית! אנא התחבר דרך כפתור ההתחברות למעלה.");
       }
 
       const generateContentConfig: any = {
