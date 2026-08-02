@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 import {defineConfig, loadEnv} from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
@@ -25,101 +24,6 @@ export default defineConfig(({mode}) => {
     plugins: [
       react(),
       tailwindcss(),
-      VitePWA({
-        registerType: 'prompt',
-        includeAssets: ['AppLogo.png', 'logo.png', 'Logo2.png', 'silent.mp3'],
-        manifest: {
-          name: 'Sync 727 - Team OS',
-          short_name: 'Sync 727',
-          description: 'מערכת ניהול קבוצה חכמה לצוותי FLL',
-          theme_color: '#0f172a',
-          background_color: '#0f172a',
-          display: 'standalone',
-          orientation: 'portrait',
-          scope: '/',
-          start_url: '/',
-          icons: [
-            {
-              src: '/AppLogo.png?v=2',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any maskable'
-            },
-            {
-              src: '/AppLogo.png?v=2',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
-            },
-          ],
-        },
-        workbox: {
-          importScripts: ['/push-sw.js'],
-          maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2}'],
-          globIgnores: ['**/version.json'],
-          navigateFallback: '/index.html',
-          cleanupOutdatedCaches: true,
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                },
-              }
-            },
-            {
-              // Cache images aggressively
-              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'images-cache',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-                },
-              },
-            },
-            {
-              // Save external data (like FLL rules from R2, API data) on the device, 
-              // but always pull the latest updates in the background.
-              urlPattern: /^https:\/\/(pub-9b07ff19511b4468a47d28bb2cb58176\.r2\.dev|2d106fb460c2e5c4df4201020f56d44a\.r2\.cloudflarestorage\.com)\/.*/i,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'app-data-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
-            },
-          ]
-        },
-      })
     ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
