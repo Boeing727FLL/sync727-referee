@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
@@ -62,6 +63,9 @@ export default function LoginPage() {
           role: 'member',
           uid,
         });
+
+        // Registered users = users who actually signed up
+        trackRefereeUser(uid);
 
         await result.user.reload();
       } else {
@@ -166,6 +170,8 @@ export default function LoginPage() {
       setLoading(true);
       const authOk = await doAuth(pending.email, pending.password, pending.isSignUp, pending.name);
       if (authOk) {
+        const fbUid = auth.currentUser?.uid || 'anon';
+        trackRefereeUser(fbUid);
         setFaceIdDone(true);
         await new Promise(r => setTimeout(r, 400));
         setShowFaceId(false);

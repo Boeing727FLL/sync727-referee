@@ -507,12 +507,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn("Firebase signOut failed:", e);
     }
-    
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
-      console.warn("API logout call failed:", e);
-    }
 
     try {
       setUser(null);

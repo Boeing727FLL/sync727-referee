@@ -14,6 +14,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
+import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession } from '../lib/analytics';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const INTRO_STARS = [
   { top: '8%', left: '10%', size: 3, delay: '0s' },
@@ -49,6 +53,8 @@ export default function PublicRulebookAI() {
   const [chatStarted, setChatStarted] = useState<boolean>(false);
   const [showEnterAnimation, setShowEnterAnimation] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
+  const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
+  const logoTapTimesRef = useRef<number[]>([]);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent;
@@ -183,6 +189,56 @@ export default function PublicRulebookAI() {
     }
   }, [user, hasGoogleToken]);
 
+  // Resolve the real logged-in referee user uid (from auth context or the new LoginPage's localStorage)
+  const resolveRefereeUid = (): string | null => {
+    if (user?.uid) return user.uid;
+    try {
+      const authUser = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      if (authUser?.uid) return authUser.uid;
+    } catch (e) {}
+    return null;
+  };
+
+  // Presence + single-session lock: mark this user as online and watch for
+  // the same user logging in from another device (which kicks this one).
+  useEffect(() => {
+    const realUid = resolveRefereeUid();
+    const presenceUid = realUid || 'anon';
+    const cleanup = startPresence(presenceUid);
+    if (realUid) trackRefereeUser(realUid);
+
+    let unsubSession: (() => void) | undefined;
+    let disposed = false;
+    if (realUid) {
+      const deviceId = getDeviceId();
+      // Register first, then watch, so we don't kick ourselves on the initial snapshot.
+      registerSession(realUid, deviceId).then(() => {
+        if (disposed) return;
+        unsubSession = watchSession(realUid, deviceId, () => {
+          handleSessionKicked();
+        });
+      });
+    }
+
+    return () => {
+      disposed = true;
+      if (unsubSession) unsubSession();
+      cleanup();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
+  // Secret: 5 rapid taps on the logo opens the analytics panel
+  const handleLogoTap = () => {
+    const now = Date.now();
+    logoTapTimesRef.current = logoTapTimesRef.current.filter(t => now - t < 2000);
+    logoTapTimesRef.current.push(now);
+    if (logoTapTimesRef.current.length >= 5) {
+      logoTapTimesRef.current = [];
+      setShowAdminAnalytics(true);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -191,6 +247,19 @@ export default function PublicRulebookAI() {
     localStorage.removeItem('auth_user');
     setHasGoogleToken(false);
     setShowLogoutConfirm(false);
+  };
+
+  const [sessionKicked, setSessionKicked] = useState(false);
+
+  const handleSessionKicked = async () => {
+    // Another device logged in with the same user - force disconnect this one.
+    try {
+      await signOut(auth);
+    } catch (e) {}
+    localStorage.removeItem('google_access_token');
+    localStorage.removeItem('auth_user');
+    setHasGoogleToken(false);
+    setSessionKicked(true);
   };
   const [seasonName, setSeasonName] = useState<string>('SUBMERGED');
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([
@@ -516,6 +585,8 @@ const fetchLatestRulebook = async () => {
 
       let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
+      trackQuestion(resolveRefereeUid() || 'anon');
+      
       const response = await GeminiService.askRulebook(
         finalPrompt, 
         relevantMessages, 
@@ -651,7 +722,7 @@ const fetchLatestRulebook = async () => {
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border-2 border-slate-950 overflow-hidden">
-              <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
+              <img src="/logoref.png" alt="שופט וירטואלי" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
             </div>
             <div className="min-w-0">
                 <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
@@ -1120,7 +1191,8 @@ const fetchLatestRulebook = async () => {
                           <img
                             src="/logoref.png"
                             alt="שופט וירטואלי"
-                            className="relative w-full h-full object-contain drop-shadow-[0_26px_50px_rgba(250,204,21,0.35)]"
+                            onClick={handleLogoTap}
+                            className="relative w-full h-full object-contain drop-shadow-[0_26px_50px_rgba(250,204,21,0.35)] cursor-pointer select-none"
                           />
                           <div className="absolute inset-0 animate-orbit pointer-events-none">
                             <div className="absolute top-0 left-1/2 -ml-1.5 w-3 h-3 md:w-4 md:h-4 bg-[#37E0C8] rotate-45 shadow-[0_0_14px_rgba(55,224,200,1)]" />
@@ -1307,6 +1379,45 @@ const fetchLatestRulebook = async () => {
         cancelText={t('auth.logoutConfirmNo')}
         variant="warning"
       />
+
+      <AdminAnalyticsModal
+        isOpen={showAdminAnalytics}
+        onClose={() => setShowAdminAnalytics(false)}
+      />
+
+      <AnimatePresence>
+        {sessionKicked && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+            dir="rtl"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center"
+            >
+              <div className="p-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/15 flex items-center justify-center">
+                  <Scale className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">החשבון נפתח במקום אחר</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  המשתמש שלך נכנס ממכשיר אחר, ולכן התחברות זו נותקה כדי למנוע חוסר עקביות בנתוני האנליטיקס.
+                </p>
+                <button
+                  onClick={() => { setSessionKicked(false); navigate('/login'); }}
+                  className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
+                >
+                  חזרה לכניסה
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
