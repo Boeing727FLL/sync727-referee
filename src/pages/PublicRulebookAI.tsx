@@ -15,6 +15,21 @@ import { useLanguage } from '../hooks/useLanguage';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 
+const INTRO_STARS = [
+  { top: '8%', left: '10%', size: 3, delay: '0s' },
+  { top: '14%', left: '78%', size: 4, delay: '0.6s' },
+  { top: '22%', left: '32%', size: 2, delay: '1.2s' },
+  { top: '30%', left: '88%', size: 3, delay: '0.3s' },
+  { top: '36%', left: '6%', size: 2, delay: '1.8s' },
+  { top: '44%', left: '55%', size: 3, delay: '0.9s' },
+  { top: '52%', left: '14%', size: 2, delay: '2.1s' },
+  { top: '60%', left: '72%', size: 4, delay: '0.2s' },
+  { top: '68%', left: '40%', size: 2, delay: '1.5s' },
+  { top: '76%', left: '90%', size: 3, delay: '0.7s' },
+  { top: '84%', left: '22%', size: 2, delay: '1.1s' },
+  { top: '90%', left: '58%', size: 3, delay: '2.4s' },
+];
+
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const { connectDrive, user, logout } = useAuth();
@@ -204,8 +219,8 @@ export default function PublicRulebookAI() {
     
     if (faviconElement) {
       originalFavicon = faviconElement.href;
-      // Change to a bot/gavel SVG icon
-      faviconElement.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='10' rx='2'/%3E%3Ccircle cx='12' cy='5' r='2'/%3E%3Cpath d='M12 7v4'/%3E%3Cline x1='8' y1='16' x2='8' y2='16'/%3E%3Cline x1='16' y1='16' x2='16' y2='16'/%3E%3C/svg%3E";
+      // Change to the Virtual Referee logo
+      faviconElement.href = "/favicon-192.png?v=3";
     }
     
     document.title = `${t('app.title')} | FIRST Israel`;
@@ -616,10 +631,6 @@ const fetchLatestRulebook = async () => {
     ]);
   };
 
-  const RefereeIcon = () => (
-    <Gavel className="w-5 h-5 md:w-6 md:h-6 text-slate-950" />
-  );
-
 
   return (
     <motion.div
@@ -639,11 +650,8 @@ const fetchLatestRulebook = async () => {
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-slate-950 flex items-center justify-center shrink-0 shadow-md p-1 relative overflow-hidden">
-              <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,#000,#000_4px,#fff_4px,#fff_8px)] opacity-20" />
-              <div className="w-full h-full bg-yellow-400 rounded-lg flex items-center justify-center z-10 border border-slate-950/20">
-                <RefereeIcon />
-              </div>
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border-2 border-slate-950 overflow-hidden">
+              <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
                 <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
@@ -659,6 +667,14 @@ const fetchLatestRulebook = async () => {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
+            <div className="inline-flex items-center gap-2 md:gap-3 px-3 py-1 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
+              <div className="h-4 md:h-6 w-px bg-slate-300" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-[6px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
+                <span className="text-[9px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[8px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[8px] md:text-xs">Yuval Margalit</span></span>
+              </div>
+            </div>
             {hasGoogleToken && user ? (
               <div className="flex items-center gap-1 md:gap-3">
                 <div className="hidden sm:flex flex-col items-end">
@@ -696,21 +712,7 @@ const fetchLatestRulebook = async () => {
             <LanguageSwitcher />
           </div>
         </div>
-
-        {/* Row 2: Credit Bar */}
-        <div className="px-2 pb-1.5 md:px-4 md:pb-2">
-          <div className="flex items-center justify-center gap-2 md:gap-3 px-3 py-1 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000]">
-            <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
-            <div className="h-4 md:h-6 w-px bg-slate-300" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-[6px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
-              <span className="text-[9px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[8px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[8px] md:text-xs">Yuval Margalit</span></span>
-            </div>
-          </div>
-        </div>
       </div>
-
-
 
       {/* Chat Area - Green field canvas background */}
       <div className="flex-1 overflow-y-auto p-3 md:p-8 space-y-4 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
@@ -744,22 +746,33 @@ const fetchLatestRulebook = async () => {
           if (isThinking) {
             return (
               <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
-                <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)] flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-                  <div className="w-7 h-7 bg-yellow-400 rounded-md border border-slate-950/25 flex items-center justify-center text-xs text-slate-950 font-black animate-spin">
-                    ⏱️
-                  </div>
+                <div className="w-9 h-9 md:w-11 md:h-11 shrink-0 rounded-xl bg-white border-2 border-slate-950 shadow-[1px_1px_0px_#000] overflow-hidden flex items-center justify-center">
+                  <img src="/logoref.png" alt="" className="w-7 h-7 md:w-9 md:h-9 object-contain" />
                 </div>
-                <div className="bg-white border-2 border-slate-950 p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex flex-col gap-3 max-w-[85%] md:max-w-[75%]">
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1">
-                      <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 bg-red-600 rounded-full border border-slate-950" />
-                      <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-yellow-400 rounded-full border border-slate-950" />
-                      <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-slate-950 rounded-full border border-white" />
+                <div className="relative bg-white border-2 border-slate-950 p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex flex-col gap-3 max-w-[85%] md:max-w-[75%] overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-100/40 to-transparent -translate-x-full animate-shine pointer-events-none" />
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex items-end gap-1.5 md:gap-2 h-7 md:h-8">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="relative w-2.5 md:w-3 h-full flex items-end justify-center">
+                          <motion.span
+                            className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full relative z-10"
+                            style={{ background: 'linear-gradient(180deg, #fde047, #f59e0b)', boxShadow: '0 0 12px rgba(250,204,21,0.8)' }}
+                            animate={{ y: [0, -14, 0], scale: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
+                            transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: [0.45, 0.05, 0.55, 0.95] }}
+                          />
+                          <motion.span
+                            className="absolute bottom-0 w-3.5 h-1 rounded-[50%] bg-slate-950/15"
+                            animate={{ scaleX: [1, 0.4, 1], opacity: [0.4, 0.1, 0.4] }}
+                            transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: 'easeInOut' }}
+                          />
+                        </div>
+                      ))}
                     </div>
                     <span className="text-xs font-black text-slate-900">{t('chat.thinking')}</span>
                   </div>
                   {thinkContent && (
-                    <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap px-1 max-h-48 overflow-y-auto">
+                    <div className="relative text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap px-1 max-h-48 overflow-y-auto">
                       {thinkContent}
                     </div>
                   )}
@@ -777,7 +790,7 @@ const fetchLatestRulebook = async () => {
               className={`flex gap-2.5 md:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Referee or User Avatar Badge */}
-              <div className={`w-7 h-7 md:w-11 md:h-11 rounded-full flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
+              <div className={`w-7 h-7 md:w-11 md:h-11 ${msg.role === 'user' ? 'rounded-full' : 'rounded-xl'} flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
                 msg.role === 'user' 
                   ? 'bg-slate-100 text-slate-800' 
                   : 'bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)]'
@@ -789,8 +802,8 @@ const fetchLatestRulebook = async () => {
                     <User className="w-4 h-4 md:w-5 md:h-5 text-slate-850" />
                   )
                 ) : (
-                  <div className="absolute inset-0.5 bg-yellow-400 rounded-[6px] border border-slate-950/20 flex items-center justify-center text-slate-950 text-xs font-black">
-                    📢
+                  <div className="absolute inset-0.5 rounded-lg overflow-hidden bg-white">
+                    <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -876,18 +889,31 @@ const fetchLatestRulebook = async () => {
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-4">
-            <div className="w-7 h-7 md:w-11 md:h-11 rounded-xl bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)] flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
-              <div className="w-5 h-5 md:w-7 md:h-7 bg-yellow-400 rounded-md border border-slate-950/25 flex items-center justify-center text-[10px] md:text-xs text-slate-950 font-black animate-spin">
-                ⏱️
-              </div>
+            <div className="w-7 h-7 md:w-11 md:h-11 shrink-0 rounded-xl bg-white border-2 border-slate-950 shadow-[1px_1px_0px_#000] overflow-hidden flex items-center justify-center">
+              <img src="/logoref.png" alt="" className="w-5 h-5 md:w-9 md:h-9 object-contain" />
             </div>
-            <div className="bg-white border-2 border-slate-950 p-2.5 md:p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center gap-2 md:gap-3">
-              <div className="flex gap-0.5 md:gap-1">
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-600 rounded-full border border-slate-950" />
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-yellow-400 rounded-full border border-slate-950" />
-                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 md:w-2 md:h-2 bg-slate-950 rounded-full border border-white" />
+            <div className="relative bg-white border-2 border-slate-950 p-2.5 md:p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center gap-2 md:gap-3 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-100/40 to-transparent -translate-x-full animate-shine pointer-events-none" />
+              <div className="relative flex items-center gap-2">
+                <div className="flex items-end gap-1.5 h-6 md:h-8">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="relative w-2 md:w-3 h-full flex items-end justify-center">
+                      <motion.span
+                        className="w-2 h-2 md:w-3 md:h-3 rounded-full relative z-10"
+                        style={{ background: 'linear-gradient(180deg, #fde047, #f59e0b)', boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
+                        animate={{ y: [0, -12, 0], scale: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
+                        transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: [0.45, 0.05, 0.55, 0.95] }}
+                      />
+                      <motion.span
+                        className="absolute bottom-0 w-3 h-1 rounded-[50%] bg-slate-950/15"
+                        animate={{ scaleX: [1, 0.4, 1], opacity: [0.4, 0.1, 0.4] }}
+                        transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: 'easeInOut' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <span className="relative text-[10px] md:text-xs font-black text-slate-900">{t('chat.thinking2')}</span>
               </div>
-              <span className="text-[10px] md:text-xs font-black text-slate-900">{t('chat.thinking2')}</span>
             </div>
           </motion.div>
         )}
@@ -1005,7 +1031,7 @@ const fetchLatestRulebook = async () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 md:p-0 overflow-y-auto"
+            className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-start justify-center p-4 md:p-0 overflow-y-auto"
             dir="rtl"
           >
             <AnimatePresence mode="wait">
@@ -1016,92 +1042,205 @@ const fetchLatestRulebook = async () => {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -15 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-slate-900 border-2 border-slate-800 shadow-[0_0_30px_rgba(250,204,21,0.05)] rounded-3xl max-w-lg w-full text-center relative overflow-hidden my-auto md:max-w-none md:rounded-none md:h-full md:overflow-y-auto"
+                  className="relative w-full min-h-screen"
                 >
-                  <div className="h-2 bg-yellow-400 w-full" />
-                  
-                  {/* Premium Credit Header */}
-                  <div className="bg-slate-950/80 border-b border-slate-800/50 px-6 py-5 flex items-center justify-center gap-5 group hover:bg-slate-950 transition-all duration-500">
-                    <img 
-                      src="/boeing_727_logo_transparent_pure_red (1).png" 
-                      alt="Boeing 727" 
-                      className="h-12 md:h-14 w-auto object-contain drop-shadow-[0_0_20px_rgba(239,68,68,0.3)] group-hover:scale-110 transition-transform duration-500" 
-                    />
-                    <div className="h-10 w-[2px] bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-                    <div className="flex flex-col items-start leading-none">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-black tracking-tighter text-2xl italic group-hover:text-primary transition-colors duration-500">Boeing <span className="text-primary not-italic">727</span></span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.5em]">The Team</span>
-                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
-                      </div>
+                  {/* ===== Synthwave Arena Scene ===== */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1226] to-[#1a1030] overflow-hidden pointer-events-none">
+                    <div className="absolute -top-28 -right-28 w-[28rem] h-[28rem] bg-yellow-400/20 rounded-full blur-3xl animate-blob" />
+                    <div className="absolute top-1/4 -left-32 w-[28rem] h-[28rem] bg-[#37E0C8]/15 rounded-full blur-3xl animate-blob animation-delay-2000" />
+                    <div className="absolute -bottom-32 left-1/4 w-[28rem] h-[28rem] bg-[#7c3aed]/20 rounded-full blur-3xl animate-blob animation-delay-4000" />
+                    {INTRO_STARS.map((s, i) => (
+                      <span
+                        key={i}
+                        className="absolute rounded-full bg-white animate-twinkle"
+                        style={{ top: s.top, left: s.left, width: s.size, height: s.size, animationDelay: s.delay, boxShadow: '0 0 8px rgba(255,255,255,0.8)' }}
+                      />
+                    ))}
+                    {/* 3D floor grid */}
+                    <div className="absolute bottom-0 left-0 right-0 h-44 md:h-60" style={{ perspective: '500px' }}>
+                      <div
+                        className="absolute inset-x-[-40%] top-1/3 bottom-[-120%] animate-grid-move"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(90deg, rgba(55,224,200,0.30) 0, rgba(55,224,200,0.30) 1px, transparent 1px, transparent 56px), repeating-linear-gradient(0deg, rgba(55,224,200,0.30) 0, rgba(55,224,200,0.30) 1px, transparent 1px, transparent 56px)',
+                          backgroundSize: '56px 56px',
+                          transform: 'rotateX(63deg)',
+                          transformOrigin: 'center top',
+                        }}
+                      />
+                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#37E0C8]/70 shadow-[0_0_24px_rgba(55,224,200,0.9)] animate-horizon-glow" />
+                      <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-[#37E0C8]/15 to-transparent" />
                     </div>
                   </div>
 
-                  <div className="p-6 md:p-12 md:pt-8">
-                    {/* Digital Assistant Badge */}
-                    <span className="inline-block bg-slate-950 text-yellow-400 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-6 border border-yellow-400/30 shadow-[0_0_15px_rgba(250,204,21,0.05)]">
-                      Digital Referee Assistant • FIRST Israel
-                    </span>
-                    
-                    <h2 className="text-4xl md:text-7xl font-black text-white mb-4 tracking-tighter italic uppercase">{t('intro.subtitle')}</h2>
-                    
-                    <p className="text-slate-400 text-sm md:text-xl font-medium mb-6 max-w-lg md:max-w-3xl mx-auto leading-relaxed">
-                      {t('intro.descFull')}
-                    </p>
-
-                    {/* Features Container */}
-                    <div className="space-y-4 md:space-y-6 text-right mb-10 md:mb-14">
-                      <div className="p-5 md:p-6 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
-                        <div className="p-3 md:p-4 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
-                          <Scale className="w-7 h-7 md:w-9 md:h-9" />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">{t('intro.feature1Title')}</h4>
-                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">{t('intro.feature1Desc')}</p>
-                        </div>
-                      </div>
-
-                      <div className="p-5 md:p-6 bg-slate-950/60 rounded-3xl border border-slate-800/80 flex items-start gap-5 hover:border-yellow-400/40 transition-all duration-300 group hover:bg-slate-900/60 hover:-translate-y-1 shadow-xl">
-                        <div className="p-3 md:p-4 bg-yellow-400/10 rounded-2xl text-yellow-400 group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
-                          <Zap className="w-7 h-7 md:w-9 md:h-9" />
-                        </div>
-                        <div>
-                          <h4 className="text-base md:text-2xl font-black text-slate-100 group-hover:text-yellow-400 transition-colors">{t('intro.feature2Title')}</h4>
-                          <p className="text-xs md:text-base text-slate-500 leading-relaxed font-medium mt-1">{t('intro.feature2Desc')}</p>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* Disclaimer */}
-                    <div className="bg-red-950/50 border-2 border-red-500/40 rounded-2xl px-5 py-4 md:px-8 md:py-5 mb-6 md:mb-8 text-center shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-                      <p className="text-sm md:text-lg text-red-300 leading-relaxed font-bold">
-                        <span className="text-red-400 font-black">{t('intro.disclaimer')}</span>{' '}
-                        {t('intro.disclaimerDesc')}
-                      </p>
-                    </div>
-
-                    {/* Action Button */}
-                    <div className="flex flex-col gap-4">
-                      <button
-                        onClick={() => {
-                          if (hasGoogleToken || user) {
-                            setShowIntro(false);
-      setChatStarted(true);
-                          } else {
-                            navigate('/login');
-                          }
-                        }}
-                        className="w-full relative overflow-hidden group bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-4 md:py-5 px-6 rounded-2xl transition-all shadow-[0_10px_20px_rgba(250,204,21,0.15)] hover:shadow-[0_15px_30px_rgba(250,204,21,0.25)] hover:-translate-y-1 flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10 active:scale-[0.98]"
+                  {/* ===== Content ===== */}
+                  <div className="relative z-10 flex flex-col min-h-full">
+                    {/* Premium Credit Header */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center"
+                    >
+                      <motion.div
+                        whileHover={{ rotateY: 8, rotateX: -6, scale: 1.05 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        style={{ transformStyle: 'preserve-3d' }}
+                        className="flex items-center gap-4 md:gap-6"
                       >
-                        <span className="text-base md:text-2xl">
-                          {hasGoogleToken || user ? t('intro.continue') : t('intro.continueLogin')}
-                        </span>
-                        <span className="text-xl group-hover:translate-x-1 transition-transform">🚀</span>
-                      </button>
+                        <img
+                          src="/boeing_727_logo_transparent_pure_red (1).png"
+                          alt="Boeing 727"
+                          className="h-12 md:h-16 w-auto object-contain drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                        />
+                        <div className="h-10 w-[2px] bg-gradient-to-b from-transparent via-slate-600 to-transparent" />
+                        <div className="flex flex-col items-start leading-none">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-black tracking-tighter text-2xl md:text-3xl italic">Boeing <span className="text-primary not-italic">727</span></span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.5em]">The Team</span>
+                            <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
 
+                    <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-10 py-6 md:py-10 text-center">
+                      {/* 3D Floating Logo */}
+                      <div className="mb-5 md:mb-8" style={{ perspective: '1000px' }}>
+                        <motion.div
+                          animate={{ rotateY: [-14, 14, -14], rotateX: [12, -6, 12], y: [0, -10, 0] }}
+                          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ transformStyle: 'preserve-3d' }}
+                          className="relative w-28 h-28 md:w-44 md:h-44 mx-auto"
+                        >
+                          <div className="absolute -inset-5 rounded-[28%] bg-yellow-400/25 blur-2xl animate-horizon-glow" />
+                          <div className="absolute -inset-1 rounded-[24%] border-2 border-yellow-400/40" style={{ transform: 'translateZ(24px)' }} />
+                          <img
+                            src="/logoref.png"
+                            alt="שופט וירטואלי"
+                            className="relative w-full h-full object-contain drop-shadow-[0_26px_50px_rgba(250,204,21,0.35)]"
+                          />
+                          <div className="absolute inset-0 animate-orbit pointer-events-none">
+                            <div className="absolute top-0 left-1/2 -ml-1.5 w-3 h-3 md:w-4 md:h-4 bg-[#37E0C8] rotate-45 shadow-[0_0_14px_rgba(55,224,200,1)]" />
+                          </div>
+                          <div className="absolute inset-0 animate-orbit pointer-events-none" style={{ animationDirection: 'reverse', animationDuration: '14s' }}>
+                            <div className="absolute top-1/2 right-0 -mt-1 w-2 h-2 md:w-3 md:h-3 bg-yellow-400 rotate-45 shadow-[0_0_12px_rgba(250,204,21,1)]" />
+                          </div>
+                          <div className="absolute inset-0 animate-orbit pointer-events-none" style={{ animationDuration: '18s' }}>
+                            <div className="absolute bottom-0 left-1/4 w-2 h-2 md:w-2.5 md:h-2.5 bg-[#7c3aed] rotate-45 shadow-[0_0_12px_rgba(124,58,237,1)]" />
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      {/* Badge */}
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.15, duration: 0.4 }}
+                        className="inline-block bg-slate-950/80 text-yellow-400 text-[10px] md:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-4 md:mb-6 border border-yellow-400/40 shadow-[0_0_20px_rgba(250,204,21,0.2)] backdrop-blur-sm"
+                      >
+                        Digital Referee Assistant • FIRST Israel
+                      </motion.span>
+
+                      {/* 3D Title */}
+                      <div className="relative mb-3 md:mb-5 max-w-4xl mx-auto w-full">
+                        <h2 className="relative z-10 flex flex-wrap items-center justify-center gap-2 md:gap-3 text-4xl md:text-7xl font-black text-white uppercase leading-tight">
+                          {t('intro.subtitle').split(' ').map((word, i) => (
+                            <motion.span
+                              key={i}
+                              initial={{ opacity: 0, rotateX: -90, y: 18 }}
+                              animate={{ opacity: 1, rotateX: 0, y: 0 }}
+                              transition={{ delay: 0.2 + i * 0.12, duration: 0.5, type: 'spring', stiffness: 160 }}
+                              style={{ transformStyle: 'preserve-3d' }}
+                              className="bg-gradient-to-b from-white via-yellow-100 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_4px_20px_rgba(250,204,21,0.25)]"
+                            >
+                              {word}
+                            </motion.span>
+                          ))}
+                        </h2>
+                      </div>
+
+                      <motion.p
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.5 }}
+                        className="text-slate-300/90 text-sm md:text-xl font-medium mb-6 md:mb-10 max-w-3xl mx-auto leading-relaxed"
+                      >
+                        {t('intro.descFull')}
+                      </motion.p>
+
+                      {/* Features 3D */}
+                      <div className="space-y-3 md:space-y-5 text-right w-full max-w-2xl mb-8 md:mb-12" style={{ perspective: '1200px' }}>
+                        {[
+                          { icon: <Scale className="w-7 h-7 md:w-9 md:h-9" />, title: t('intro.feature1Title'), desc: t('intro.feature1Desc'), delay: 0.6 },
+                          { icon: <Zap className="w-7 h-7 md:w-9 md:h-9" />, title: t('intro.feature2Title'), desc: t('intro.feature2Desc'), delay: 0.75 },
+                        ].map((f, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: i === 0 ? -40 : 40, rotateY: i === 0 ? 14 : -14 }}
+                            animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                            transition={{ delay: f.delay, duration: 0.5 }}
+                            whileHover={{ y: -6, rotateX: -6, scale: 1.02 }}
+                            style={{ transformStyle: 'preserve-3d' }}
+                            className="p-4 md:p-6 bg-slate-950/60 backdrop-blur-sm rounded-2xl md:rounded-3xl border border-white/10 flex items-start gap-4 md:gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] hover:border-yellow-400/50 transition-colors duration-300"
+                          >
+                            <div style={{ transform: 'translateZ(28px)' }}>
+                              <motion.div
+                                whileHover={{ rotate: 12, scale: 1.15 }}
+                                className="p-3 md:p-4 bg-yellow-400/10 rounded-xl md:rounded-2xl text-yellow-400 border border-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.15)]"
+                              >
+                                {f.icon}
+                              </motion.div>
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-base md:text-2xl font-black text-slate-100 mb-1">{f.title}</h4>
+                              <p className="text-xs md:text-base text-slate-400 leading-relaxed font-medium">{f.desc}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Disclaimer */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.9, duration: 0.4 }}
+                        className="bg-red-950/40 backdrop-blur-sm border-2 border-red-500/40 rounded-2xl px-4 py-3 md:px-8 md:py-4 mb-6 md:mb-8 text-center shadow-[0_0_24px_rgba(239,68,68,0.12)] max-w-2xl w-full"
+                      >
+                        <p className="text-xs md:text-lg text-red-300 leading-relaxed font-bold">
+                          <span className="text-red-400 font-black">{t('intro.disclaimer')}</span>{' '}
+                          {t('intro.disclaimerDesc')}
+                        </p>
+                      </motion.div>
+
+                      {/* CTA */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.0, duration: 0.4 }}
+                        className="w-full max-w-md mx-auto"
+                      >
+                        <button
+                          onClick={() => {
+                            if (hasGoogleToken || user) {
+                              setShowIntro(false);
+                              setChatStarted(true);
+                            } else {
+                              navigate('/login');
+                            }
+                          }}
+                          className="relative w-full overflow-hidden group bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-4 md:py-5 px-6 rounded-2xl transition-all duration-300 shadow-[0_12px_30px_rgba(250,204,21,0.25)] hover:shadow-[0_18px_45px_rgba(250,204,21,0.4)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.96] flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10"
+                        >
+                          <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 to-transparent opacity-60" />
+                          <span className="pointer-events-none absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/70 to-transparent animate-shine" />
+                          <span className="relative text-base md:text-2xl">
+                            {hasGoogleToken || user ? t('intro.continue') : t('intro.continueLogin')}
+                          </span>
+                          <span className="relative text-xl md:text-2xl group-hover:translate-x-1 group-hover:scale-125 transition-transform">🚀</span>
+                        </button>
+                      </motion.div>
                     </div>
                   </div>
                 </motion.div>

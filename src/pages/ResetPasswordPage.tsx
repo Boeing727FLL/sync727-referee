@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Gavel, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -108,8 +108,8 @@ export default function ResetPasswordPage() {
 
           <div className="p-8">
             {/* Logo */}
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner border border-slate-700">
-              <Gavel className="w-8 h-8 text-yellow-400" />
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-[3px_3px_0px_#000] border-2 border-slate-950">
+              <img src="/logoref.png" alt="שופט וירטואלי" className="w-10 h-10 object-contain" />
             </div>
 
             <h1 className="text-2xl font-black text-white text-center mb-1">איפוס סיסמה</h1>

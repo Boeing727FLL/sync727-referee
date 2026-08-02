@@ -109,3 +109,41 @@
   margin: 0;
   padding: 0;
 }
+
+/* ---------- Intro / Synthwave Arena ---------- */
+@keyframes grid-move {
+  0% { background-position-y: 0; }
+  100% { background-position-y: 56px; }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.2); }
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes orbit {
+  0% { transform: rotate(0deg) translateX(52px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(52px) rotate(-360deg); }
+}
+
+@keyframes shine {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(240%) skewX(-20deg); }
+}
+
+@keyframes horizon-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.animate-grid-move { animation: grid-move 2.4s linear infinite; }
+.animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+.animate-orbit { animation: orbit 9s linear infinite; }
+.animate-shine { animation: shine 2.8s ease-in-out infinite; }
+.animate-horizon-glow { animation: horizon-glow 2.2s ease-in-out infinite; }

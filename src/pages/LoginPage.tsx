@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswor
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, Gavel, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
 function OrbitItem({ progress, angle, children }: { progress: MotionValue<number>; angle: number; children: React.ReactNode }) {
   const x = useTransform(() => Math.cos((angle + progress.get()) * Math.PI / 180) * 170);
@@ -40,9 +40,10 @@ export default function LoginPage() {
   const [isConverging, setIsConverging] = useState(false);
   const [showFaceId, setShowFaceId] = useState(false);
   const [faceIdDone, setFaceIdDone] = useState(false);
+  const [faceIdError, setFaceIdError] = useState<string | null>(null);
   const pendingAuthRef = useRef<{ email: string; password: string; isSignUp: boolean; name: string } | null>(null);
 
-  const doAuth = async (emailVal: string, passwordVal: string, isSignUpMode: boolean, nameVal: string) => {
+  const doAuth = async (emailVal: string, passwordVal: string, isSignUpMode: boolean, nameVal: string): Promise<boolean> => {
     try {
       let uid: string;
       let userEmail: string;
@@ -79,33 +80,31 @@ export default function LoginPage() {
         isAdmin: false,
       }));
 
-      setShowFaceId(false);
       setLoading(false);
-      setShowSuccess(true);
-
-      setTimeout(() => setIsConverging(true), 4500);
-      setTimeout(() => setIsFadingOut(true), 5000);
-      setTimeout(() => navigate('/?enter=chat'), 5500);
+      return true;
     } catch (err: any) {
       setLoading(false);
-      setShowFaceId(false);
       setFaceIdDone(false);
+      let msg: string;
       const code = err.code;
       if (code === 'auth/email-already-in-use') {
-        setError('כבר קיים חשבון עם האימייל הזה. נסה להתחבר.');
+        msg = 'כבר קיים חשבון עם האימייל הזה. נסה להתחבר.';
       } else if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
-        setError('אימייל או סיסמה שגויים.');
+        msg = 'אימייל או סיסמה שגויים.';
       } else if (code === 'auth/wrong-password') {
-        setError('סיסמה שגויה.');
+        msg = 'סיסמה שגויה.';
       } else if (code === 'auth/weak-password') {
-        setError('הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.');
+        msg = 'הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.';
       } else if (code === 'auth/invalid-email') {
-        setError('כתובת אימייל לא תקינה.');
+        msg = 'כתובת אימייל לא תקינה.';
       } else if (code === 'auth/too-many-requests') {
-        setError('יותר מדי ניסיונות. נסה שוב מאוחר יותר.');
+        msg = 'יותר מדי ניסיונות. נסה שוב מאוחר יותר.';
       } else {
-        setError(err.message);
+        msg = err.message;
       }
+      setError(msg);
+      setFaceIdError(msg);
+      return false;
     }
   };
 
@@ -115,15 +114,7 @@ export default function LoginPage() {
     pendingAuthRef.current = { email, password, isSignUp, name };
     setShowFaceId(true);
     setFaceIdDone(false);
-  };
-
-  const handleFaceIdComplete = async () => {
-    setFaceIdDone(true);
-    await new Promise(r => setTimeout(r, 400));
-    const pending = pendingAuthRef.current;
-    if (!pending) return;
-    setLoading(true);
-    await doAuth(pending.email, pending.password, pending.isSignUp, pending.name);
+    setFaceIdError(null);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -161,12 +152,6 @@ export default function LoginPage() {
   const orbitProgress = useMotionValue(0);
 
   useEffect(() => {
-    if (faceIdDone) {
-      handleFaceIdComplete();
-    }
-  }, [faceIdDone]);
-
-  useEffect(() => {
     const controls = animate(orbitProgress, 360, { duration: 8, repeat: Infinity, ease: 'linear' });
     return controls.stop;
   }, [orbitProgress]);
@@ -174,7 +159,27 @@ export default function LoginPage() {
   useEffect(() => {
     if (!showFaceId) return;
     setFaceIdDone(false);
-    const timer = setTimeout(() => setFaceIdDone(true), 2500);
+    setFaceIdError(null);
+    const timer = setTimeout(async () => {
+      const pending = pendingAuthRef.current;
+      if (!pending) return;
+      setLoading(true);
+      const authOk = await doAuth(pending.email, pending.password, pending.isSignUp, pending.name);
+      if (authOk) {
+        setFaceIdDone(true);
+        await new Promise(r => setTimeout(r, 400));
+        setShowFaceId(false);
+        setShowSuccess(true);
+        setTimeout(() => setIsConverging(true), 4500);
+        setTimeout(() => setIsFadingOut(true), 5000);
+        setTimeout(() => navigate('/?enter=chat'), 5500);
+      } else {
+        setFaceIdDone(false);
+        await new Promise(r => setTimeout(r, 2500));
+        setShowFaceId(false);
+        setFaceIdError(null);
+      }
+    }, 2500);
     return () => clearTimeout(timer);
   }, [showFaceId]);
 
@@ -202,8 +207,8 @@ export default function LoginPage() {
           </button>
 
           <div className="p-6 md:p-8 pt-14">
-            <div className="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner border border-slate-700">
-              {showReset ? <KeyRound className="w-7 h-7 text-white" /> : <Gavel className="w-7 h-7 text-white" />}
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-[3px_3px_0px_#000] border-2 border-slate-950">
+              {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.png" alt="שופט וירטואלי" className="w-9 h-9 object-contain" />}
             </div>
 
             <AnimatePresence mode="wait">
@@ -451,7 +456,7 @@ export default function LoginPage() {
             className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900"
           >
             <div className="relative w-full h-full flex items-center justify-center">
-              {/* Center Gavel */}
+              {/* Center Logo */}
               <motion.div
                 initial={{ scale: 0, rotate: -20 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -463,8 +468,8 @@ export default function LoginPage() {
                   transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   className="absolute -inset-4 rounded-full bg-yellow-400/15 blur-2xl"
                 />
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.3)] relative">
-                  <Gavel className="w-12 h-12 text-slate-900" />
+                <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.3)] relative border-2 border-slate-950">
+                  <img src="/logoref.png" alt="שופט וירטואלי" className="w-16 h-16 object-contain" />
                 </div>
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
@@ -540,7 +545,7 @@ export default function LoginPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm"
-            onClick={() => { if (!faceIdDone) { setShowFaceId(false); } }}
+            onClick={() => { if (!faceIdDone && !faceIdError) { setShowFaceId(false); } else if (faceIdError) { setShowFaceId(false); setFaceIdError(null); } }}
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -566,7 +571,7 @@ export default function LoginPage() {
                 </svg>
 
                 {/* Scanning line */}
-                {!faceIdDone && (
+                {!faceIdDone && !faceIdError && (
                   <motion.div
                     initial={{ top: '10%' }}
                     animate={{ top: ['10%', '85%', '10%'] }}
@@ -578,7 +583,7 @@ export default function LoginPage() {
 
                 {/* Checkmark on done */}
                 <AnimatePresence>
-                  {faceIdDone && (
+                  {faceIdDone && !faceIdError && (
                     <motion.div
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
@@ -598,15 +603,44 @@ export default function LoginPage() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* X on failure */}
+                <AnimatePresence>
+                  {faceIdError && !faceIdDone && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.4)]">
+                        <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <motion.path
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            transition={{ duration: 0.25 }}
+                            d="M6 6l12 12"
+                          />
+                          <motion.path
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            transition={{ duration: 0.25, delay: 0.2 }}
+                            d="M18 6L6 18"
+                          />
+                        </svg>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <motion.p
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-white font-bold text-sm"
+                className="text-white font-bold text-sm text-center px-6"
               >
-                {faceIdDone ? 'האימות הושלם' : 'מזהה אותך...'}
+                {faceIdError && !faceIdDone ? faceIdError : faceIdDone ? 'האימות הושלם' : 'מזהה אותך...'}
               </motion.p>
             </motion.div>
           </motion.div>

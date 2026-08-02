@@ -364,9 +364,12 @@ export const GeminiService = {
 אתה שופט וירטואלי של FLL. מקורותיך: קבצי חוקים מצורפים + חיפוש Google בלבד.
 
 ⚠️⚠️⚠️ חשוב ביותר: ⚠️⚠️⚠️
-הקבצים המצורפים הם גרסה ישנה ולא מעודכנת! הם נועדו רק כמקור להתייחסות בלבד.
-המקור המעודכן וה权威 הוא Google! חיפוש Google הוא המקור היחיד והעיקרי שלך לתשובות!
-לפני שאתה עונה על שאלה כלשהי, חפש בגוגל - גם אם המידע נראה לך ברור מהקבצים!
+קבצי החוקים המצורפים (ה-PDF) הם המקור הראשי והסמכותי שלך לפסיקות ולניקוד!
+עליך לעיין בקבצים המצורפים ביסודיות לפני כל תשובה - הם הבסיס לכל פסק.
+אתה חייב לצטט את מספר החוק והניקוד המדויק מתוך הקבצים המצורפים בכל תשובה.
+⚠️ שים לב במיוחד להחרגות ולחריגים (Exemptions/Exceptions) שכתובים בחוקים! לעיתים קרובות לחוק יש החרגה כגון: "אלא אם", "חריג", "אבל לא", "במקרים של", "יוצא מן הכלל", "פרט ל-", "לא כולל" - החרגות אלה חייבות להיכלל בפסיקתך ולהשפיע על הניקוד. אין להציג חוק כמוחלט אם יש לו החרגה כתובה - בדוק תמיד קודם אם קיימת החרגה לחוק הרלוונטי וציין אותה במפורש בתשובה.
+חיפוש Google משמש רק להשלמה ולעדכונים - אם הקבצים המצורפים מכסים את הנושא, הסתמך עליהם קודם.
+השתמש בחיפוש Google בעיקר כשיש סתירה, נתון חסר, או שאלה על עדכונים חדשים שאינם בקבצים.
 
 סגנון דיבור:
 - דבר ${langName} רגילה, מקצועית וברורה
@@ -377,9 +380,9 @@ export const GeminiService = {
 - אל תדבר כמו ילד או כמו פרסומת - דבר כמו מקצוען
 - בסיום, אפשר להוסיף משפט עידוד קצר ומקצועי
 
-🔍 חיפוש Google - חובה!
-הכלי Google Search זמין לך. חפש בגוגל לפני כל תשובה, תמיד, בלי יוצא מן הכלל.
-הקבצים מצורפים רק כהשוואה - גוגל הוא המקור המ authority!
+🔍 חיפוש Google - משלים!
+הכלי Google Search זמין לך. חפש בגוגל רק כדי להשלים, לאמת עדכונים, או לפתור סתירות שלא מכוסות בקבצים המצורפים.
+הקבצים המצורפים (ה-PDF) הם המקור הראשי והסמכותי - תעדיף אותם על פני כל מקור אחר!
 
 דוגמאות לחיפושים:
 - "FLL UNEARTHED Mission [מספר] scoring points"
@@ -387,11 +390,16 @@ export const GeminiService = {
 - "FIRST LEGO League UNEARTHED game manual"
 
 כל תשובה:
-1. **קודם כל** - בצע חיפוש Google רלוונטי
-2. פתח ב-<think> עם דיון: (א) מה חיפשת בגוגל, (ב) מה מצאת, (ג) השווה מול הקבצים, (ד) בדוק דיוק
-3. **סגור את <think> ואז כתוב תשובה מקצועית ב${langName} רגילה
+1. **קודם כל** - עיין ביסודיות בקבצי החוקים המצורפים (ה-PDF) ומצא את החוקים הרלוונטיים
+2. השתמש בחיפוש Google רק במידת הצורך - להשלמה, עדכונים או אימות
+3. פתח ב-<think> עם דיון: (א) איזה חוק בקבצים רלוונטי, (ב) האם יש לחוק הזה החרגה או חריג כתוב, (ג) מה מצאת בגוגל אם חיפשת, (ד) השווה והכריע כולל ההחרגה, (ה) בדוק דיוק
+4. **סגור את <think> ואז כתוב תשובה מקצועית ב${langName} רגילה, מצטט את מספרי החוקים מתוך הקבצים
 
-חוקים: חפש בגוגל תמיד, מגע הדדי (ציוד=דגם), אל תמציא, הפנה לשופט פיזי באי-ודאות.
+חוקים: עיין בקבצי ה-PDF המצורפים לפני כל תשובה, מגע הדדי (ציוד=דגם), אל תמציא, הפנה לשופט פיזי באי-ודאות.
+הקפד לבדוק ולהיכלל כל החרגה (Exemption) כתובה בחוקים ולתת לה משקל מלא בפסיקה ובניקוד - חוק עם החרגה אינו חל במלואו במקרה שחלה ההחרגה.
+חובה לסרוק כל עמוד בספר החוקים, ואם כתובה בו המילה "החרגה" או "חריג" - לקרוא את ההחרגה ולכלול אותה בפסיקה.
+עיקרון הכוונה בעצירת הרובוט: משמעותה של מגע או עצירה של הרובוט מחוץ לבית תלויה בכוונת הקבוצה להמשיך לשגר שוב באותו מקצה. אם הקבוצה סיימה את פעולתה באותו מקצה ואינה מתכוונת לשגר שוב - אין לראות בעצירה כהפרה ואין להעניש כלל, באשר תהיה סיבת העצירה. הפעל את העיקרון הזה בעצמך: זהה ראשית האם מדובר בעצירה סופית חסרת כוונה לשגר מחדש, ורק אם קיימת כוונה לשגר שוב - בדוק את הכלל הרגיל של מגע/עצירה מחוץ לבית.
+במקרה של סתירה בין חוקי הבסיס במדריך לבין מסמך העדכונים (Updates), מסמך העדכונים תמיד קובע ומבטל את חוק הבסיס.
 ${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
@@ -615,6 +623,12 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                     if (uploadAttempts >= 15) throw new Error(`All rotated API keys are invalid. Could not upload ${fileName}.`);
                     currentApiKey = await getNextApiKey();
                     uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
+                  } else if (errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+                    if (uploadAttempts >= 15) throw new Error(`שגיאה בהעלאת הקובץ ${fileName} למודל בינה מלאכותית. ${uploadErr}`);
+                    currentApiKey = await getNextApiKey();
+                    uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
+                    console.warn(`Quota exceeded (429) during upload, rotating API key and retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                   } else {
                     throw new Error(`שגיאה בהעלאת הקובץ ${fileName} למודל בינה מלאכותית. ${uploadErr}`);
                   }
@@ -1043,15 +1057,23 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             }
             // Need to get a new key for the next attempt
             currentApiKey = await getNextApiKey();
-          } else if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("Too Many Requests")) {
-            const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests");
-            const delay = is429 ? 15000 : 2000;
-            console.warn(`Transient error on attempt ${attempts}: ${errMsg}. Retrying in ${delay/1000}s...`);
-            if (attempts >= maxAttempts) {
-              if (is429) return 'מערכת השופט עמוסה כרגע. אנא נסה שוב בעוד דקה.';
-              throw genErr;
+          } else if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded")) {
+            const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED");
+            if (is429) {
+              currentApiKey = await getNextApiKey();
+              console.warn(`Quota exceeded (429) on attempt ${attempts}. Rotating API key, retrying...`);
+              if (attempts >= maxAttempts) {
+                return 'מערכת השופט עמוסה כרגע. אנא נסה שוב בעוד דקה.';
+              }
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+              const delay = 2000;
+              console.warn(`Transient error on attempt ${attempts}: ${errMsg}. Retrying in ${delay/1000}s...`);
+              if (attempts >= maxAttempts) {
+                throw genErr;
+              }
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
-            await new Promise(resolve => setTimeout(resolve, delay));
           } else {
             throw genErr; // Other unrecoverable errors throw immediately
           }
