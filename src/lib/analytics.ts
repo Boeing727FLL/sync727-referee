@@ -30,11 +30,13 @@ export async function trackRefereeUser(uid: string) {
   }
 }
 
-export function startPresence(uid: string): () => void {
+export function startPresence(uid: string, deviceId?: string): () => void {
+  const devId = deviceId || getDeviceId();
   const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const presenceRef = doc(db, 'presence', sessionId);
   const touch = () => setDoc(presenceRef, {
     uid,
+    deviceId: devId,
     onlineAt: serverTimestamp()
   }, { merge: true }).catch((e) => console.warn("startPresence failed:", e));
   touch();
@@ -45,22 +47,47 @@ export function startPresence(uid: string): () => void {
   };
 }
 
+// A user counts as online only when their presence doc comes from the device
+// that currently owns the active session for that user (see registerSession).
+// This filters out stale/leftover docs from old tabs, other devices and 'anon'.
 export function onOnlineUsersChange(callback: (count: number) => void): () => void {
-  return onSnapshot(collection(db, 'presence'), (snap) => {
+  const freshPresence: { uid: string; deviceId?: string }[] = [];
+  const activeByUid: Record<string, string> = {};
+
+  const push = () => {
+    const counted = new Set<string>();
+    for (const p of freshPresence) {
+      const active = activeByUid[p.uid];
+      if (active && p.deviceId === active) counted.add(p.uid);
+    }
+    callback(counted.size);
+  };
+
+  const unsubPresence = onSnapshot(collection(db, 'presence'), (snap) => {
     const now = Timestamp.now();
     const cutoff = new Timestamp(now.seconds - 120, now.nanoseconds);
-    const uids = new Set<string>();
+    freshPresence.length = 0;
     snap.docs.forEach(d => {
       const data = d.data();
       const uid = data?.uid;
-      const onlineAt = data?.onlineAt;
       if (!uid) return;
       // Ignore stale docs left behind by tabs/sessions that closed uncleanly
-      if (!onlineAt || onlineAt.seconds < cutoff.seconds) return;
-      uids.add(uid);
+      if (!data.onlineAt || data.onlineAt.seconds < cutoff.seconds) return;
+      freshPresence.push({ uid, deviceId: data.deviceId });
     });
-    callback(uids.size);
+    push();
   }, (err) => console.warn("presence snapshot failed:", err));
+
+  const unsubSessions = onSnapshot(collection(db, 'sessions'), (snap) => {
+    for (const k of Object.keys(activeByUid)) delete activeByUid[k];
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if (data?.deviceId) activeByUid[d.id] = data.deviceId;
+    });
+    push();
+  }, (err) => console.warn("sessions snapshot failed:", err));
+
+  return () => { unsubPresence(); unsubSessions(); };
 }
 
 export async function getAnalytics(): Promise<{

@@ -22,6 +22,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     if (!isOpen) {
       setPassword('');
       setError(false);
+      setUnlocked(false);
       return;
     }
     const unsubOnline = onOnlineUsersChange(setOnlineUsers);
