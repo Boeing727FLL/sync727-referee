@@ -218,7 +218,7 @@ export default function PublicRulebookAI() {
       faviconElement.href = "/favicon-192.png?v=3";
     }
     
-    document.title = `${t('app.title')} | FIRST Israel`;
+    document.title = 'שופט וירטואלי — Boeing727';
 
     return () => {
       document.title = originalTitle;

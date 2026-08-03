@@ -1,7 +1,7 @@
 {
-  "name": "Sync 727",
-  "short_name": "Sync 727",
-  "description": "מערכת ניהול קבוצה - Sync 727",
+  "name": "שופט וירטואלי — Boeing727",
+  "short_name": "Boeing727",
+  "description": "שופט וירטואלי — Boeing727",
   "start_url": "/?homescreen=1",
   "display": "standalone",
   "background_color": "#0f172a",
