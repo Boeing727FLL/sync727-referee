@@ -35,7 +35,7 @@ async function extractTextFromUrl(url: string): Promise<string> {
 
     if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
       const data = new Uint8Array(response.data);
-      const loadingTask = pdfjs.getDocument({ data });
+      const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
       const pdf = await loadingTask.promise;
       
       for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
@@ -97,7 +97,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer();
       const data = new Uint8Array(arrayBuffer);
-      const loadingTask = pdfjs.getDocument({ data });
+      const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
       const pdf = await loadingTask.promise;
       
       let text = "";
@@ -138,7 +138,7 @@ export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor: num
   try {
     const arrayBuffer = await pdfInput.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
-    const loadingTask = pdfjs.getDocument({ data });
+    const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
     const pdf = await loadingTask.promise;
     const images: { data: Blob; name: string }[] = [];
 
