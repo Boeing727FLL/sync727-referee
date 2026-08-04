@@ -198,6 +198,7 @@ export default function PublicRulebookAI() {
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
+  const [isInitialGreeting, setIsInitialGreeting] = useState(true);
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -268,6 +269,12 @@ export default function PublicRulebookAI() {
     }, 35);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isInitialGreeting && typewriterTargetRef.current > 0 && typewriterCount >= typewriterTargetRef.current) {
+      setIsInitialGreeting(false);
+    }
+  }, [typewriterCount, isInitialGreeting]);
 
   useEffect(() => {
     if (loading) {
@@ -974,11 +981,11 @@ const fetchLatestRulebook = async () => {
           />
           
           <button
-            onClick={() => (loading || isTypewriterActive) ? handleStop() : handleSend()}
-            disabled={isLearning || (!loading && !isTypewriterActive && !input.trim())}
+            onClick={() => (loading || isTypewriterActive) && !isInitialGreeting ? handleStop() : handleSend()}
+            disabled={isLearning || isInitialGreeting || (!loading && !isTypewriterActive && !input.trim())}
             style={{ flexShrink: 0 }}
             className={`relative overflow-hidden rounded-xl transition-all flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5 ${
-              isLearning
+              isLearning || isInitialGreeting
                 ? 'bg-slate-300 text-slate-500 p-2 md:p-3 cursor-not-allowed'
                 : loading || isTypewriterActive
                   ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 p-2 md:p-3 w-12 h-12 md:w-14 md:h-14'
@@ -986,7 +993,7 @@ const fetchLatestRulebook = async () => {
             }`}
           >
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine pointer-events-none" />
-            {loading || isTypewriterActive ? (
+            {loading || (isTypewriterActive && !isInitialGreeting) ? (
               <motion.div
                 initial={{ scale: 0, rotate: -90 }}
                 animate={{ scale: 1, rotate: 0 }}
