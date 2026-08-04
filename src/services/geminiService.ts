@@ -423,6 +423,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 \n\n` });
         
         for (const file of allFiles) {
+          if (signal?.aborted) return '';
           const rawFileName = file.actualFile?.name || file.key || 'file';
           const fileName = rawFileName.split('/').pop() || rawFileName;
           const isPdf = file.actualFile?.type === 'application/pdf' || 
@@ -449,6 +450,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               const encodedFileName = encodeURIComponent(fileName);
               
               while (consecutiveMisses < maxMisses) {
+                if (signal?.aborted) return '';
                 try {
                   const imgUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
                   const imgRes = await fetch(imgUrl);
@@ -522,6 +524,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 
                 let pageIndex = 1;
                 for (const pageImg of pageImages) {
+                  if (signal?.aborted) return '';
                   try {
                     const uploadResult = await uploadClient.files.upload({
                       file: pageImg.data,
@@ -579,6 +582,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
               let uploadSuccess = false;
               let uploadAttempts = 0;
               while (uploadAttempts < 15 && !uploadSuccess) {
+                if (signal?.aborted) return '';
                 uploadAttempts++;
                 try {
                   const uploadResult = await uploadClient.files.upload({
@@ -740,6 +744,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             // Execute the function calls
             const functionResponsesParts = [];
             for (const fc of functionCallsToExecute) {
+              if (signal?.aborted) return responseText || '';
               if (fc.name === "read_website_content") {
                 const urlToRead = (fc.args as any).url;
                 if (onChunk) onChunk(`\n\n[השופט קורא את האתר: ${urlToRead}...]\n\n`);
