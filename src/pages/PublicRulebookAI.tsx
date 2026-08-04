@@ -193,7 +193,6 @@ export default function PublicRulebookAI() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasResponseStarted, setHasResponseStarted] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
   const [selectedModel] = useState<string>('gemini-3.6-flash');
   const [tripleJudgeMode] = useState<boolean>(true);
@@ -506,7 +505,6 @@ const fetchLatestRulebook = async () => {
     ]);
     
     setLoading(true);
-    setHasResponseStarted(false);
     const controller = new AbortController();
     abortControllerRef.current = controller;
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
@@ -527,7 +525,6 @@ const fetchLatestRulebook = async () => {
         selectedModel,
         (chunkText) => {
           if (controller.signal.aborted) return;
-          setHasResponseStarted(true);
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
@@ -977,19 +974,19 @@ const fetchLatestRulebook = async () => {
           />
           
           <button
-            onClick={() => loading && hasResponseStarted ? handleStop() : handleSend()}
-            disabled={isLearning || (!loading && !input.trim()) || (loading && !hasResponseStarted)}
+            onClick={() => loading ? handleStop() : handleSend()}
+            disabled={isLearning || (!loading && !input.trim())}
             style={{ flexShrink: 0 }}
             className={`relative overflow-hidden rounded-xl transition-all flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5 ${
               isLearning
                 ? 'bg-slate-300 text-slate-500 p-2 md:p-3 cursor-not-allowed'
-                : loading && hasResponseStarted
+                : loading
                   ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 p-2 md:p-3 w-12 h-12 md:w-14 md:h-14'
                   : 'bg-red-600 hover:bg-red-700 text-white p-2 md:p-3'
             }`}
           >
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine pointer-events-none" />
-            {loading && hasResponseStarted ? (
+            {loading ? (
               <motion.div
                 initial={{ scale: 0, rotate: -90 }}
                 animate={{ scale: 1, rotate: 0 }}
