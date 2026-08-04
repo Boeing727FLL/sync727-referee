@@ -357,20 +357,37 @@ const fetchLatestRulebook = async () => {
         const detectedSeason = loadedFiles.reduce((season, f) => {
           const extracted = extractSeasonFromFilename(f.name);
           return extracted !== 'UNKNOWN' ? extracted : season;
-        }, seasonName);
+        }, 'UNKNOWN');
 
-        if (detectedSeason !== seasonName) {
-          setSeasonName(detectedSeason);
+        if (detectedSeason !== 'UNKNOWN') {
+          if (detectedSeason !== seasonName) {
+            setSeasonName(detectedSeason);
+            try {
+              await updateDoc(doc(db, 'app_config', 'rulebook'), {
+                current_season: detectedSeason,
+                last_updated: Date.now()
+              });
+            } catch (e) {}
+            setMessages(prev => {
+              const newMessages = [...prev];
+              if (newMessages.length > 0 && newMessages[0].role === 'model') {
+                newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', detectedSeason) };
+              }
+              return newMessages;
+            });
+          }
+        } else if (seasonName !== 'UNKNOWN') {
+          setSeasonName('UNKNOWN');
           try {
             await updateDoc(doc(db, 'app_config', 'rulebook'), {
-              current_season: detectedSeason,
+              current_season: 'UNKNOWN',
               last_updated: Date.now()
             });
           } catch (e) {}
           setMessages(prev => {
             const newMessages = [...prev];
             if (newMessages.length > 0 && newMessages[0].role === 'model') {
-              newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', detectedSeason) };
+              newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', 'UNKNOWN') };
             }
             return newMessages;
           });
