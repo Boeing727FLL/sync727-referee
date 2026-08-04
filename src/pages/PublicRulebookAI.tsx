@@ -454,27 +454,7 @@ const fetchLatestRulebook = async () => {
       });
 
       await upload.done();
-
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        setUploadProgress(95);
-        try {
-          const images = await convertPdfToImages(file);
-          for (let i = 0; i < images.length; i++) {
-            const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
-            await s3Client.send(new PutObjectCommand({
-              Bucket: R2_BUCKET_NAME,
-              Key: imgKey,
-              Body: images[i].data,
-              ContentType: 'image/jpeg',
-            }));
-          }
-          console.log(`Uploaded ${images.length} page images for ${file.name}`);
-        } catch (imgErr) {
-          console.error("Failed to convert/upload PDF pages:", imgErr);
-        }
-      }
       
-      // Close modal immediately after file is uploaded so user isn't stuck
       setShowUploadModal(false);
       setUploading(false);
       setUploadProgress(0);
@@ -495,14 +475,13 @@ const fetchLatestRulebook = async () => {
         }
       }
 
-      // If a new season is detected, clear the old rulebooks
       if (isNewSeason) {
         console.log(`New season detected: ${extractedSeason}. Clearing old rules for ${seasonName}...`);
         
         try {
           const command = new ListObjectsV2Command({
             Bucket: R2_BUCKET_NAME,
-            Prefix: 'fll-rules', // Match all: fll-rules/, fll-rules-images/, fll-rules-text/
+            Prefix: 'fll-rules',
           });
           const listResponse = await s3Client.send(command);
           if (listResponse.Contents && listResponse.Contents.length > 0) {
@@ -524,10 +503,36 @@ const fetchLatestRulebook = async () => {
         }
       }
 
-      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. ${extractedSeason !== "UNKNOWN" ? `זוהתה עונת ${extractedSeason}.` : 'קובץ נוסף נשמר בענן.'} שומר בענן...`, isProgress: true }]);
+      const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "חדש";
+      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות...`, isProgress: true }]);
 
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          const images = await convertPdfToImages(file);
+          for (let i = 0; i < images.length; i++) {
+            const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
+            await s3Client.send(new PutObjectCommand({
+              Bucket: R2_BUCKET_NAME,
+              Key: imgKey,
+              Body: images[i].data,
+              ContentType: 'image/jpeg',
+            }));
+            const pct = Math.round(((i + 1) / images.length) * 100);
+            setMessages(prev => {
+              const newMsgs = [...prev];
+              const last = newMsgs[newMsgs.length - 1];
+              if (last?.role === 'model' && (last as any).isProgress) {
+                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות... ${pct}% (${i + 1}/${images.length})` };
+              }
+              return newMsgs;
+            });
+          }
+          console.log(`Uploaded ${images.length} page images for ${file.name}`);
+        } catch (imgErr) {
+          console.error("Failed to convert/upload PDF pages:", imgErr);
+        }
+      }
 
-      
       setIsLearning(true);
       
       setTimeout(async () => {
