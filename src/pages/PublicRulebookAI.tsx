@@ -417,6 +417,12 @@ const fetchLatestRulebook = async () => {
     if (match && match[1] && match[1] !== 'challenge' && match[1] !== 'robot') {
       return match[1].toUpperCase();
     }
+
+    const baseName = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '').trim();
+    if (baseName && !baseName.toLowerCase().includes('update') && !baseName.toLowerCase().includes('text') && !baseName.toLowerCase().includes('image')) {
+      return baseName.toUpperCase();
+    }
+
     return 'UNKNOWN';
   };
 
