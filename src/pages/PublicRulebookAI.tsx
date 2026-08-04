@@ -508,7 +508,7 @@ const fetchLatestRulebook = async () => {
 
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         try {
-          const images = await convertPdfToImages(file);
+          const images = await convertPdfToImages(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
           for (let i = 0; i < images.length; i++) {
             const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
             await s3Client.send(new PutObjectCommand({
