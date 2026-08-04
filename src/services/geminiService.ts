@@ -1,12 +1,11 @@
 import axios from 'axios';
 import * as pdfjs from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Configure pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Run pdf.js on the main thread (fake worker) to avoid ReadableStream.getReader transfer issues
+pdfjs.GlobalWorkerOptions.workerSrc = '';
 
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
