@@ -5,7 +5,7 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'fire
 import { db } from '../lib/firebase';
 
 // Configure pdf.js worker using a CDN URL to avoid Vite bundling issues
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs`;
 
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
