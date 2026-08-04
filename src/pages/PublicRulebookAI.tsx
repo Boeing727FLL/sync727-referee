@@ -514,7 +514,7 @@ const fetchLatestRulebook = async () => {
             await s3Client.send(new PutObjectCommand({
               Bucket: R2_BUCKET_NAME,
               Key: imgKey,
-              Body: images[i].data,
+              Body: new Uint8Array(await images[i].data.arrayBuffer()),
               ContentType: 'image/jpeg',
             }));
             const pct = Math.round(((i + 1) / images.length) * 100);
