@@ -4,8 +4,8 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Run pdf.js on the main thread (fake worker) to avoid ReadableStream.getReader transfer issues
-pdfjs.GlobalWorkerOptions.workerSrc = '';
+// Configure pdf.js worker using a CDN URL to avoid Vite bundling issues
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs`;
 
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
