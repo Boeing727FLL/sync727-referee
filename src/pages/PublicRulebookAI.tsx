@@ -734,7 +734,7 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Chat Area - Green field canvas background */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-8 space-y-4 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-8 space-y-4 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
         
         {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && !chatStarted)).map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
