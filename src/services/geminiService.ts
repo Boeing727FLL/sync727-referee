@@ -484,6 +484,49 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               }
               
 console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
+
+              if (uploadedImages.length === 0 && file.url) {
+                console.log(`No pre-processed images found for ${fileName}, converting PDF on the fly...`);
+                try {
+                  let fetchUrl = file.url;
+                  if (fetchUrl.includes('/api/r2/file/')) {
+                    const fileKey = fetchUrl.substring(fetchUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
+                    fetchUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
+                  }
+                  const res = await axios.get(fetchUrl, { responseType: 'blob' });
+                  const pdfBlob = res.data;
+                  if (pdfBlob) {
+                    const pageImages = await convertPdfToImages(pdfBlob);
+                    console.log(`Converted ${pageImages.length} pages on the fly for ${fileName}`);
+                    let pageIndex = 1;
+                    for (const pageImg of pageImages) {
+                      if (signal?.aborted) return '';
+                      try {
+                        const uploadResult = await uploadClient.files.upload({
+                          file: pageImg.data,
+                          config: { mimeType: 'image/jpeg' },
+                        });
+                        const prefixText = fileTypeStr === 'user_image'
+                          ? `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`
+                          : `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} | PAGE: ${pageIndex} ---\n`;
+                        currentParts.push({ text: prefixText });
+                        currentParts.push({
+                          fileData: {
+                            fileUri: uploadResult.uri,
+                            mimeType: uploadResult.mimeType || 'image/jpeg'
+                          }
+                        });
+                        pageIndex++;
+                      } catch (err: any) {
+                        console.error(`Failed to upload PDF page ${pageImg.name}:`, err);
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch/convert PDF for ${fileName}:`, err);
+                }
+              }
+
               uploadedImages
                 .sort((a: any, b: any) => a.pageIndex - b.pageIndex)
                 .forEach((res: any) => {
