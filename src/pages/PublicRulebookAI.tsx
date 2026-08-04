@@ -665,7 +665,7 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Header */}
-      <div className="border-b-2 border-slate-950 bg-amber-50 z-10 shadow-sm">
+      <div className="border-b-2 border-slate-950 bg-amber-50 z-10 shadow-sm shrink-0">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -686,12 +686,12 @@ const fetchLatestRulebook = async () => {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
-            <div className="inline-flex items-center gap-2 md:gap-3 px-3 py-1 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
-              <div className="h-4 md:h-6 w-px bg-slate-300" />
+            <div className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
+              <div className="h-3 md:h-6 w-px bg-slate-300" />
               <div className="flex flex-col leading-tight">
-                <span className="text-[6px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
-                <span className="text-[9px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[8px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[8px] md:text-xs">Yuval Margalit</span></span>
+                <span className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
+                <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
             {hasGoogleToken && user ? (
@@ -939,7 +939,7 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Quick Actions - Styled as tactical yellow strategy cards */}
-      <div className="px-2 md:px-4 py-1.5 md:py-3 bg-amber-50/50 border-t-2 border-slate-950 overflow-x-auto flex gap-1.5 md:gap-2 no-scrollbar">
+      <div className="px-2 md:px-4 py-1.5 md:py-3 bg-amber-50/50 border-t-2 border-slate-950 overflow-x-auto flex gap-1.5 md:gap-2 no-scrollbar shrink-0">
         {quickQuestions.map((q, i) => (
           <button
             key={i}
@@ -953,7 +953,7 @@ const fetchLatestRulebook = async () => {
       </div>
 
       {/* Input Area */}
-      <div className="px-2.5 py-2 md:px-4 md:p-4 bg-white border-t-2 border-slate-950 pb-safe">
+      <div className="px-2.5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:px-4 md:p-4 bg-white border-t-2 border-slate-950 shrink-0">
         
         <div className="flex items-center gap-2 md:gap-3">
           <input
