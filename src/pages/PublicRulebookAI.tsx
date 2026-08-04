@@ -1,7 +1,7 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon } from 'lucide-react';
+import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon, Square } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -206,6 +206,7 @@ export default function PublicRulebookAI() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -504,6 +505,8 @@ const fetchLatestRulebook = async () => {
     ]);
     
     setLoading(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
@@ -521,6 +524,7 @@ const fetchLatestRulebook = async () => {
         [], // no files - text only
         selectedModel,
         (chunkText) => {
+          if (controller.signal.aborted) return;
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
@@ -537,21 +541,43 @@ const fetchLatestRulebook = async () => {
         },
         tripleJudgeMode,
         thinkingConfigLevel,
-        language
+        language,
+        controller.signal
       );
       
-      setMessages(prev => {
-        const lastMsg = prev[prev.length - 1];
-        if (lastMsg?.role === 'model') return prev;
-        return [...prev, { role: 'model', text: response || t('chat.commError') }];
-      });
+      if (controller.signal.aborted) {
+        setMessages(prev => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === 'model' && lastMsg.text) return prev;
+          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+        });
+      } else {
+        setMessages(prev => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === 'model') return prev;
+          return [...prev, { role: 'model', text: response || t('chat.commError') }];
+        });
+      }
     } catch (error: any) {
-      const errMsg = error?.message || t('chat.connectionLost');
-      setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
+      if (controller.signal.aborted) {
+        setMessages(prev => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === 'model' && lastMsg.text) return prev;
+          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+        });
+      } else {
+        const errMsg = error?.message || t('chat.connectionLost');
+        setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
+      }
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
       if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
     }
+  };
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
   };
 
   const quickQuestions = [
@@ -946,12 +972,28 @@ const fetchLatestRulebook = async () => {
           />
           
           <button
-            onClick={() => handleSend()}
-            disabled={loading || isLearning || isTypewriterActive || !input.trim()}
+            onClick={() => loading ? handleStop() : handleSend()}
+            disabled={!loading && (isLearning || isTypewriterActive || !input.trim())}
             style={{ flexShrink: 0 }}
-            className="bg-red-600 hover:bg-red-700 text-white p-2 md:p-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5"
+            className={`relative overflow-hidden rounded-xl transition-all flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5 ${
+              loading
+                ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 p-2 md:p-3 w-12 h-12 md:w-14 md:h-14 animate-pulse'
+                : 'bg-red-600 hover:bg-red-700 text-white p-2 md:p-3'
+            }`}
           >
-            <Send className="w-4 h-4 md:w-6 md:h-6" />
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine pointer-events-none" />
+            {loading ? (
+              <motion.div
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0, rotate: 90 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              >
+                <Square className="w-5 h-5 md:w-6 md:h-6 fill-current" />
+              </motion.div>
+            ) : (
+              <Send className="w-4 h-4 md:w-6 md:h-6" />
+            )}
           </button>
         </div>
       </div>

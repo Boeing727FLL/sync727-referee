@@ -300,7 +300,8 @@ export const GeminiService = {
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
     thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
-    language: string = 'he'
+    language: string = 'he',
+    signal?: AbortSignal
   ) {
     try {
       console.log("Processing FLL Query directly on the client-side...");
@@ -692,6 +693,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           thinkingLevel: ThinkingLevel.HIGH,
         },
         mediaResolution: 'MEDIA_RESOLUTION_HIGH',
+        abortSignal: signal,
       };
 
       if (useNativeSystemInstruction) {
@@ -705,6 +707,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       // using currentApiKey which has the latest valid key from the upload steps
 
       while (attempts < maxAttempts && !success) {
+        if (signal?.aborted) return '';
         attempts++;
         const client = new GoogleGenAI({ apiKey: currentApiKey });
 
@@ -1075,6 +1078,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       return responseText || "לא התקבלה תשובה מודל הבינה המלאכותית.";
 
     } catch (error: any) {
+      if (signal?.aborted) return '';
       const errMsg = error?.message || String(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
