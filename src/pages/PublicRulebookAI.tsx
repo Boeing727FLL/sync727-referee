@@ -420,8 +420,13 @@ const fetchLatestRulebook = async () => {
     }
 
     const baseName = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '').trim();
-    if (baseName && !baseName.toLowerCase().includes('update') && !baseName.toLowerCase().includes('text') && !baseName.toLowerCase().includes('image')) {
-      return baseName.toUpperCase();
+    // Strip a trailing updates/update suffix so "Bioglow_updates.pdf" maps to the same season as "Bioglow.pdf"
+    const seasonBase = baseName
+      .replace(/\s*[_\-()\s]+\s*updates?\s*[)\-]*$/i, '')
+      .replace(/\s+updates?\s*$/i, '')
+      .trim();
+    if (seasonBase && !seasonBase.toLowerCase().includes('update') && !seasonBase.toLowerCase().includes('text') && !seasonBase.toLowerCase().includes('image')) {
+      return seasonBase.toUpperCase();
     }
 
     return 'UNKNOWN';

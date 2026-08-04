@@ -334,6 +334,7 @@ export const GeminiService = {
 עליך לעיין בכל התמונות המצורפות ביסודיות לפני כל תשובה - הן הבסיס לכל פסק.
 אתה חייב לצטט את מספר החוק והניקוד המדויק מתוך התמונות המצורפות בכל תשובה.
 תמונות המסומנות '--- RULEBOOK PAGE ---' או '--- RULEBOOK IMAGE ---' או '--- RULEBOOK ---' הן ספר החוקים/הניקוד - השתמש בהן רק כמילון חוקים, לא כשאלת המשתמש.
+תמונות המסומנות '--- UPDATES PAGE ---' הן מסמך העדכונים הרשמי (Updates) - אם קיים סתירה ביניהן לבין חוקי הבסיס שבספר, מסמך העדכונים תמיד גובר וקובע.
 תמונות המסומנות '--- USER PHOTO ---' הן שאלת המשתמש - עליך לשפוט לפיהן בלבד.
 ⚠️ חובה חובה חובה - בדיקת עדכונים והחרגות בכל שאלה: ⚠️
 בכל שאלה, בלי יוצא מן הכלל, חובה עליך לבדוק במסמך העדכונים (Updates) האם קיים עדכון שמשנה/מבטל/מוסיף על החוק או הניקוד הרלוונטי לשאלה - גם אם החוקים "קובעים" דבר מסוים. לעולם אל תניח שאין עדכון בלי לבדוק. לעיתים קרובות לחוק יש עדכון שמשנה את הניקוד, את התנאים, או מבטל את החוק, או החרגה/חריג (Exemption/Exception) כגון: "אלא אם", "חריג", "אבל לא", "במקרים של", "יוצא מן הכלל", "פרט ל-", "לא כולל".
@@ -374,6 +375,18 @@ ${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פש
       let uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
 
       let globalImageIndex = 1;
+
+      // Build the text prefix that precedes each attached image so the model can tell
+      // user photos, rulebook pages, and official updates pages apart.
+      const pagePrefixText = (fileName: string, isUserPhoto: boolean, pageIndex?: number): string => {
+        if (isUserPhoto) {
+          return `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`;
+        }
+        if (/update/i.test(fileName)) {
+          return `Image ${globalImageIndex++}:\n--- UPDATES PAGE (Official updates document - overrides the base rulebook) | FILE: ${fileName}${pageIndex ? ` | PAGE: ${pageIndex}` : ''} ---\n`;
+        }
+        return `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName}${pageIndex ? ` | PAGE: ${pageIndex}` : ''} ---\n`;
+      };
 
       // Extract and append text or base64 components from allFiles
       if (allFiles.length > 0) {
@@ -471,9 +484,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                           file: pageImg.data,
                           config: { mimeType: 'image/jpeg' },
                         });
-                        const prefixText = fileTypeStr === 'user_image'
-                          ? `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`
-                          : `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} | PAGE: ${pageIndex} ---\n`;
+                        const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
                         currentParts.push({ text: prefixText });
                         currentParts.push({
                           fileData: {
@@ -495,9 +506,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
               uploadedImages
                 .sort((a: any, b: any) => a.pageIndex - b.pageIndex)
                 .forEach((res: any) => {
-                  const prefixText = fileTypeStr === 'user_image' 
-                    ? `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`
-                    : `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} | PAGE: ${res.pageIndex} ---\n`;
+                  const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', res.pageIndex);
                   currentParts.push({ text: prefixText });
                   currentParts.push({ fileData: res.fileData });
                 });
@@ -538,9 +547,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                       file: pageImg.data,
                       config: { mimeType: 'image/jpeg' },
                     });
-                    const prefixText = fileTypeStr === 'user_image' 
-                      ? `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`
-                      : `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} | PAGE: ${pageIndex} ---\n`;
+                    const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
                     currentParts.push({ text: prefixText });
                     currentParts.push({
                       fileData: {
@@ -609,9 +616,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                     throw new Error(`Media processing failed in Gemini backend for ${fileName}.`);
                   }
                   
-                  const prefixText = fileTypeStr === 'user_image' 
-                    ? `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`
-                    : `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} ---\n`;
+                  const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image');
                   currentParts.push({ text: prefixText });
                   currentParts.push({
                     fileData: {
