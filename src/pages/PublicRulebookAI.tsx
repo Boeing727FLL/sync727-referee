@@ -353,6 +353,28 @@ const fetchLatestRulebook = async () => {
         }
         
         setActiveRulebookFiles(loadedFiles);
+
+        const detectedSeason = loadedFiles.reduce((season, f) => {
+          const extracted = extractSeasonFromFilename(f.name);
+          return extracted !== 'UNKNOWN' ? extracted : season;
+        }, seasonName);
+
+        if (detectedSeason !== seasonName) {
+          setSeasonName(detectedSeason);
+          try {
+            await updateDoc(doc(db, 'app_config', 'rulebook'), {
+              current_season: detectedSeason,
+              last_updated: Date.now()
+            });
+          } catch (e) {}
+          setMessages(prev => {
+            const newMessages = [...prev];
+            if (newMessages.length > 0 && newMessages[0].role === 'model') {
+              newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', detectedSeason) };
+            }
+            return newMessages;
+          });
+        }
       } else {
         setIsLearning(false);
       }
@@ -365,14 +387,14 @@ const fetchLatestRulebook = async () => {
   const extractSeasonFromFilename = (filename: string): string => {
     const str = filename.toLowerCase();
     
-    if (str.includes('submerged') || str.includes('2024')) return 'SUBMERGED';
-    if (str.includes('unearthed') || str.includes('unearth') || str.includes('2025')) return 'UNEARTHED';
-    if (str.includes('masterpiece') || str.includes('mustrpiece') || str.includes('master') || str.includes('2023')) return 'MASTERPIECE';
-    if (str.includes('superpowered') || str.includes('super power') || str.includes('2022')) return 'SUPERPOWERED';
-    if (str.includes('cargoconnect') || str.includes('cargo connect') || str.includes('2021')) return 'CARGO_CONNECT';
-    if (str.includes('replay') || str.includes('re-play') || str.includes('2020')) return 'REPLAY';
-    if (str.includes('cityshaper') || str.includes('city shaper') || str.includes('2019')) return 'CITY_SHAPER';
-    if (str.includes('intoorbit') || str.includes('into orbit') || str.includes('2018')) return 'INTO_ORBIT';
+    if (str.includes('submerged')) return 'SUBMERGED';
+    if (str.includes('unearthed') || str.includes('unearth')) return 'UNEARTHED';
+    if (str.includes('masterpiece') || str.includes('mustrpiece') || str.includes('master')) return 'MASTERPIECE';
+    if (str.includes('superpowered') || str.includes('super power')) return 'SUPERPOWERED';
+    if (str.includes('cargoconnect') || str.includes('cargo connect')) return 'CARGO_CONNECT';
+    if (str.includes('replay') || str.includes('re-play')) return 'REPLAY';
+    if (str.includes('cityshaper') || str.includes('city shaper')) return 'CITY_SHAPER';
+    if (str.includes('intoorbit') || str.includes('into orbit')) return 'INTO_ORBIT';
 
     const match = str.match(/fll[_-]?(?:challenge[_-])?([a-z]+)[_-]/);
     if (match && match[1] && match[1] !== 'challenge' && match[1] !== 'robot') {
