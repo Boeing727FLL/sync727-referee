@@ -39,6 +39,7 @@ export default defineConfig(({mode}) => {
       hmr: false,
     },
     build: {
+      target: 'es2022',
       chunkSizeWarningLimit: 2000,
       sourcemap: false,
       rollupOptions: {
@@ -51,6 +52,7 @@ export default defineConfig(({mode}) => {
               }
               if (
                 id.includes('pdfjs-dist') ||
+                id.includes('mupdf') ||
                 id.includes('pdf-lib') ||
                 id.includes('jspdf') ||
                 id.includes('html2canvas')

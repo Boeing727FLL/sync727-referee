@@ -1,15 +1,43 @@
 import axios from 'axios';
-import * as pdfjs from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Configure pdf.js worker using the bundled worker URL
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
-
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
+
+// Lazy MuPDF loader. MuPDF renders PDF pages to JPEG in WASM without relying on
+// ReadableStream/canvas readback, so it is safe even in environments where pdf.js fails.
+let mupdfLibPromise: Promise<typeof import('mupdf')> | null = null;
+async function getMupdfLib(): Promise<typeof import('mupdf')> {
+  if (!mupdfLibPromise) {
+    (globalThis as any).$libmupdf_wasm_Module = { locateFile: () => '/mupdf-wasm.wasm' };
+    mupdfLibPromise = import('mupdf');
+  }
+  return mupdfLibPromise;
+}
+
+// Extract plain text from PDF bytes using MuPDF (maxPages limits runaway PDFs)
+async function extractPdfText(data: Uint8Array, maxPages: number): Promise<string> {
+  const mupdf = await getMupdfLib();
+  let doc: any = null;
+  try {
+    doc = mupdf.Document.openDocument(data, 'application/pdf');
+    const totalPages = doc.countPages();
+    let text = "";
+    for (let i = 0; i < Math.min(totalPages, maxPages); i++) {
+      const page = doc.loadPage(i);
+      const stext = page.toStructuredText();
+      const pageText = stext.asText();
+      text += `--- Page ${i + 1} ---\n${pageText.trim()}\n\n`;
+      stext.destroy();
+      page.destroy();
+    }
+    return text;
+  } finally {
+    doc?.destroy();
+  }
+}
 
 async function extractTextFromUrl(url: string): Promise<string> {
   if (rulebookCache.has(url)) return rulebookCache.get(url)!;
@@ -34,36 +62,7 @@ async function extractTextFromUrl(url: string): Promise<string> {
     let text = "";
 
     if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
-      const data = new Uint8Array(response.data);
-      const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
-      const pdf = await loadingTask.promise;
-      
-      for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // Improved text extraction with basic layout preservation and Hebrew reversal
-        const lines: Map<number, { x: number, str: string }[]> = new Map();
-        
-        textContent.items.forEach((item: any) => {
-          const y = Math.round(item.transform[5]);
-          const x = Math.round(item.transform[4]);
-          const str = item.str;
-          
-          if (!lines.has(y)) lines.set(y, []);
-          lines.get(y)!.push({ x, str });
-        });
-        
-        // Sort lines by Y (top to bottom)
-        const sortedY = Array.from(lines.keys()).sort((a, b) => b - a);
-        const pageText = sortedY.map(y => {
-          // Sort items in the line by X (left to right)
-          const lineItems = lines.get(y)!.sort((a, b) => a.x - b.x);
-          return lineItems.map(item => item.str).join(" ");
-        }).join("\n");
-        
-        text += `--- Page ${i} ---\n${pageText}\n\n`;
-      }
+      text = await extractPdfText(new Uint8Array(response.data), 50);
     } else {
       // Assume text-based
       text = new TextDecoder().decode(response.data);
@@ -96,34 +95,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
   try {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer();
-      const data = new Uint8Array(arrayBuffer);
-      const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
-      const pdf = await loadingTask.promise;
-      
-      let text = "";
-      for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const lines: Map<number, { x: number, str: string }[]> = new Map();
-        
-        textContent.items.forEach((item: any) => {
-          const y = Math.round(item.transform[5]);
-          const x = Math.round(item.transform[4]);
-          const str = item.str;
-          
-          if (!lines.has(y)) lines.set(y, []);
-          lines.get(y)!.push({ x, str });
-        });
-        
-        const sortedY = Array.from(lines.keys()).sort((a, b) => b - a);
-        const pageText = sortedY.map(y => {
-          const lineItems = lines.get(y)!.sort((a, b) => a.x - b.x);
-          return lineItems.map(item => item.str).join(" ");
-        }).join("\n");
-        
-        text += `--- Page ${i} ---\n${pageText}\n\n`;
-      }
-      return text;
+      return await extractPdfText(new Uint8Array(arrayBuffer), 50);
     } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt') || file.name.toLowerCase().endsWith('.json')) {
       return await file.text();
     }
@@ -133,54 +105,47 @@ export async function extractTextFromFile(file: File): Promise<string> {
   return "";
 }
 
-// Convert PDF pages to images (JPEG Blobs) using pdfjs
+// Convert PDF pages to images (JPEG Blobs) using MuPDF WASM
 export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor: number = 2.0, specificPage?: number): Promise<{ data: Blob; name: string }[]> {
   try {
+    const mupdf = await getMupdfLib();
     const arrayBuffer = await pdfInput.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
-    const loadingTask = pdfjs.getDocument({ data, disableAutoFetch: true, disableStream: true });
-    const pdf = await loadingTask.promise;
     const images: { data: Blob; name: string }[] = [];
+    let doc: any = null;
+    try {
+      doc = mupdf.Document.openDocument(data, 'application/pdf');
+      const totalPages = doc.countPages();
 
-    // Convert all pages of the PDF to JPEG images to ensure the model sees every detail/symbol
-    const totalPages = pdf.numPages;
-    console.log(`Rendering PDF visually to JPEG images: total ${totalPages} pages (Scale: ${scaleFactor})...`);
+      // Convert all pages of the PDF to JPEG images to ensure the model sees every detail/symbol
+      console.log(`Rendering PDF visually to JPEG images: total ${totalPages} pages (Scale: ${scaleFactor})...`);
 
-    const startPage = specificPage ? specificPage : 1;
-    const endPage = specificPage ? specificPage : totalPages;
+      const startPage = specificPage ? specificPage : 1;
+      const endPage = specificPage ? specificPage : totalPages;
+      const colorspace = mupdf.ColorSpace.DeviceRGB;
 
-    for (let i = startPage; i <= endPage; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        // scale 2.0 is sufficient for reading small icons, drawings, symbols, and Hebrew text on diagrams without blowing up file sizes
-        const viewport = page.getViewport({ scale: scaleFactor });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (context) {
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
+      for (let i = startPage; i <= endPage; i++) {
+        try {
+          const page = doc.loadPage(i - 1);
+          // scale 2.0 is sufficient for reading small icons, drawings, symbols, and Hebrew text on diagrams without blowing up file sizes
+          const pixmap = page.toPixmap(mupdf.Matrix.scale(scaleFactor, scaleFactor), colorspace, false, true);
+          const jpegBytes = pixmap.asJPEG(scaleFactor >= 5.0 ? 100 : 85);
 
-          await page.render({
-            canvasContext: context,
-            viewport: viewport
-          } as any).promise;
-
-          const blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob((b) => resolve(b), 'image/jpeg', scaleFactor >= 5.0 ? 1.0 : 0.85);
+          const blob = new Blob([jpegBytes], { type: 'image/jpeg' });
+          images.push({
+            data: blob,
+            name: `page_${i}.jpg`
           });
-
-          if (blob) {
-            images.push({
-              data: blob,
-              name: `page_${i}.jpg`
-            });
-          }
+          pixmap.destroy();
+          page.destroy();
+        } catch (pageErr) {
+          console.error(`Error rendering PDF page ${i} to visual image:`, pageErr);
         }
-      } catch (pageErr) {
-        console.error(`Error rendering PDF page ${i} to visual image:`, pageErr);
       }
+      return images;
+    } finally {
+      doc?.destroy();
     }
-    return images;
   } catch (err) {
     console.error("Error in convertPdfToImages:", err);
     return [];
