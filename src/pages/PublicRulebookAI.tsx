@@ -457,20 +457,21 @@ const fetchLatestRulebook = async () => {
 
       const extractedSeason = extractSeasonFromFilename(fileName);
       const isNewSeason = extractedSeason !== "UNKNOWN" && extractedSeason !== seasonName;
-      const seasonToStore = extractedSeason !== "UNKNOWN" ? extractedSeason : seasonName;
 
-      try {
-        await updateDoc(doc(db, 'app_config', 'rulebook'), {
-          current_season: seasonToStore,
-          last_updated: Date.now()
-        });
-      } catch (e) {
-        console.warn("Firestore sync update failed:", e);
+      if (extractedSeason !== "UNKNOWN") {
+        try {
+          await updateDoc(doc(db, 'app_config', 'rulebook'), {
+            current_season: extractedSeason,
+            last_updated: Date.now()
+          });
+        } catch (e) {
+          console.warn("Firestore sync update failed:", e);
+        }
       }
 
       // If a new season is detected, clear the old rulebooks
       if (isNewSeason) {
-        console.log(`New season detected: ${seasonToStore}. Clearing old rules for ${seasonName}...`);
+        console.log(`New season detected: ${extractedSeason}. Clearing old rules for ${seasonName}...`);
         
         try {
           const command = new ListObjectsV2Command({
@@ -497,7 +498,7 @@ const fetchLatestRulebook = async () => {
         }
       }
 
-      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. זוהתה עונת ${seasonToStore !== "UNKNOWN" ? seasonToStore : "חדשה"}. שומר בענן...`, isProgress: true }]);
+      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. ${extractedSeason !== "UNKNOWN" ? `זוהתה עונת ${extractedSeason}.` : 'קובץ נוסף נשמר בענן.'} שומר בענן...`, isProgress: true }]);
 
 
       
