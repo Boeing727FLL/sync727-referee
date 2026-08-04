@@ -7,7 +7,8 @@ import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
 import { s3Client, R2_BUCKET_NAME, getPublicUrl } from '../lib/r2';
 import { Upload } from '@aws-sdk/lib-storage';
-import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../hooks/useAuth';
@@ -453,6 +454,25 @@ const fetchLatestRulebook = async () => {
       });
 
       await upload.done();
+
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setUploadProgress(95);
+        try {
+          const images = await convertPdfToImages(file);
+          for (let i = 0; i < images.length; i++) {
+            const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
+            await s3Client.send(new PutObjectCommand({
+              Bucket: R2_BUCKET_NAME,
+              Key: imgKey,
+              Body: images[i].data,
+              ContentType: 'image/jpeg',
+            }));
+          }
+          console.log(`Uploaded ${images.length} page images for ${file.name}`);
+        } catch (imgErr) {
+          console.error("Failed to convert/upload PDF pages:", imgErr);
+        }
+      }
       
       // Close modal immediately after file is uploaded so user isn't stuck
       setShowUploadModal(false);
