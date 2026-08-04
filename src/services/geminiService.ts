@@ -1,11 +1,12 @@
 import axios from 'axios';
 import * as pdfjs from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Configure pdf.js worker using a CDN URL to avoid Vite bundling issues
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs`;
+// Configure pdf.js worker using the bundled worker URL
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
