@@ -372,7 +372,6 @@ ${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פש
       }
 
       let currentApiKey = await getNextApiKey();
-      let uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
 
       let globalImageIndex = 1;
 
@@ -420,7 +419,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             
             if (isR2Rulebook) {
               console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
-              const uploadedImages: { pageIndex: number; fileData: any }[] = [];
+              const uploadedImages: { pageIndex: number; inlineData: any }[] = [];
               let pageIndex = 1;
               let consecutiveMisses = 0;
               const maxMisses = 3;
@@ -442,16 +441,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
                   
                   consecutiveMisses = 0;
                   const blobToUpload = new Blob([imgData], { type: 'image/jpeg' });
-                  const uploadResult = await uploadClient.files.upload({
-                    file: blobToUpload,
-                    config: { mimeType: 'image/jpeg' },
-                  });
-                  
+
                   uploadedImages.push({
                     pageIndex,
-                    fileData: {
-                      fileUri: uploadResult.uri,
-                      mimeType: uploadResult.mimeType || 'image/jpeg'
+                    inlineData: {
+                      data: await fileToBase64(blobToUpload),
+                      mimeType: 'image/jpeg'
                     }
                   });
                   pageIndex++;
@@ -480,21 +475,17 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                     for (const pageImg of pageImages) {
                       if (signal?.aborted) return '';
                       try {
-                        const uploadResult = await uploadClient.files.upload({
-                          file: pageImg.data,
-                          config: { mimeType: 'image/jpeg' },
-                        });
                         const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
                         currentParts.push({ text: prefixText });
                         currentParts.push({
-                          fileData: {
-                            fileUri: uploadResult.uri,
-                            mimeType: uploadResult.mimeType || 'image/jpeg'
+                          inlineData: {
+                            data: await fileToBase64(pageImg.data),
+                            mimeType: 'image/jpeg'
                           }
                         });
                         pageIndex++;
                       } catch (err: any) {
-                        console.error(`Failed to upload PDF page ${pageImg.name}:`, err);
+                        console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
                       }
                     }
                   }
@@ -508,7 +499,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 .forEach((res: any) => {
                   const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', res.pageIndex);
                   currentParts.push({ text: prefixText });
-                  currentParts.push({ fileData: res.fileData });
+                  currentParts.push({ inlineData: res.inlineData });
                 });
             } else {
               // Fetch the PDF blob to convert pages to visual images for Gemma
@@ -543,21 +534,17 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 for (const pageImg of pageImages) {
                   if (signal?.aborted) return '';
                   try {
-                    const uploadResult = await uploadClient.files.upload({
-                      file: pageImg.data,
-                      config: { mimeType: 'image/jpeg' },
-                    });
                     const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
                     currentParts.push({ text: prefixText });
                     currentParts.push({
-                      fileData: {
-                        fileUri: uploadResult.uri,
-                        mimeType: uploadResult.mimeType || 'image/jpeg'
+                      inlineData: {
+                        data: await fileToBase64(pageImg.data),
+                        mimeType: 'image/jpeg'
                       }
                     });
                     pageIndex++;
                   } catch (err: any) {
-                    console.error(`Failed to upload PDF page ${pageImg.name}:`, err);
+                    console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
                   }
                 }
               }
@@ -594,55 +581,14 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             }
 
             if (blobToUpload) {
-              let uploadSuccess = false;
-              let uploadAttempts = 0;
-              while (uploadAttempts < 15 && !uploadSuccess) {
-                if (signal?.aborted) return '';
-                uploadAttempts++;
-                try {
-                  const uploadResult = await uploadClient.files.upload({
-                    file: blobToUpload,
-                    config: { mimeType: mimeType },
-                  });
-                  
-                  let fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                  while (fileInfo.state === 'PROCESSING') {
-                    console.log(`Waiting for media file ${fileName} to process...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                  }
-                  
-                  if (fileInfo.state === 'FAILED') {
-                    throw new Error(`Media processing failed in Gemini backend for ${fileName}.`);
-                  }
-                  
-                  const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image');
-                  currentParts.push({ text: prefixText });
-                  currentParts.push({
-                    fileData: {
-                      fileUri: uploadResult.uri,
-                      mimeType: uploadResult.mimeType || mimeType
-                    }
-                  });
-                  uploadSuccess = true;
-                } catch (uploadErr: any) {
-                  const errMsg = uploadErr?.message || JSON.stringify(uploadErr);
-                  if (errMsg.includes("403") || errMsg.includes("leaked") || errMsg.includes("PERMISSION_DENIED") || errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID")) {
-                    markKeyUnhealthy(currentApiKey);
-                    if (uploadAttempts >= 15) throw new Error(`All rotated API keys are invalid. Could not upload ${fileName}.`);
-                    currentApiKey = await getNextApiKey();
-                    uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
-                  } else if (errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED")) {
-                    if (uploadAttempts >= 15) throw new Error(`שגיאה בהעלאת הקובץ ${fileName} למודל בינה מלאכותית. ${uploadErr}`);
-                    currentApiKey = await getNextApiKey();
-                    uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
-                    console.warn(`Quota exceeded (429) during upload, rotating API key and retrying...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                  } else {
-                    throw new Error(`שגיאה בהעלאת הקובץ ${fileName} למודל בינה מלאכותית. ${uploadErr}`);
-                  }
+              const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image');
+              currentParts.push({ text: prefixText });
+              currentParts.push({
+                inlineData: {
+                  data: await fileToBase64(blobToUpload),
+                  mimeType
                 }
-              }
+              });
             }
           }
         }
@@ -840,24 +786,12 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                             if (croppedBlob) pageImgBlob = croppedBlob;
                           }
 
-                          const uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
-                          const uploadResult = await uploadClient.files.upload({
-                            file: pageImgBlob,
-                            config: { mimeType: 'image/jpeg' },
-                          });
-                          
-                          let fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                          while (fileInfo.state === 'PROCESSING') {
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                            fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                          }
-                          
                           functionResponsesParts.push({
                              text: `Image ${globalImageIndex++}:\n--- HIGH RESOLUTION ZOOM (4K, CROP ${xP}%,${yP}% to ${wP}%,${hP}%) FOR ${filename} PAGE ${pageNumber} ---\n`
                           });
                           functionResponsesParts.push({
-                             fileData: {
-                               fileUri: uploadResult.uri,
+                             inlineData: {
+                               data: await fileToBase64(pageImgBlob),
                                mimeType: 'image/jpeg'
                              }
                           });
@@ -888,24 +822,12 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                           if (croppedBlob) imgBlob = croppedBlob;
                         }
 
-                        const uploadClient = new GoogleGenAI({ apiKey: currentApiKey });
-                        const uploadResult = await uploadClient.files.upload({
-                          file: imgBlob,
-                          config: { mimeType: fileBlob.type || 'image/jpeg' },
-                        });
-                        
-                        let fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                        while (fileInfo.state === 'PROCESSING') {
-                          await new Promise(resolve => setTimeout(resolve, 1500));
-                          fileInfo = await uploadClient.files.get({ name: uploadResult.name });
-                        }
-                        
                         functionResponsesParts.push({
                            text: `Image ${globalImageIndex++}:\n--- HIGH RESOLUTION ZOOM (4K, CROP ${xP}%,${yP}% to ${wP}%,${hP}%) FOR ${filename} ---\n`
                         });
                         functionResponsesParts.push({
-                           fileData: {
-                             fileUri: uploadResult.uri,
+                           inlineData: {
+                             data: await fileToBase64(imgBlob),
                              mimeType: fileBlob.type || 'image/jpeg'
                            }
                         });
