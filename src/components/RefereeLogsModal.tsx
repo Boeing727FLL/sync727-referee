@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, ScrollText, MessageSquareText, Search, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { X, Lock, ScrollText, MessageSquareText, Search, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface RefereeLogsModalProps {
@@ -88,6 +88,19 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       else next.add(id);
       return next;
     });
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'referee_logs', id));
+      setExpanded(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } catch (e) {
+      console.warn("delete log failed:", e);
+    }
   };
 
   const filtered = logs.filter(l => {
@@ -185,9 +198,11 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         const isExpanded = expanded.has(entry.id);
                         return (
                           <div key={entry.id} className="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
-                            <button
+                            <div
                               onClick={() => toggleExpand(entry.id)}
-                              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-800 transition-colors text-right"
+                              role="button"
+                              tabIndex={0}
+                              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-800 transition-colors text-right cursor-pointer"
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 {isExpanded ? <ChevronUp className="w-4 h-4 text-yellow-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
@@ -195,7 +210,14 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                   {entry.question || '(ללא שאלה)'}
                                 </span>
                               </div>
-                            </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); handleDelete(entry.id); }}
+                                className="shrink-0 p-1.5 rounded-lg text-red-400 hover:text-white hover:bg-red-500/30 transition-colors"
+                                title="מחק"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                             {isExpanded && (
                               <div className="px-3 pb-3 space-y-2">
                                 <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
