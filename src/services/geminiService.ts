@@ -738,17 +738,15 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         try {
           let currentPassText = "";
 
-          // PASS 1 — Generate the draft, streaming to the user.
-          currentPassText = await collectStreamedText(
-            await client.interactions.create({
-              model: modelWithPrefix,
-              input: toInteractionInput(contents),
-              generation_config: interactionGenerationConfig,
-              system_instruction: activeSystemPrompt,
-              stream: true,
-            }),
-            (chunk) => { if (onChunk) onChunk(chunk); }
-          );
+          // PASS 1 — Generate the draft silently (only the final polished answer is streamed).
+          const draftResult = await client.interactions.create({
+            model: modelWithPrefix,
+            input: toInteractionInput(contents),
+            generation_config: interactionGenerationConfig,
+            system_instruction: activeSystemPrompt,
+            stream: false,
+          });
+          currentPassText = interactionText(draftResult);
 
           // --- NO MORE FUNCTION CALLS: Ready for supreme cognitive synthesis! ---
           try {
