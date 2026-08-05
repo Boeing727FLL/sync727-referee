@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -261,7 +261,7 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
-    modelName: string = "gemini-3.5-flash-lite",
+    modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
     thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
@@ -649,19 +649,80 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         });
       }
 
-      const generateContentConfig: any = {
-        temperature: 0.8,
-        maxOutputTokens: 65536,
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.HIGH,
-        },
-        mediaResolution: 'MEDIA_RESOLUTION_HIGH',
-        abortSignal: signal,
+      const interactionGenerationConfig: any = {
+        max_output_tokens: 65536,
+        thinking_level: 'high',
       };
 
-      if (useNativeSystemInstruction) {
-        generateContentConfig.systemInstruction = activeSystemPrompt;
-      }
+      // Convert legacy { role, parts } chat messages to the Interactions API Turn[] schema.
+      const toInteractionInput = (msgs: any[]) =>
+        (msgs || []).map((m: any) => ({
+          role: m.role,
+          content: (m.parts || []).map((p: any) => {
+            if (p.inlineData) {
+              return {
+                type: 'image',
+                data: p.inlineData.data,
+                mime_type: p.inlineData.mimeType || 'image/jpeg',
+                resolution: 'high',
+              };
+            }
+            if (p.fileData) {
+              return {
+                type: 'image',
+                uri: p.fileData.fileUri,
+                mime_type: p.fileData.mimeType || 'image/jpeg',
+                resolution: 'high',
+              };
+            }
+            return { type: 'text', text: p.text ?? '' };
+          }),
+        }));
+
+      // Text-only variant used for the silent validation passes.
+      const toInteractionTextOnly = (msgs: any[]) =>
+        (msgs || [])
+          .map((m: any) => ({
+            role: m.role,
+            content: (m.parts || [])
+              .filter((p: any) => {
+                if (p.fileData || p.inlineData) return false;
+                if (p.text && /^Image \d+:\n---/.test(p.text)) return false;
+                if (p.text && p.text.includes('--- HIGH RESOLUTION ZOOM')) return false;
+                return true;
+              })
+              .map((p: any) => ({ type: 'text', text: p.text ?? '' })),
+          }))
+          .filter((t: any) => t.content.length > 0);
+
+      // Collect streamed text from an Interactions SSE stream.
+      const collectStreamedText = async (stream: any, onText?: (text: string) => void): Promise<string> => {
+        let text = '';
+        for await (const event of stream) {
+          if (!event || typeof event !== 'object') continue;
+          if (event.event_type === 'content.delta') {
+            const d = event.delta;
+            if (d && d.type === 'text' && d.text) {
+              text += d.text;
+              if (onText) onText(d.text);
+            }
+          } else if (event.event_type === 'error' && event.error) {
+            throw new Error(event.error.message || 'Interaction stream error');
+          }
+        }
+        return text;
+      };
+
+      // Extract plain text from a completed (non-streamed) interaction.
+      const interactionText = (interaction: any): string =>
+        (interaction?.outputs || [])
+          .filter((o: any) => o && o.type === 'text' && typeof o.text === 'string')
+          .map((o: any) => o.text)
+          .join('');
+
+      const modelWithPrefix = googleModelName.startsWith('models/')
+        ? googleModelName
+        : `models/${googleModelName}`;
 
       let responseText = "";
       let attempts = 0;
@@ -675,231 +736,23 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         const client = new GoogleGenAI({ apiKey: currentApiKey });
 
         try {
-          const responseStream = await client.models.generateContentStream({
-            model: googleModelName,
-            contents: contents,
-            config: generateContentConfig
-          });
-
-          let functionCallsToExecute: any[] = [];
           let currentPassText = "";
 
-          for await (const chunk of responseStream) {
-            if (chunk.functionCalls && chunk.functionCalls.length > 0) {
-              functionCallsToExecute.push(...chunk.functionCalls);
-            }
-            if (chunk.text) {
-              currentPassText += chunk.text;
-            }
-          }
-
-          if (functionCallsToExecute.length > 0) {
-            // Append the model's function calls to contents
-            contents.push({
-              role: 'model',
-              parts: functionCallsToExecute.map(fc => ({ functionCall: fc }))
-            });
-
-            // Execute the function calls
-            const functionResponsesParts = [];
-            for (const fc of functionCallsToExecute) {
-              if (signal?.aborted) return responseText || '';
-              if (fc.name === "read_website_content") {
-                const urlToRead = (fc.args as any).url;
-                if (onChunk) onChunk(`\n\n[השופט קורא את האתר: ${urlToRead}...]\n\n`);
-                try {
-                  console.log(`Reading website: ${urlToRead}`);
-                  const jinaRes = await axios.get(`https://r.jina.ai/${urlToRead}`);
-                  let content = "";
-                  if (typeof jinaRes.data === 'string') {
-                    content = jinaRes.data.substring(0, 30000);
-                  } else if (jinaRes.data && jinaRes.data.data && jinaRes.data.data.content) {
-                    content = jinaRes.data.data.content.substring(0, 30000);
-                  }
-                  functionResponsesParts.push({
-                    functionResponse: {
-                      name: fc.name,
-                      response: { content: content || "No content found" }
-                    }
-                  });
-                } catch (err) {
-                  console.error(`Failed to read website ${urlToRead}:`, err);
-                  functionResponsesParts.push({
-                    functionResponse: {
-                      name: fc.name,
-                      response: { error: `Failed to fetch website: ${err}` }
-                    }
-                  });
-                }
-              } else if (fc.name === "zoom_in_high_resolution") {
-                const filename = (fc.args as any).filename;
-                const pageNumber = (fc.args as any).page_number;
-                const xP = (fc.args as any).x_percent ?? 0;
-                const yP = (fc.args as any).y_percent ?? 0;
-                const wP = (fc.args as any).width_percent ?? 100;
-                const hP = (fc.args as any).height_percent ?? 100;
-                
-                try {
-                  console.log(`Zooming into ${filename}...`);
-                  
-                  // Find the file in rulebookFiles or userFiles
-                  const allFiles = [...(rulebookFiles || []), ...(userFiles || [])];
-                  let fileToZoom = allFiles.find(f => {
-                    const nameStr = (f as any).name || (f as any).key || f.url || '';
-                    return nameStr.toLowerCase().includes(filename.toLowerCase());
-                  });
-                  
-                  // Resilient Fallback: If no match found and we have userFiles, pick the first user file!
-                  if (!fileToZoom) {
-                    if (userFiles && userFiles.length > 0) {
-                      fileToZoom = userFiles[0];
-                    } else if (allFiles.length > 0) {
-                      fileToZoom = allFiles[0];
-                    }
-                  }
-                  
-                  if (fileToZoom) {
-                    let fileBlob: Blob | File | null = null;
-                    if ((fileToZoom as any).actualFile) {
-                      fileBlob = (fileToZoom as any).actualFile;
-                    } else if ((fileToZoom as any).base64) {
-                      const fetchRes = await fetch((fileToZoom as any).base64);
-                      fileBlob = await fetchRes.blob();
-                    } else if (fileToZoom.url) {
-                      let fetchUrl = fileToZoom.url;
-                      if (fetchUrl.includes('/api/r2/file/')) {
-                        const fileKey = fetchUrl.substring(fetchUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
-                        fetchUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
-                      }
-                      const res = await axios.get(fetchUrl, { responseType: 'blob' });
-                      fileBlob = res.data;
-                    }
-                    
-                    if (fileBlob) {
-                      if (fileBlob.type === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-                        const pageImages = await convertPdfToImages(fileBlob, 5.0, pageNumber);
-                        if (pageImages.length > 0) {
-                          let pageImgBlob = pageImages[0].data;
-                          
-                          if (wP < 100 || hP < 100) {
-                            const croppedBlob = await cropAndScaleImage(pageImgBlob, xP, yP, wP, hP);
-                            if (croppedBlob) pageImgBlob = croppedBlob;
-                          }
-
-                          functionResponsesParts.push({
-                             text: `Image ${globalImageIndex++}:\n--- HIGH RESOLUTION ZOOM (4K, CROP ${xP}%,${yP}% to ${wP}%,${hP}%) FOR ${filename} PAGE ${pageNumber} ---\n`
-                          });
-                          functionResponsesParts.push({
-                             inlineData: {
-                               data: await fileToBase64(pageImgBlob),
-                               mimeType: 'image/jpeg'
-                             }
-                          });
-                          
-                          functionResponsesParts.push({
-                             functionResponse: {
-                               name: fc.name,
-                               response: { success: true, message: `High resolution zoom image of page ${pageNumber} has been attached to this message. Analyze it carefully.` }
-                             }
-                          });
-                        } else {
-                          functionResponsesParts.push({
-                            functionResponse: {
-                              name: fc.name,
-                              response: { error: `Could not render page ${pageNumber} from PDF.` }
-                            }
-                          });
-                        }
-                      } else {
-                        // IT IS AN IMAGE
-                        let imgBlob = fileBlob;
-                        if (wP < 100 || hP < 100) {
-                          const croppedBlob = await cropAndScaleImage(imgBlob, xP, yP, wP, hP);
-                          if (croppedBlob) imgBlob = croppedBlob;
-                        } else {
-                          // Still scale to 4K if no crop was requested
-                          const croppedBlob = await cropAndScaleImage(imgBlob, 0, 0, 100, 100);
-                          if (croppedBlob) imgBlob = croppedBlob;
-                        }
-
-                        functionResponsesParts.push({
-                           text: `Image ${globalImageIndex++}:\n--- HIGH RESOLUTION ZOOM (4K, CROP ${xP}%,${yP}% to ${wP}%,${hP}%) FOR ${filename} ---\n`
-                        });
-                        functionResponsesParts.push({
-                           inlineData: {
-                             data: await fileToBase64(imgBlob),
-                             mimeType: fileBlob.type || 'image/jpeg'
-                           }
-                        });
-
-                        functionResponsesParts.push({
-                           functionResponse: {
-                             name: fc.name,
-                             response: { success: true, message: `High resolution 4K zoomed image chunk has been attached to this message. Analyze it carefully.` }
-                           }
-                        });
-                      }
-                    } else {
-                      functionResponsesParts.push({
-                        functionResponse: {
-                          name: fc.name,
-                          response: { error: `Could not load file data for ${filename}.` }
-                        }
-                      });
-                    }
-                  } else {
-                    functionResponsesParts.push({
-                      functionResponse: {
-                        name: fc.name,
-                        response: { error: `File ${filename} not found in current context.` }
-                      }
-                    });
-                  }
-                } catch (err) {
-                  console.error(`Failed to zoom into ${filename}:`, err);
-                  functionResponsesParts.push({
-                    functionResponse: {
-                      name: fc.name,
-                      response: { error: `Failed to zoom: ${err}` }
-                    }
-                  });
-                }
-              }
-            }
-
-            // Append the function responses to contents
-            contents.push({
-              role: 'user',
-              parts: functionResponsesParts
-            });
-            
-            // Do not mark success = true so it continues the loop
-            // Reduce attempts so it doesn't count against the max Attempts
-            attempts--;
-            continue;
-          }
+          // PASS 1 — Generate the draft, streaming to the user.
+          currentPassText = await collectStreamedText(
+            await client.interactions.create({
+              model: modelWithPrefix,
+              input: toInteractionInput(contents),
+              generation_config: interactionGenerationConfig,
+              system_instruction: activeSystemPrompt,
+              stream: true,
+            }),
+            (chunk) => { if (onChunk) onChunk(chunk); }
+          );
 
           // --- NO MORE FUNCTION CALLS: Ready for supreme cognitive synthesis! ---
           try {
-            // Strip image parts AND their description text from contents for text-only validation passes
-            // (models like gemma may not support image input in multi-turn contexts)
-            const stripImages = (msgs: any[]) => msgs.map(m => {
-              const filteredParts = (m.parts || []).filter((p: any) => {
-                if (p.fileData || p.inlineData) return false;
-                if (p.text && /^Image \d+:\n---/.test(p.text)) return false;
-                if (p.text && p.text.includes('--- HIGH RESOLUTION ZOOM')) return false;
-                return true;
-              });
-              return { ...m, parts: filteredParts };
-            });
-
-            // Append the silent reasoning draft to the contents
-            contents.push({
-              role: 'model',
-              parts: [{ text: currentPassText }]
-            });
-
-            // Pass 1: Silent Red Team Adversarial Critique
+            // Pass 2: Silent Red Team Adversarial Critique (text-only, without streaming)
             const critiquePrompt = `[מערכת בקרה קוגניטיבית עילאית Claude Fable 5 - שלב א' בקורת עצמית עוינת (Adversarial Critique)]:
 נתח את טיוטת החשיבה, פסיקות החוקים והניקוד שלך עד כה בהשוואה לתמונות הזום שבוצעו. העמד את עצמך במבחן ביקורתי מחמיר (Red Teaming):
 - האם ישנה טעות כלשהי בזיהוי המשימה או בחוקים שלה? (זכור: יש להתעלם מהיסטוריית משימות קודמות!).
@@ -908,67 +761,46 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 - האם ישנם חצים או סימני LaTeX/דולר ($ / \$\$) אסורים בטיוטה שלך?
 נסח בקצרה את מסקנות הביקורת והתיקונים שחובה לבצע.`;
 
-            contents.push({
-              role: 'user',
-              parts: [{ text: critiquePrompt }]
+            const critiqueInput = [
+              ...toInteractionTextOnly(contents),
+              { role: 'model', content: [{ type: 'text', text: currentPassText }] },
+              { role: 'user', content: [{ type: 'text', text: critiquePrompt }] },
+            ];
+
+            const critiqueResult = await client.interactions.create({
+              model: modelWithPrefix,
+              input: critiqueInput,
+              generation_config: interactionGenerationConfig,
+              system_instruction: activeSystemPrompt,
+              stream: false,
             });
 
-            // Disable tools for the validation phase to keep it fast and purely cognitive
-            const validationConfig = {
-              ...generateContentConfig,
-              tools: undefined,
-              toolConfig: undefined
-            };
-
-            // Run the critique silently (without streaming to onChunk!)
-            const critiqueResult = await client.models.generateContent({
-              model: googleModelName,
-              contents: stripImages(contents),
-              config: validationConfig
-            });
-
-            const critiqueText = critiqueResult.text || "אין הערות קריטיות.";
-
+            const critiqueText = interactionText(critiqueResult) || "אין הערות קריטיות.";
             const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
 
             if (strippedCritique) {
-              // Pass 2: Final Polishing & Streaming to the user
-              contents.push({
-                role: 'model',
-                parts: [{ text: critiqueText }]
-              });
-
+              // Pass 3: Final Polishing & Streaming to the user
               const finalPrompt = `[שלב ב' הפקת התשובה הסופית]:
 על בסיס הביקורת, כתוב את התשובה כמו שאתה מדבר עם קבוצה ליד שולחן התחרות. ישיר, ידידותי, מעודד. אל תשתמש ב"פסק הדין הסופי" או שפה משפטית. פשוט תענה לשאלה בצורה טבעית, ציין את מספרי הכללים הרלוונטיים ותנאי הניקוד. ללא LaTeX/$, ללא חצים יוניקוד, הצג חישובים פשוטים.`;
 
-              contents.push({
-                role: 'user',
-                parts: [{ text: finalPrompt }]
-              });
+              const finalInput = [
+                ...critiqueInput,
+                { role: 'model', content: [{ type: 'text', text: critiqueText }] },
+                { role: 'user', content: [{ type: 'text', text: finalPrompt }] },
+              ];
 
-              const finalConfig = {
-                ...generateContentConfig,
-                tools: undefined,
-                toolConfig: undefined
-              };
+              const finalPassChunks = await collectStreamedText(
+                await client.interactions.create({
+                  model: modelWithPrefix,
+                  input: finalInput,
+                  generation_config: interactionGenerationConfig,
+                  system_instruction: activeSystemPrompt,
+                  stream: true,
+                }),
+                (chunk) => { if (onChunk) onChunk(chunk); }
+              );
 
-              const validationStream = await client.models.generateContentStream({
-                model: googleModelName,
-                contents: stripImages(contents),
-                config: finalConfig
-              });
-
-              let finalPassChunks = '';
-              for await (const chunk of validationStream) {
-                if (chunk.text) {
-                  finalPassChunks += chunk.text;
-                  if (onChunk) onChunk(chunk.text);
-                }
-              }
-              responseText = finalPassChunks;
-              if (!responseText && currentPassText) {
-                responseText = currentPassText;
-              }
+              responseText = finalPassChunks || currentPassText;
             } else {
               responseText = currentPassText;
             }
@@ -986,7 +818,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             if (attempts >= maxAttempts) {
               throw new Error("All rotated API keys are invalid or leaked. Please update keys.");
             }
-            // Need to get a new key for the next attempt
             currentApiKey = await getNextApiKey();
           } else if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded")) {
             const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED");
@@ -1006,7 +837,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
               await new Promise(resolve => setTimeout(resolve, delay));
             }
           } else {
-            throw genErr; // Other unrecoverable errors throw immediately
+            throw genErr;
           }
         }
       }
