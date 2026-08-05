@@ -700,7 +700,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         let text = '';
         for await (const event of stream) {
           if (!event || typeof event !== 'object') continue;
-          if (event.event_type === 'content.delta') {
+          if (event.event_type === 'step.delta' || event.event_type === 'content.delta') {
             const d = event.delta;
             if (d && d.type === 'text' && d.text) {
               text += d.text;
@@ -715,6 +715,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
       // Extract plain text from a completed (non-streamed) interaction.
       const interactionText = (interaction: any): string =>
+        (typeof interaction?.output_text === 'string' && interaction.output_text) ||
         (interaction?.outputs || [])
           .filter((o: any) => o && o.type === 'text' && typeof o.text === 'string')
           .map((o: any) => o.text)
