@@ -654,10 +654,10 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         thinking_level: 'high',
       };
 
-      // Convert legacy { role, parts } chat messages to the Interactions API Turn[] schema.
+      // Convert legacy { role, parts } chat messages to the Interactions API step_list schema.
       const toInteractionInput = (msgs: any[]) =>
         (msgs || []).map((m: any) => ({
-          role: m.role,
+          type: m.role === 'model' ? 'model_output' : 'user_input',
           content: (m.parts || []).map((p: any) => {
             if (p.inlineData) {
               return {
@@ -683,7 +683,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       const toInteractionTextOnly = (msgs: any[]) =>
         (msgs || [])
           .map((m: any) => ({
-            role: m.role,
+            type: m.role === 'model' ? 'model_output' : 'user_input',
             content: (m.parts || [])
               .filter((p: any) => {
                 if (p.fileData || p.inlineData) return false;
@@ -762,8 +762,8 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
             const critiqueInput = [
               ...toInteractionTextOnly(contents),
-              { role: 'model', content: [{ type: 'text', text: currentPassText }] },
-              { role: 'user', content: [{ type: 'text', text: critiquePrompt }] },
+              { type: 'model_output', content: [{ type: 'text', text: currentPassText }] },
+              { type: 'user_input', content: [{ type: 'text', text: critiquePrompt }] },
             ];
 
             const critiqueResult = await client.interactions.create({
@@ -784,8 +784,8 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
               const finalInput = [
                 ...critiqueInput,
-                { role: 'model', content: [{ type: 'text', text: critiqueText }] },
-                { role: 'user', content: [{ type: 'text', text: finalPrompt }] },
+                { type: 'model_output', content: [{ type: 'text', text: critiqueText }] },
+                { type: 'user_input', content: [{ type: 'text', text: finalPrompt }] },
               ];
 
               const finalPassChunks = await collectStreamedText(
