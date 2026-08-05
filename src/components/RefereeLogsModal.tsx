@@ -96,16 +96,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     return (l.question || '').toLowerCase().includes(q) || (l.answer || '').toLowerCase().includes(q);
   });
 
-  const formatTime = (ts: any): string => {
-    if (!ts) return '...';
-    try {
-      const date = ts.toDate ? ts.toDate() : new Date(ts);
-      return date.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return '';
-    }
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -205,12 +195,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                   {entry.question || '(ללא שאלה)'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${entry.ok === false ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                  {entry.ok === false ? 'שגיאה' : 'OK'}
-                                </span>
-                                <span className="text-[11px] text-slate-400">{formatTime(entry.createdAt)}</span>
-                              </div>
                             </button>
                             {isExpanded && (
                               <div className="px-3 pb-3 space-y-2">
@@ -221,12 +205,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                 <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
                                   <div className="text-[10px] text-emerald-400 font-black mb-1">תשובה</div>
                                   <div className="text-sm text-slate-200 whitespace-pre-wrap break-words">{entry.answer}</div>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {entry.season && <span className="text-[10px] font-bold text-slate-400 bg-slate-700/60 rounded px-1.5 py-0.5">עונה: {entry.season}</span>}
-                                  {entry.language && <span className="text-[10px] font-bold text-slate-400 bg-slate-700/60 rounded px-1.5 py-0.5">שפה: {entry.language}</span>}
-                                  {entry.uid && <span className="text-[10px] font-bold text-slate-400 bg-slate-700/60 rounded px-1.5 py-0.5">משתמש: {entry.uid}</span>}
-                                  {entry.model && <span className="text-[10px] font-bold text-slate-400 bg-slate-700/60 rounded px-1.5 py-0.5">מודל: {entry.model}</span>}
                                 </div>
                               </div>
                             )}
