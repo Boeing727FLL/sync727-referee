@@ -1,4 +1,4 @@
-import { doc, setDoc, increment, getDocsFromServer, getDocFromServer, collection, deleteDoc, deleteField, serverTimestamp, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, increment, getDocsFromServer, getDocFromServer, collection, deleteDoc, deleteField, serverTimestamp, onSnapshot, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 const STATS_REF = doc(db, 'analytics', 'stats');
@@ -27,6 +27,28 @@ export async function trackRefereeUser(uid: string) {
     }, { merge: true });
   } catch (e) {
     console.warn("trackRefereeUser failed:", e);
+  }
+}
+
+// Log every question + answer pair so the head referees can review them
+// from the hidden logs screen (5 quick taps on "Developed By", code "FLL").
+export async function logRefereeQA(payload: {
+  question: string;
+  answer: string;
+  season?: string;
+  language?: string;
+  uid?: string | null;
+  model?: string;
+  ok?: boolean;
+}) {
+  try {
+    await addDoc(collection(db, 'referee_logs'), {
+      ...payload,
+      uid: payload.uid || 'anon',
+      createdAt: serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn("logRefereeQA failed:", e);
   }
 }
 

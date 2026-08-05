@@ -16,7 +16,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession } from '../lib/analytics';
+import RefereeLogsModal from '../components/RefereeLogsModal';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -55,7 +56,9 @@ export default function PublicRulebookAI() {
   const [showEnterAnimation, setShowEnterAnimation] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
+  const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
   const logoTapTimesRef = useRef<number[]>([]);
+  const developByTapTimesRef = useRef<number[]>([]);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent;
@@ -163,6 +166,17 @@ export default function PublicRulebookAI() {
     if (logoTapTimesRef.current.length >= 5) {
       logoTapTimesRef.current = [];
       setShowAdminAnalytics(true);
+    }
+  };
+
+  // Secret: 5 rapid taps on the "Developed By" caption opens the head-referee logs screen
+  const handleDevelopByTap = () => {
+    const now = Date.now();
+    developByTapTimesRef.current = developByTapTimesRef.current.filter(t => now - t < 2000);
+    developByTapTimesRef.current.push(now);
+    if (developByTapTimesRef.current.length >= 5) {
+      developByTapTimesRef.current = [];
+      setShowRefereeLogs(true);
     }
   };
 
@@ -628,6 +642,15 @@ const fetchLatestRulebook = async () => {
           return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
         });
       } else {
+        logRefereeQA({
+          question: userMessage,
+          answer: response || t('chat.commError'),
+          season: seasonName,
+          language,
+          uid: resolveRefereeUid(),
+          model: selectedModel,
+          ok: true,
+        });
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model') return prev;
@@ -643,6 +666,15 @@ const fetchLatestRulebook = async () => {
         });
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
+        logRefereeQA({
+          question: userMessage,
+          answer: errMsg,
+          season: seasonName,
+          language,
+          uid: resolveRefereeUid(),
+          model: selectedModel,
+          ok: false,
+        });
         setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
       }
     } finally {
@@ -766,7 +798,7 @@ const fetchLatestRulebook = async () => {
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
               <div className="h-3 md:h-6 w-px bg-slate-300" />
               <div className="flex flex-col leading-tight">
-                <span className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Developed By</span>
+                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
                 <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
@@ -1408,6 +1440,11 @@ const fetchLatestRulebook = async () => {
       <AdminAnalyticsModal
         isOpen={showAdminAnalytics}
         onClose={() => setShowAdminAnalytics(false)}
+      />
+
+      <RefereeLogsModal
+        isOpen={showRefereeLogs}
+        onClose={() => setShowRefereeLogs(false)}
       />
 
       <AnimatePresence>
