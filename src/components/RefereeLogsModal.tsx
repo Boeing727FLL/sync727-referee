@@ -9,7 +9,7 @@ interface RefereeLogsModalProps {
   onClose: () => void;
 }
 
-const SECRET_CODE = 'FLL';
+const SECRET_CODE = 'fLl';
 
 type LogEntry = {
   id: string;
@@ -73,7 +73,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   }, [unlocked]);
 
   const handleUnlock = () => {
-    if (code.trim().toLowerCase() === SECRET_CODE.toLowerCase()) {
+    if (code.trim() === SECRET_CODE) {
       setUnlocked(true);
       setError(false);
     } else {

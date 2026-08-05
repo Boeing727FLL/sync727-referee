@@ -169,11 +169,9 @@ export default function PublicRulebookAI() {
     }
   };
 
-  // Secret: 5 rapid taps on the "Developed By" caption opens the head-referee logs screen
+  // Secret: 5 taps on the "Developed By" caption opens the head-referee logs screen
   const handleDevelopByTap = () => {
-    const now = Date.now();
-    developByTapTimesRef.current = developByTapTimesRef.current.filter(t => now - t < 2000);
-    developByTapTimesRef.current.push(now);
+    developByTapTimesRef.current.push(Date.now());
     if (developByTapTimesRef.current.length >= 5) {
       developByTapTimesRef.current = [];
       setShowRefereeLogs(true);
