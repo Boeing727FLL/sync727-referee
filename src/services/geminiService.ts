@@ -197,33 +197,47 @@ let GEMINI_KEYS: string[] = [];
 
 const unhealthyKeys = new Set<string>();
 
-async function getNextApiKey(): Promise<string> {
-  if (GEMINI_KEYS.length === 0) {
-    try {
-      const { doc, getDoc } = await import('firebase/firestore');
-      const docRef = doc(db, "secrets", "api_keys");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        console.log("Firebase API keys document data:", data);
-        if (data.gemini_keys && Array.isArray(data.gemini_keys)) {
-          GEMINI_KEYS = data.gemini_keys;
-        } else {
-          // Check if it's stored as fields like 0: "key", 1: "key" or any string keys
-          const keys = [];
-          for (const key in data) {
-            if (typeof data[key] === 'string' && data[key].startsWith('AIza')) {
-              keys.push(data[key]);
-            }
+async function ensureKeysLoaded(): Promise<void> {
+  if (GEMINI_KEYS.length > 0) return;
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const docRef = doc(db, "secrets", "api_keys");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      console.log("Firebase API keys document data:", data);
+      if (data.gemini_keys && Array.isArray(data.gemini_keys)) {
+        GEMINI_KEYS = data.gemini_keys;
+      } else {
+        // Check if it's stored as fields like 0: "key", 1: "key" or any string keys
+        const keys = [];
+        for (const key in data) {
+          if (typeof data[key] === 'string' && data[key].startsWith('AIza')) {
+            keys.push(data[key]);
           }
-          if (keys.length > 0) GEMINI_KEYS = keys;
         }
-        console.log("Loaded GEMINI_KEYS from Firebase:", GEMINI_KEYS.length, "keys.");
+        if (keys.length > 0) GEMINI_KEYS = keys;
       }
-    } catch (err) {
-      console.error("Error fetching Gemini keys from Firestore:", err);
+      console.log("Loaded GEMINI_KEYS from Firebase:", GEMINI_KEYS.length, "keys.");
     }
+  } catch (err) {
+    console.error("Error fetching Gemini keys from Firestore:", err);
   }
+}
+
+// Full snapshot of every available API key (the pool from Firebase + any env fallback).
+async function getAllApiKeys(): Promise<string[]> {
+  await ensureKeysLoaded();
+  const envKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) ||
+                 (import.meta.env?.VITE_GEMINI_API_KEY);
+  const list = [...GEMINI_KEYS];
+  if (envKey && !list.includes(envKey)) list.push(envKey);
+  if (list.length === 0) throw new Error("No API keys configured");
+  return list;
+}
+
+async function getNextApiKey(): Promise<string> {
+  await ensureKeysLoaded();
 
   const availableKeys = GEMINI_KEYS.filter(k => !unhealthyKeys.has(k));
   if (availableKeys.length === 0) {
@@ -371,7 +385,8 @@ ${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פש
         currentParts.push({ text: `System Instructions:\n${activeSystemPrompt}\n\nUser Question:` });
       }
 
-      let currentApiKey = await getNextApiKey();
+      // Load the key pool early so the first model attempt can start immediately.
+      await ensureKeysLoaded();
 
       let globalImageIndex = 1;
 
@@ -649,11 +664,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         });
       }
 
-      const interactionGenerationConfig: any = {
-        max_output_tokens: 65536,
-        thinking_level: 'high',
-      };
-
       // Convert legacy { role, parts } chat messages to the Interactions API step_list schema.
       const toInteractionInput = (msgs: any[]) =>
         (msgs || []).map((m: any) => ({
@@ -695,6 +705,17 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           }))
           .filter((t: any) => t.content.length > 0);
 
+      // Convert step_list back to the classic { role, parts } format for generateContent.
+      const stepsToContents = (steps: any[]): any[] =>
+        (steps || []).map((s: any) => ({
+          role: s.type === 'model_output' ? 'model' : 'user',
+          parts: (s.content || []).map((c: any) =>
+            c.type === 'image'
+              ? { inlineData: { data: c.data, mimeType: c.mime_type || 'image/jpeg' } }
+              : { text: c.text ?? '' }
+          ),
+        }));
+
       // Collect streamed text from an Interactions SSE stream.
       const collectStreamedText = async (stream: any, onText?: (text: string) => void): Promise<string> => {
         let text = '';
@@ -721,38 +742,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           .map((o: any) => o.text)
           .join('');
 
-      const modelWithPrefix = googleModelName.startsWith('models/')
-        ? googleModelName
-        : `models/${googleModelName}`;
-
-      let responseText = "";
-      let attempts = 0;
-      let maxAttempts = 15;
-      let success = false;
-      // using currentApiKey which has the latest valid key from the upload steps
-
-      while (attempts < maxAttempts && !success) {
-        if (signal?.aborted) return '';
-        attempts++;
-        const client = new GoogleGenAI({ apiKey: currentApiKey });
-
-        try {
-          let currentPassText = "";
-
-          // PASS 1 — Generate the draft silently (only the final polished answer is streamed).
-          const draftResult = await client.interactions.create({
-            model: modelWithPrefix,
-            input: toInteractionInput(contents),
-            generation_config: interactionGenerationConfig,
-            system_instruction: activeSystemPrompt,
-            stream: false,
-          });
-          currentPassText = interactionText(draftResult);
-
-          // --- NO MORE FUNCTION CALLS: Ready for supreme cognitive synthesis! ---
-          try {
-            // Pass 2: Silent Red Team Adversarial Critique (text-only, without streaming)
-            const critiquePrompt = `[מערכת בקרה קוגניטיבית עילאית Claude Fable 5 - שלב א' בקורת עצמית עוינת (Adversarial Critique)]:
+      const critiquePrompt = `[מערכת בקרה קוגניטיבית עילאית Claude Fable 5 - שלב א' בקורת עצמית עוינת (Adversarial Critique)]:
 נתח את טיוטת החשיבה, פסיקות החוקים והניקוד שלך עד כה בהשוואה לתמונות הזום שבוצעו. העמד את עצמך במבחן ביקורתי מחמיר (Red Teaming):
 - האם ישנה טעות כלשהי בזיהוי המשימה או בחוקים שלה? (זכור: יש להתעלם מהיסטוריית משימות קודמות!).
 - האם עיקרון מגע הדדי וסימטריות המגע מתקיימים במלואם? (האם ציוד נוגע בדגם או להפך, מה שפוסל את הניקוד?)
@@ -760,89 +750,180 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 - האם ישנם חצים או סימני LaTeX/דולר ($ / \$\$) אסורים בטיוטה שלך?
 נסח בקצרה את מסקנות הביקורת והתיקונים שחובה לבצע.`;
 
-            const critiqueInput = [
-              ...toInteractionTextOnly(contents),
-              { type: 'model_output', content: [{ type: 'text', text: currentPassText }] },
-              { type: 'user_input', content: [{ type: 'text', text: critiquePrompt }] },
-            ];
-
-            const critiqueResult = await client.interactions.create({
-              model: modelWithPrefix,
-              input: critiqueInput,
-              generation_config: interactionGenerationConfig,
-              system_instruction: activeSystemPrompt,
-              stream: false,
-            });
-
-            const critiqueText = interactionText(critiqueResult) || "אין הערות קריטיות.";
-            const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
-
-            if (strippedCritique) {
-              // Pass 3: Final Polishing & Streaming to the user
-              const finalPrompt = `[שלב ב' הפקת התשובה הסופית]:
+      const finalPrompt = `[שלב ב' הפקת התשובה הסופית]:
 על בסיס הביקורת, כתוב את התשובה כמו שאתה מדבר עם קבוצה ליד שולחן התחרות. ישיר, ידידותי, מעודד. אל תשתמש ב"פסק הדין הסופי" או שפה משפטית. פשוט תענה לשאלה בצורה טבעית, ציין את מספרי הכללים הרלוונטיים ותנאי הניקוד. ללא LaTeX/$, ללא חצים יוניקוד, הצג חישובים פשוטים.`;
 
+      // ===== Model fallback chain =====
+      // The user is billed per model in AI Studio, so if the primary model is
+      // down/quota-limited we swap to the fallback models in order. We never tell
+      // the user the referee is unavailable until every model and every API key
+      // has genuinely been attempted.
+      const modelChain: { name: string; kind: 'interactions' | 'generateContent'; config: any }[] = [
+        {
+          name: googleModelName,
+          kind: 'interactions',
+          config: { max_output_tokens: 65536, thinking_level: 'high' },
+        },
+        {
+          name: 'gemini-3.5-flash',
+          kind: 'interactions',
+          config: { max_output_tokens: 65536, thinking_level: 'high' },
+        },
+        {
+          name: 'gemini-3.1-pro-preview',
+          kind: 'interactions',
+          config: { temperature: 0.75, max_output_tokens: 65536, top_p: 0.95, thinking_level: 'high' },
+        },
+        {
+          name: 'gemini-3.5-flash-lite',
+          kind: 'generateContent',
+          config: { thinkingConfig: { thinkingLevel: 'HIGH' }, mediaResolution: 'MEDIA_RESOLUTION_HIGH' },
+        },
+      ];
+      const seenModels = new Set<string>();
+      const effectiveChain = modelChain.filter(m => {
+        if (seenModels.has(m.name)) return false;
+        seenModels.add(m.name);
+        return true;
+      });
+
+      // Run one of the 3 passes against the given model using the current key.
+      const callModel = async (
+        client: any,
+        modelEntry: { name: string; kind: 'interactions' | 'generateContent'; config: any },
+        stepInput: any[],
+        isStream: boolean,
+        onText?: (text: string) => void,
+      ): Promise<string> => {
+        if (modelEntry.kind === 'interactions') {
+          const prefixed = modelEntry.name.startsWith('models/') ? modelEntry.name : `models/${modelEntry.name}`;
+          const params: any = {
+            model: prefixed,
+            input: stepInput,
+            generation_config: modelEntry.config,
+            system_instruction: activeSystemPrompt,
+            stream: isStream,
+          };
+          if (isStream) {
+            const stream = await client.interactions.create(params);
+            return collectStreamedText(stream, onText);
+          }
+          return interactionText(await client.interactions.create(params));
+        }
+        // Standard generateContent fallback (gemini-3.5-flash-lite)
+        const gcContents = stepsToContents(stepInput);
+        const gcConfig: any = { thinkingConfig: { thinkingLevel: 'HIGH' } };
+        if (stepInput.some((s: any) => (s.content || []).some((c: any) => c.type === 'image'))) {
+          gcConfig.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
+        }
+        if (isStream) {
+          const stream = await client.models.generateContentStream({
+            model: modelEntry.name,
+            config: gcConfig,
+            contents: gcContents,
+            systemInstruction: activeSystemPrompt,
+          });
+          let text = '';
+          for await (const chunk of stream) {
+            if (chunk && chunk.text) {
+              text += chunk.text;
+              if (onText) onText(chunk.text);
+            }
+          }
+          return text;
+        }
+        const result = await client.models.generateContent({
+          model: modelEntry.name,
+          config: gcConfig,
+          contents: gcContents,
+          systemInstruction: activeSystemPrompt,
+        });
+        return (result && result.text) || '';
+      };
+
+      const isKeyInvalidErr = (m: string) =>
+        m.includes("403") || m.includes("401") || m.includes("leaked") || m.includes("PERMISSION_DENIED") || m.includes("API key not valid") || m.includes("API_KEY_INVALID");
+      const isQuotaErr = (m: string) =>
+        m.includes("429") || m.includes("Too Many Requests") || m.includes("Quota exceeded") || m.includes("RESOURCE_EXHAUSTED");
+      const isTransientErr = (m: string) =>
+        isQuotaErr(m) || m.includes("500") || m.includes("INTERNAL") || m.includes("503");
+      const isRequestLevelErr = (m: string) => {
+        const mm = m.toLowerCase();
+        return mm.includes("400") && (
+          mm.includes("schema") || mm.includes("model") || mm.includes("unsupported") ||
+          mm.includes("not found") || mm.includes("input format") || mm.includes("unknown field") ||
+          mm.includes("invalid argument") || mm.includes("not enabled")
+        );
+      };
+
+      let responseText = "";
+      let success = false;
+      const allKeys = await getAllApiKeys();
+
+      for (let mi = 0; mi < effectiveChain.length && !success; mi++) {
+        const modelEntry = effectiveChain[mi];
+        // Last resort: ignore known-bad keys so all 120 are genuinely re-tried.
+        if (mi === effectiveChain.length - 1) {
+          unhealthyKeys.clear();
+        }
+        let triedAnyKeyForModel = false;
+
+        for (const key of allKeys) {
+          if (signal?.aborted) return '';
+          if (unhealthyKeys.has(key)) continue;
+          triedAnyKeyForModel = true;
+
+          const client = new GoogleGenAI({ apiKey: key });
+
+          try {
+            // PASS 1 — Generate the draft silently (only the final polished answer is streamed).
+            const draftText = await callModel(client, modelEntry, toInteractionInput(contents), false);
+
+            // PASS 2 — Silent Red Team Adversarial Critique (text-only, no streaming).
+            const critiqueInput = [
+              ...toInteractionTextOnly(contents),
+              { type: 'model_output', content: [{ type: 'text', text: draftText }] },
+              { type: 'user_input', content: [{ type: 'text', text: critiquePrompt }] },
+            ];
+            const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
+            const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
+
+            let finalAnswer = draftText;
+            if (strippedCritique) {
+              // PASS 3 — Final Polishing, streamed to the user.
               const finalInput = [
                 ...critiqueInput,
                 { type: 'model_output', content: [{ type: 'text', text: critiqueText }] },
                 { type: 'user_input', content: [{ type: 'text', text: finalPrompt }] },
               ];
+              const streamedText = await callModel(client, modelEntry, finalInput, true, (chunk) => { if (onChunk) onChunk(chunk); });
+              finalAnswer = streamedText || draftText;
+            }
 
-              const finalPassChunks = await collectStreamedText(
-                await client.interactions.create({
-                  model: modelWithPrefix,
-                  input: finalInput,
-                  generation_config: interactionGenerationConfig,
-                  system_instruction: activeSystemPrompt,
-                  stream: true,
-                }),
-                (chunk) => { if (onChunk) onChunk(chunk); }
-              );
-
-              responseText = finalPassChunks || currentPassText;
+            responseText = finalAnswer;
+            success = true;
+            console.log(`Referee answer generated with model ${modelEntry.name} (key ${key.substring(0, 10)}...).`);
+            break;
+          } catch (err: any) {
+            const errMsg = err?.message || JSON.stringify(err);
+            if (isKeyInvalidErr(errMsg)) {
+              console.warn(`Key ${key.substring(0, 10)}... invalid (${errMsg.substring(0, 120)}). Moving to next key.`);
+              markKeyUnhealthy(key);
+            } else if (isRequestLevelErr(errMsg)) {
+              console.warn(`Model ${modelEntry.name} unusable for this request (${errMsg.substring(0, 120)}). Switching to next model.`);
+              break; // Same request error will repeat for every key — fail fast to the next model.
+            } else if (isTransientErr(errMsg)) {
+              console.warn(`Transient error on model ${modelEntry.name}, key ${key.substring(0, 10)}... (${errMsg.substring(0, 120)}). Rotating key.`);
+              if (isQuotaErr(errMsg)) markKeyUnhealthy(key);
             } else {
-              responseText = currentPassText;
+              console.warn(`Model ${modelEntry.name}, key ${key.substring(0, 10)}... failed (${errMsg.substring(0, 150)}). Moving to next key.`);
             }
-          } catch (valErr) {
-            console.warn("Self-correction failed, using draft response");
-            responseText = currentPassText;
-          }
-
-          success = true;
-        } catch (genErr: any) {
-          console.warn(`Attempt ${attempts} failed, retrying...`);
-          const errMsg = genErr?.message || JSON.stringify(genErr);
-          if (errMsg.includes("403") || errMsg.includes("leaked") || errMsg.includes("PERMISSION_DENIED") || errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID")) {
-            markKeyUnhealthy(currentApiKey);
-            if (attempts >= maxAttempts) {
-              throw new Error("All rotated API keys are invalid or leaked. Please update keys.");
-            }
-            currentApiKey = await getNextApiKey();
-          } else if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded")) {
-            const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED");
-            if (is429) {
-              currentApiKey = await getNextApiKey();
-              console.warn(`Quota exceeded (429) on attempt ${attempts}. Rotating API key, retrying...`);
-              if (attempts >= maxAttempts) {
-                return 'מערכת השופט עמוסה כרגע. אנא נסה שוב בעוד דקה.';
-              }
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            } else {
-              const delay = 2000;
-              console.warn(`Transient error on attempt ${attempts}: ${errMsg}. Retrying in ${delay/1000}s...`);
-              if (attempts >= maxAttempts) {
-                throw genErr;
-              }
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-          } else {
-            throw genErr;
           }
         }
       }
 
       if (!responseText) {
-        throw new Error("Empty response received from Gemini.");
+        throw new Error("All models and API keys were exhausted without a successful answer.");
       }
 
       return responseText || "לא התקבלה תשובה מודל הבינה המלאכותית.";
