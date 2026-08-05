@@ -21,6 +21,9 @@ import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSe
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
+const stripThinkBlocks = (text: string): string =>
+  (text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
+
 const INTRO_STARS = [
   { top: '8%', left: '10%', size: 3, delay: '0s' },
   { top: '14%', left: '78%', size: 4, delay: '0.6s' },
@@ -642,7 +645,7 @@ const fetchLatestRulebook = async () => {
       } else {
         logRefereeQA({
           question: userMessage,
-          answer: response || t('chat.commError'),
+          answer: stripThinkBlocks(response) || response || t('chat.commError'),
           season: seasonName,
           language,
           uid: resolveRefereeUid(),
