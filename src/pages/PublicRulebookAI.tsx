@@ -474,6 +474,31 @@ const fetchLatestRulebook = async () => {
       });
 
       await upload.done();
+
+      // Same-season updates file (e.g. BioGlow_updates.pdf): replace any previous version of this exact file,
+      // including its generated page images and text, so only the latest upload survives.
+      const prevVersionPrefixes = [
+        `fll-rules-images/${file.name}/`,
+        `fll-rules-text/${file.name}.txt`,
+        `fll-rules/${file.name}`,
+      ];
+      for (const prefix of prevVersionPrefixes) {
+        try {
+          const listResp = await s3Client.send(new ListObjectsV2Command({
+            Bucket: R2_BUCKET_NAME,
+            Prefix: prefix,
+          }));
+          const staleObjects = (listResp.Contents || []).map((o: any) => ({ Key: o.Key }));
+          if (staleObjects.length > 0) {
+            await s3Client.send(new DeleteObjectsCommand({
+              Bucket: R2_BUCKET_NAME,
+              Delete: { Objects: staleObjects.slice(0, 1000) },
+            }));
+          }
+        } catch (e) {
+          console.warn(`Failed to remove previous version of ${file.name} (${prefix}):`, e);
+        }
+      }
       
       setShowUploadModal(false);
       setUploading(false);
