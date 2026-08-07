@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, Star, MessageSquareHeart, RefreshCw, Trash2, ArrowLeft, Inbox } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const SECRET_PASSWORD = '2601';
@@ -26,6 +26,8 @@ export default function FeedbackAdminPage() {
   const [error, setError] = useState(false);
   const [items, setItems] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem(AUTO_UNLOCK_KEY) === '1') {
@@ -77,6 +79,18 @@ export default function FeedbackAdminPage() {
     } catch (e) {
       console.warn("delete feedback failed:", e);
     }
+    setConfirmDeleteId(null);
+  };
+
+  const handleClearAll = async () => {
+    try {
+      const batch = writeBatch(db);
+      items.forEach(i => batch.delete(doc(db, 'referee_feedback', i.id)));
+      await batch.commit();
+    } catch (e) {
+      console.warn("clear all feedback failed:", e);
+    }
+    setConfirmClearAll(false);
   };
 
   const formatTime = (ts: any): string => {
@@ -163,7 +177,35 @@ export default function FeedbackAdminPage() {
                 {total} {total === 1 ? 'פידבק' : 'פידבקים'}
                 {lowCount > 0 && ` • ${lowCount} בציון נמוך (1-2)`}
               </div>
-              <div className="text-[11px] text-slate-500">מתעדכן בזמן אמת</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[11px] text-slate-500">מתעדכן בזמן אמת</div>
+                {total > 0 && (
+                  confirmClearAll ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={handleClearAll}
+                        className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-400 transition-colors"
+                      >
+                        מחק הכול
+                      </button>
+                      <button
+                        onClick={() => setConfirmClearAll(false)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors"
+                      >
+                        ביטול
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmClearAll(true)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/40 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      מחק הכול
+                    </button>
+                  )
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -192,13 +234,30 @@ export default function FeedbackAdminPage() {
                         </div>
                         <span className="text-xs text-slate-500 font-bold">{item.uid || 'anon'}</span>
                       </div>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1.5 rounded-lg text-red-400 hover:text-white hover:bg-red-500/30 transition-colors"
-                        title="מחק"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {confirmDeleteId === item.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-400 transition-colors"
+                          >
+                            מחק
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors"
+                          >
+                            ביטול
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          className="p-1.5 rounded-lg text-red-400 hover:text-white hover:bg-red-500/30 transition-colors"
+                          title="מחק"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     {item.comment && (
                       <p className="text-sm text-slate-200 whitespace-pre-wrap break-words mb-2">{item.comment}</p>
