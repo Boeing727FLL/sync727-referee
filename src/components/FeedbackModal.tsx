@@ -12,12 +12,11 @@ interface FeedbackModalProps {
   uid?: string | null;
 }
 
-const LABELS: Record<string, { title: string; subtitle: string; hint: string; placeholder: string; improvementsTitle: string; improvementsHint: string; improvementsPlaceholder: string; submit: string; later: string; thanks: string }> = {
+const LABELS: Record<string, { title: string; subtitle: string; hint: string; improvementsTitle: string; improvementsHint: string; improvementsPlaceholder: string; submit: string; later: string; thanks: string }> = {
   he: {
     title: 'מה דעתך על השופט הווירטואלי?',
     subtitle: 'הדירוג שלך עוזר לנו לשפר את השופט',
     hint: 'תן ציון',
-    placeholder: 'מה אפשר לשפר? (לא חובה)',
     improvementsTitle: 'שיפורים שהייתם רוצים לראות?',
     improvementsHint: 'לא כל שיפור ייכנס - ההחלטה על שיפורים היא על שיקול דעת הקבוצה',
     improvementsPlaceholder: 'למשל: תשובות מהירות יותר, הסבר מפורט יותר...',
@@ -29,7 +28,6 @@ const LABELS: Record<string, { title: string; subtitle: string; hint: string; pl
     title: 'How was the Virtual Referee?',
     subtitle: 'Your rating helps us improve the referee',
     hint: 'Rate your experience',
-    placeholder: 'What can we improve? (optional)',
     improvementsTitle: 'Improvements you would like to see?',
     improvementsHint: 'Not every improvement will be added - decisions are at the team\'s discretion',
     improvementsPlaceholder: 'e.g. faster answers, more detailed explanations...',
@@ -44,7 +42,6 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
   const labels = LABELS[language] || LABELS.he;
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
-  const [comment, setComment] = useState('');
   const [improvements, setImprovements] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -52,7 +49,6 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
   const reset = () => {
     setRating(0);
     setHovered(0);
-    setComment('');
     setImprovements('');
     setSubmitting(false);
     setDone(false);
@@ -68,7 +64,6 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
     setSubmitting(true);
     await logRefereeFeedback({
       rating,
-      comment: comment.trim() || undefined,
       improvements: improvements.trim() || undefined,
       uid,
       season,
@@ -141,15 +136,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
                   </div>
                   <p className="text-center text-xs text-slate-500 mb-4">{labels.hint}</p>
 
-                  <textarea
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    placeholder={labels.placeholder}
-                    rows={2}
-                    className="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-500/40 focus:border-yellow-500 resize-none"
-                  />
-
-                  <div className="mt-3">
+                  <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-bold text-white">{labels.improvementsTitle}</span>
                     </div>

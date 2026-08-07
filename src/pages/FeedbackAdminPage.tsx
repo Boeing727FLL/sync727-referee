@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, Star, MessageSquareHeart, RefreshCw, Trash2, ArrowLeft, Inbox } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch, getDocsFromServer } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const SECRET_PASSWORD = '2601';
@@ -11,7 +11,6 @@ const AUTO_UNLOCK_KEY = 'referee_feedback_unlocked';
 type FeedbackEntry = {
   id: string;
   rating?: number;
-  comment?: string;
   improvements?: string;
   uid?: string;
   season?: string;
@@ -28,6 +27,37 @@ export default function FeedbackAdminPage() {
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const applySnapshot = (snap: any) => {
+    const entries: FeedbackEntry[] = [];
+    snap.docs.forEach((d: any) => {
+      const data = d.data();
+      entries.push({
+        id: d.id,
+        rating: data.rating,
+        improvements: data.improvements,
+        uid: data.uid,
+        season: data.season,
+        language: data.language,
+        createdAt: data.createdAt,
+      });
+    });
+    setItems(entries);
+    setLoading(false);
+  };
+
+  const refreshFromServer = async () => {
+    setRefreshing(true);
+    try {
+      const q = query(collection(db, 'referee_feedback'), orderBy('createdAt', 'desc'), limit(300));
+      const snap = await getDocsFromServer(q);
+      applySnapshot(snap);
+    } catch (e) {
+      console.warn("refresh feedback failed:", e);
+    }
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (sessionStorage.getItem(AUTO_UNLOCK_KEY) === '1') {
@@ -40,24 +70,7 @@ export default function FeedbackAdminPage() {
     if (!unlocked) return;
     setLoading(true);
     const q = query(collection(db, 'referee_feedback'), orderBy('createdAt', 'desc'), limit(300));
-    const unsub = onSnapshot(q, (snap) => {
-      const entries: FeedbackEntry[] = [];
-      snap.docs.forEach(d => {
-        const data = d.data();
-        entries.push({
-          id: d.id,
-          rating: data.rating,
-          comment: data.comment,
-          improvements: data.improvements,
-          uid: data.uid,
-          season: data.season,
-          language: data.language,
-          createdAt: data.createdAt,
-        });
-      });
-      setItems(entries);
-      setLoading(false);
-    }, (err) => {
+    const unsub = onSnapshot(q, applySnapshot, (err) => {
       console.warn("feedback snapshot failed:", err);
       setLoading(false);
     });
@@ -178,7 +191,18 @@ export default function FeedbackAdminPage() {
                 {lowCount > 0 && ` • ${lowCount} בציון נמוך (1-2)`}
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-[11px] text-slate-500">מתעדכן בזמן אמת</div>
+                <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  חי בזמן אמת
+                </div>
+                <button
+                  onClick={refreshFromServer}
+                  disabled={refreshing}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                  רענון
+                </button>
                 {total > 0 && (
                   confirmClearAll ? (
                     <div className="flex items-center gap-1.5">
@@ -259,9 +283,6 @@ export default function FeedbackAdminPage() {
                         </button>
                       )}
                     </div>
-                    {item.comment && (
-                      <p className="text-sm text-slate-200 whitespace-pre-wrap break-words mb-2">{item.comment}</p>
-                    )}
                     {item.improvements && (
                       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2.5 mb-2">
                         <div className="text-[10px] text-yellow-500 font-black mb-1">שיפורים מבוקשים</div>

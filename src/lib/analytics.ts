@@ -56,7 +56,6 @@ export async function logRefereeQA(payload: {
 // from the hidden feedback page (opened via a link in the analytics panel).
 export async function logRefereeFeedback(payload: {
   rating: number;
-  comment?: string;
   improvements?: string;
   uid?: string | null;
   season?: string;
