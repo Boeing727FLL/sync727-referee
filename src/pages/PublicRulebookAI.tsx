@@ -17,6 +17,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
 import RefereeLogsModal from '../components/RefereeLogsModal';
+import FeedbackModal from '../components/FeedbackModal';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -60,6 +61,8 @@ export default function PublicRulebookAI() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
   const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
+  const [showFeedback, setShowFeedback] = useState<boolean>(false);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logoTapTimesRef = useRef<number[]>([]);
   const developByTapTimesRef = useRef<number[]>([]);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
@@ -180,6 +183,27 @@ export default function PublicRulebookAI() {
       setShowRefereeLogs(true);
     }
   };
+
+  // Feedback popup frequency control - never too often:
+  // at most once every 14 days per device, and no new prompt for 45 days after submitting.
+  const maybePromptFeedback = () => {
+    if (showFeedback) return;
+    const now = Date.now();
+    const lastPrompt = parseInt(localStorage.getItem('referee_feedback_last_prompt') || '0', 10);
+    const submittedAt = parseInt(localStorage.getItem('referee_feedback_submitted_at') || '0', 10);
+    if (submittedAt && now - submittedAt < 45 * 24 * 60 * 60 * 1000) return;
+    if (lastPrompt && now - lastPrompt < 14 * 24 * 60 * 60 * 1000) return;
+    localStorage.setItem('referee_feedback_last_prompt', String(now));
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setShowFeedback(true);
+    }, 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -682,6 +706,7 @@ const fetchLatestRulebook = async () => {
           if (lastMsg?.role === 'model') return prev;
           return [...prev, { role: 'model', text: response || t('chat.commError') }];
         });
+        maybePromptFeedback();
       }
     } catch (error: any) {
       if (controller.signal.aborted) {
@@ -1471,6 +1496,17 @@ const fetchLatestRulebook = async () => {
       <RefereeLogsModal
         isOpen={showRefereeLogs}
         onClose={() => setShowRefereeLogs(false)}
+      />
+
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        onSubmit={() => {
+          localStorage.setItem('referee_feedback_submitted_at', String(Date.now()));
+          setShowFeedback(false);
+        }}
+        season={seasonName}
+        uid={resolveRefereeUid()}
       />
 
       <AnimatePresence>

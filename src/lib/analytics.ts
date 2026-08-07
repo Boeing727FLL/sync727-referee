@@ -52,6 +52,26 @@ export async function logRefereeQA(payload: {
   }
 }
 
+// Save user feedback on the virtual referee so the head referees can review it
+// from the hidden feedback page (opened via a link in the analytics panel).
+export async function logRefereeFeedback(payload: {
+  rating: number;
+  comment?: string;
+  uid?: string | null;
+  season?: string;
+  language?: string;
+}) {
+  try {
+    await addDoc(collection(db, 'referee_feedback'), {
+      ...payload,
+      uid: payload.uid || 'anon',
+      createdAt: serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn("logRefereeFeedback failed:", e);
+  }
+}
+
 export function startPresence(uid: string, deviceId?: string): () => void {
   const devId = deviceId || getDeviceId();
   const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

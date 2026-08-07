@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
+import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck, MessageSquareHeart } from 'lucide-react';
 import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
 
 interface AdminAnalyticsModalProps {
@@ -11,6 +12,7 @@ interface AdminAnalyticsModalProps {
 const SECRET_PASSWORD = '2601';
 
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
@@ -48,6 +50,12 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     setResetting(true);
     await resetQuestions();
     setResetting(false);
+  };
+
+  const openFeedbackPage = () => {
+    sessionStorage.setItem('referee_feedback_unlocked', '1');
+    onClose();
+    navigate('/feedback-view');
   };
 
   const statCard = (icon: React.ReactNode, label: string, value: string | number, sub?: string) => (
@@ -127,6 +135,13 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                     {statCard(<UserCheck className="w-5 h-5" />, 'ממוצע שאלות למשתמש', stats ? stats.avgPerUser.toFixed(1) : '—', stats ? `מתוך ${stats.activeUsers} משתמשים פעילים` : undefined)}
                   </div>
                   <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={openFeedbackPage}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold hover:bg-emerald-500/30 transition-colors"
+                    >
+                      <MessageSquareHeart className="w-4 h-4" />
+                      צפייה בפידבקים
+                    </button>
                     <button
                       onClick={handleReset}
                       disabled={resetting}
