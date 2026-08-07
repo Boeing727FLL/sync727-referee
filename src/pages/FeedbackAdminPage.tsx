@@ -12,6 +12,7 @@ type FeedbackEntry = {
   id: string;
   rating?: number;
   comment?: string;
+  improvements?: string;
   uid?: string;
   season?: string;
   language?: string;
@@ -45,6 +46,7 @@ export default function FeedbackAdminPage() {
           id: d.id,
           rating: data.rating,
           comment: data.comment,
+          improvements: data.improvements,
           uid: data.uid,
           season: data.season,
           language: data.language,
@@ -200,6 +202,12 @@ export default function FeedbackAdminPage() {
                     </div>
                     {item.comment && (
                       <p className="text-sm text-slate-200 whitespace-pre-wrap break-words mb-2">{item.comment}</p>
+                    )}
+                    {item.improvements && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2.5 mb-2">
+                        <div className="text-[10px] text-yellow-500 font-black mb-1">שיפורים מבוקשים</div>
+                        <p className="text-sm text-slate-200 whitespace-pre-wrap break-words">{item.improvements}</p>
+                      </div>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-slate-500">
                       {item.season && <span>עונה: {item.season}</span>}

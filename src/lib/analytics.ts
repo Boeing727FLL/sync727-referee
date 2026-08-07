@@ -57,6 +57,7 @@ export async function logRefereeQA(payload: {
 export async function logRefereeFeedback(payload: {
   rating: number;
   comment?: string;
+  improvements?: string;
   uid?: string | null;
   season?: string;
   language?: string;
