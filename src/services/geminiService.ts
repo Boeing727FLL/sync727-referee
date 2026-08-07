@@ -339,9 +339,13 @@ export const GeminiService = {
         it: 'Italiano', zh: '中文', ja: '日本語', ko: '한국어',
       };
       const langName = langNames[language] || 'English';
+      const currentSeason = (seasonName && seasonName.trim() && seasonName !== 'UNKNOWN') ? seasonName.trim() : null;
       const systemPrompt = `CRITICAL: You MUST respond in ${langName} (language code: ${language}). ALL your answers must be in ${langName}. This overrides any other language instructions below.
 
 אתה שופט וירטואלי של FLL. מקורך: התמונות המצורפות בלבד - ספר החוקים, ספר הניקוד ומסמך העדכונים.
+
+⚠️ העונה הנוכחית: ${currentSeason ? `העונה של צוות זה לפי האפליקציה היא ${currentSeason}.` : 'העונה של צוות זה אינה ידועה מראש - קבע אותה אך ורק לפי הקבצים המצורפים.'}
+אסור בתכלית האיסור לקבוע את שם העונה/האתגר על סמך ידע קודם על עונות FLL אחרות (כגון SUBMERGED/FIRST DIVE, UNEARTHED, MASTERPIECE, SUPERPOWERED, CARGO_CONNECT וכו'). שם העונה נקבע אך ורק לפי הקבצים המצורפים להודעה - שם הקובץ (למשל Bioglow.pdf) ותוכנו. אם קיים סתירה בין ידע קודם שלך לבין הקובץ המצורף - הקובץ המצורף קובע, ואתה חייב להשיב לפי הקובץ.
 
 ⚠️⚠️⚠️ חשוב ביותר: ⚠️⚠️⚠️
 התמונות המצורפות להודעה הן המקור הראשי והסמכותי שלך לפסיקות ולניקוד! הן כוללות את ספר החוקים, ספר הניקוד ומסמך העדכונים (Updates).

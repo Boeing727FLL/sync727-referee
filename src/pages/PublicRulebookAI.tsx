@@ -203,7 +203,7 @@ export default function PublicRulebookAI() {
     setHasGoogleToken(false);
     setSessionKicked(true);
   };
-  const [seasonName, setSeasonName] = useState<string>('SUBMERGED');
+  const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([
     { role: 'model', text: t('chat.greeting').replace('{season}', seasonName) }
   ]);
