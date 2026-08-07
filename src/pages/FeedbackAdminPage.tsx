@@ -28,6 +28,14 @@ export default function FeedbackAdminPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [timerReset, setTimerReset] = useState(false);
+
+  const resetPopupTimer = () => {
+    localStorage.removeItem('referee_feedback_last_prompt');
+    localStorage.removeItem('referee_feedback_submitted_at');
+    setTimerReset(true);
+    setTimeout(() => setTimerReset(false), 4000);
+  };
 
   const applySnapshot = (snap: any) => {
     const entries: FeedbackEntry[] = [];
@@ -129,14 +137,30 @@ export default function FeedbackAdminPage() {
             <MessageSquareHeart className="w-6 h-6 text-yellow-400" />
             <h1 className="text-xl md:text-2xl font-black">פידבק על השופט הווירטואלי</h1>
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 font-bold hover:bg-slate-700 transition-colors"
-          >
-            <ArrowRight className="w-4 h-4" />
-            חזרה לאפליקציה
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={resetPopupTimer}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 font-bold hover:bg-slate-700 transition-colors"
+              title="מאפס את טיימר הטופס הקופץ של הפידבק במכשיר הזה"
+            >
+              <RefreshCw className="w-4 h-4" />
+              אפס את טיימר הפידבק
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 font-bold hover:bg-slate-700 transition-colors"
+            >
+              <ArrowRight className="w-4 h-4" />
+              חזרה לאפליקציה
+            </button>
+          </div>
         </div>
+
+        {timerReset && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-sm font-bold">
+            טיימר הפידבק אופס - הטופס יקפוץ שוב אחרי התשובה הבאה
+          </div>
+        )}
 
         {!unlocked ? (
           <motion.div
