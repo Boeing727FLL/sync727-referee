@@ -6,13 +6,12 @@ import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAsc-XfaV276Ap2wtqLe-RyV4RROLLPyLE",
-  authDomain: "sync-727-1f91f.firebaseapp.com",
-  databaseURL: "https://sync-727-1f91f-default-rtdb.firebaseio.com",
-  projectId: "sync-727-1f91f",
-  storageBucket: "sync-727-1f91f.firebasestorage.app",
-  messagingSenderId: "796625427827",
-  appId: "1:796625427827:web:2dec83a04acd3de6f83906"
+  apiKey: "AIzaSyAShqcVG0F-Vjkg8uVK9QYRjgLGyUAI_PI",
+  authDomain: "sync-727-referee.firebaseapp.com",
+  projectId: "sync-727-referee",
+  storageBucket: "sync-727-referee.firebasestorage.app",
+  messagingSenderId: "804828140815",
+  appId: "1:804828140815:web:9a617392dea1e037649a7a"
 };
 
 export const app = initializeApp(firebaseConfig);

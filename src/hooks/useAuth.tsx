@@ -556,7 +556,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await navigator.serviceWorker.register(swUrl);
         registration = await navigator.serviceWorker.ready;
         
-        const vapidPublicKey = "BMPQLMhgXBit7rGAaP-tsf18u9ROlevl6Cmz5Efew7FDbe5ajwX9l88Rxsp8fGJW4i5TLPQNCP3rLclktzx6CPU";
+        const vapidPublicKey = "BNDaCAoPpcdzpfmSocYo6YDcd7FegeNzNSk1uf3LnoFkd0ietaVNX7LvE86P2cQ23Mi634Dj2FCCh2EP8XV60VU";
         const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
         webPushSubscription = await registration.pushManager.getSubscription();
@@ -577,7 +577,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (messaging && registration) {
           fcmToken = await getToken(messaging, {
-            vapidKey: "BMPQLMhgXBit7rGAaP-tsf18u9ROlevl6Cmz5Efew7FDbe5ajwX9l88Rxsp8fGJW4i5TLPQNCP3rLclktzx6CPU",
+            vapidKey: "BNDaCAoPpcdzpfmSocYo6YDcd7FegeNzNSk1uf3LnoFkd0ietaVNX7LvE86P2cQ23Mi634Dj2FCCh2EP8XV60VU",
             serviceWorkerRegistration: registration
           });
           console.log('FCM Token acquired:', fcmToken);
