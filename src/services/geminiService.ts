@@ -275,7 +275,7 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
-    modelName: string = "gemini-3.7-flash",
+    modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
     thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
@@ -376,8 +376,7 @@ export const GeminiService = {
 בכל שאלה, חובה לבדוק במסמך העדכונים (Updates) אם קיים עדכון על החוק/הניקוד הרלוונטי, ובספר אם יש החרגה (Exemption) כתובה לחוק. אם יש עדכון או החרגה - ציין אותם וכלול בפסיקה ובניקוד, ואל תציג את החוק כמוחלט. אם אין - פסק לפי החוק בלי להזכיר המילה "עדכון" או "החרגה".
 חובה לסרוק את מסמך העדכונים ואת תמונות ספר החוקים בכל שאלה, ואם כתוב בהן עדכון, "החרגה" או "חריג" לחוק הרלוונטי - לקרוא אותן ולכלול אותן בפסיקה.
 במקרה של סתירה בין חוקי הבסיס בספר לבין מסמך העדכונים (Updates), מסמך העדכונים תמיד קובע ומבטל את חוק הבסיס - אך ציין את העובדה שבחרת לפי העדכון רק אם העדכון רלוונטי לשאלה.
-${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.
-במידה ולא מצאת תשובה בספר החוקים, בעדכונים, או בתמונות המצורפות - חפש בגוגל כדי לאמת מידע או להשלים חסר. השתמש בכלי google_search רק כשאתה אכן לא בטוח ולא כהרחבה אוטומטית.`;
+${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
 
@@ -808,7 +807,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             generation_config: modelEntry.config,
             system_instruction: activeSystemPrompt,
             stream: isStream,
-            tools: [{ type: 'google_search' }],
           };
           if (isStream) {
             const stream = await client.interactions.create(params);
@@ -818,7 +816,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         }
         // Standard generateContent fallback (gemini-3.5-flash-lite)
         const gcContents = stepsToContents(stepInput);
-        const gcConfig: any = { thinkingConfig: { thinkingLevel: 'HIGH' }, tools: [{ googleSearch: {} }] };
+        const gcConfig: any = { thinkingConfig: { thinkingLevel: 'HIGH' } };
         if (stepInput.some((s: any) => (s.content || []).some((c: any) => c.type === 'image'))) {
           gcConfig.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
         }
