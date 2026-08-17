@@ -321,29 +321,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Login Success — authenticate with Firebase using email/password
-      const fbEmail = `${deterministicId}@sync727.app`;
-      try {
-        await signInWithEmailAndPassword(auth, fbEmail, code);
-      } catch (e: any) {
-        // If user doesn't exist in Firebase Auth yet, create it
-        if (e?.code === 'auth/user-not-found' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/wrong-password') {
-          try {
-            await createUserWithEmailAndPassword(auth, fbEmail, code);
-          } catch (createErr: any) {
-            // If already exists but wrong password, create new with reset
-            if (createErr?.code === 'auth/email-already-in-use') {
-              // Can't reset password without admin SDK — proceed without Firebase Auth session
-              console.warn("Firebase Auth user exists with different password, proceeding without session:", createErr.message);
-            } else {
-              console.warn("Firebase Auth create failed, proceeding without session:", createErr.message);
-            }
-          }
-        } else {
-          console.warn("Firebase Auth login failed, proceeding without session:", e.message);
-        }
-      }
-
       // Check Admin Status
       const isAdmin = checkList(whitelists.admins) || checkList(DEFAULT_WHITELISTS.admins);
 
