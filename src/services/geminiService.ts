@@ -766,17 +766,22 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         {
           name: googleModelName,
           kind: 'interactions',
-          config: { max_output_tokens: 65536, thinking_level: 'high' },
+          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
+        },
+        {
+          name: 'gemini-3.6-flash',
+          kind: 'interactions',
+          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.5-flash',
           kind: 'interactions',
-          config: { max_output_tokens: 65536, thinking_level: 'high' },
+          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.1-pro-preview',
           kind: 'interactions',
-          config: { temperature: 0.75, max_output_tokens: 65536, top_p: 0.95, thinking_level: 'high' },
+          config: { temperature: 0.75, max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.5-flash-lite',
@@ -807,6 +812,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             generation_config: modelEntry.config,
             system_instruction: activeSystemPrompt,
             stream: isStream,
+            tools: [{ type: 'google_search' }],
           };
           if (isStream) {
             const stream = await client.interactions.create(params);
@@ -866,6 +872,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
       for (let mi = 0; mi < effectiveChain.length && !success; mi++) {
         const modelEntry = effectiveChain[mi];
+        console.log(`Attempting model ${mi + 1}/${effectiveChain.length}: ${modelEntry.name} (${modelEntry.kind})`);
         // Last resort: ignore known-bad keys so all 120 are genuinely re-tried.
         if (mi === effectiveChain.length - 1) {
           unhealthyKeys.clear();
