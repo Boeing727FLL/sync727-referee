@@ -275,7 +275,7 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
-    modelName: string = "gemini-3.7-flash",
+    modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
     thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
@@ -765,11 +765,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       const modelChain: { name: string; kind: 'interactions' | 'generateContent'; config: any }[] = [
         {
           name: googleModelName,
-          kind: 'interactions',
-          config: { max_output_tokens: 65536, thinking_level: 'high' },
-        },
-        {
-          name: 'gemini-3.6-flash',
           kind: 'interactions',
           config: { max_output_tokens: 65536, thinking_level: 'high' },
         },
