@@ -812,7 +812,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             generation_config: modelEntry.config,
             system_instruction: activeSystemPrompt,
             stream: isStream,
-            tools: [{ type: 'google_search' }],
           };
           if (isStream) {
             const stream = await client.interactions.create(params);
