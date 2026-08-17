@@ -766,22 +766,22 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         {
           name: googleModelName,
           kind: 'interactions',
-          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
+          config: { max_output_tokens: 65536, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.6-flash',
           kind: 'interactions',
-          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
+          config: { max_output_tokens: 65536, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.5-flash',
           kind: 'interactions',
-          config: { max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
+          config: { max_output_tokens: 65536, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.1-pro-preview',
           kind: 'interactions',
-          config: { temperature: 0.75, max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
+          config: { temperature: 1, max_output_tokens: 65536, topP: 0.95, thinkingLevel: 'high' },
         },
         {
           name: 'gemini-3.5-flash-lite',
