@@ -275,7 +275,7 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
-    modelName: string = "gemini-3.6-flash",
+    modelName: string = "gemini-3.7-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
     thinkingConfigLevel: 'HIGH' | 'OFF' | 'LOW' = 'HIGH',
