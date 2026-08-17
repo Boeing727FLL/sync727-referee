@@ -234,7 +234,6 @@ export default function PublicRulebookAI() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
-  const [selectedModel] = useState<string | undefined>(undefined);
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
@@ -662,7 +661,7 @@ const fetchLatestRulebook = async () => {
         activeRulebookFiles,
         seasonName, 
         [], // no files - text only
-        selectedModel,
+        undefined,
         (chunkText) => {
           if (controller.signal.aborted) return;
           setMessages(prev => {
@@ -698,7 +697,7 @@ const fetchLatestRulebook = async () => {
           season: seasonName,
           language,
           uid: resolveRefereeUid(),
-          model: selectedModel,
+          model: 'gemini-3.6-flash',
           ok: true,
         });
         setMessages(prev => {
@@ -723,7 +722,7 @@ const fetchLatestRulebook = async () => {
           season: seasonName,
           language,
           uid: resolveRefereeUid(),
-          model: selectedModel,
+          model: 'gemini-3.6-flash',
           ok: false,
         });
         setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
