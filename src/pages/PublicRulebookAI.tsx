@@ -234,7 +234,7 @@ export default function PublicRulebookAI() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
-  const [selectedModel] = useState<string>('gemini-3.7-flash');
+  const [selectedModel] = useState<string | undefined>(undefined);
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
