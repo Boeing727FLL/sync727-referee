@@ -6,7 +6,8 @@ import {
   signOut, 
   GoogleAuthProvider,
   User as FirebaseUser,
-  signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   updateProfile,
   setPersistence,
   inMemoryPersistence,
@@ -83,14 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 1. Listen for Auth State
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setFirebaseUser(currentUser);
-      
-      if (!currentUser) {
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.warn("Auto-anonymous login failed (non-critical):", e);
-        }
-      }
       
       // Note: We intentionally DO NOT auto-login the user here even if currentUser exists.
       // This forces the user to enter their passcode again on refresh.
@@ -328,12 +321,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Login Success
-      if (!auth.currentUser) {
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.warn("Anonymous login failed, proceeding with app-level auth only:", e);
+      // Login Success — authenticate with Firebase using email/password
+      const fbEmail = `${deterministicId}@sync727.app`;
+      try {
+        await signInWithEmailAndPassword(auth, fbEmail, code);
+      } catch (e: any) {
+        // If user doesn't exist in Firebase Auth yet, create it
+        if (e?.code === 'auth/user-not-found' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/wrong-password') {
+          try {
+            await createUserWithEmailAndPassword(auth, fbEmail, code);
+          } catch (createErr: any) {
+            // If already exists but wrong password, create new with reset
+            if (createErr?.code === 'auth/email-already-in-use') {
+              // Can't reset password without admin SDK — proceed without Firebase Auth session
+              console.warn("Firebase Auth user exists with different password, proceeding without session:", createErr.message);
+            } else {
+              console.warn("Firebase Auth create failed, proceeding without session:", createErr.message);
+            }
+          }
+        } else {
+          console.warn("Firebase Auth login failed, proceeding without session:", e.message);
         }
       }
 
