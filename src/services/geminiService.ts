@@ -723,8 +723,10 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 uri: p.videoUri,
               };
             }
+            const text = (p.text ?? '').trim();
+            if (!text) return null; // skip empty text parts
             return { type: 'text', text: p.text ?? '' };
-          }),
+          }).filter(Boolean),
         }));
 
       // Text-only variant used for the silent validation passes.
@@ -843,7 +845,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             model: prefixed,
             input: stepInput,
             generation_config: modelEntry.config,
-            system_instruction: activeSystemPrompt,
+            system_instruction: { parts: [{ text: activeSystemPrompt }] },
             stream: isStream,
           };
           console.log('DEBUG stepInput:', JSON.stringify(stepInput).substring(0, 2000));
