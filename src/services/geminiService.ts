@@ -845,10 +845,9 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             model: prefixed,
             input: stepInput,
             generation_config: modelEntry.config,
-            system_instruction: { parts: [{ text: activeSystemPrompt }] },
+            system_instruction: activeSystemPrompt,
             stream: isStream,
           };
-          console.log('DEBUG stepInput:', JSON.stringify(stepInput).substring(0, 2000));
           if (isStream) {
             const stream = await client.interactions.create(params);
             return collectStreamedText(stream, onText);
