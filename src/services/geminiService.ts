@@ -779,12 +779,13 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             type: m.role === 'model' ? 'model_output' : 'user_input',
             content: (m.parts || [])
               .filter((p: any) => {
-                if (p.fileData || p.inlineData) return false;
+                if (p.fileData || p.inlineData || p.videoUri) return false;
                 if (p.text && /^Image \d+:\n---/.test(p.text)) return false;
                 if (p.text && p.text.includes('--- HIGH RESOLUTION ZOOM')) return false;
                 return true;
               })
-              .map((p: any) => ({ type: 'text', text: p.text ?? '' })),
+              .map((p: any) => ({ type: 'text', text: p.text ?? '' }))
+              .filter((p: any) => p.text && p.text.trim().length > 0),
           }))
           .filter((t: any) => t.content.length > 0);
 
@@ -968,15 +969,15 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             const draftText = await callModel(client, modelEntry, toInteractionInput(contents), false);
 
             // PASS 2 — Silent Red Team Adversarial Critique (text-only, no streaming).
+            let finalAnswer = draftText;
             const critiqueInput = [
               ...toInteractionTextOnly(contents),
-              { type: 'model_output', content: [{ type: 'text', text: draftText }] },
+              ...(draftText.trim() ? [{ type: 'model_output', content: [{ type: 'text', text: draftText }] }] : []),
               { type: 'user_input', content: [{ type: 'text', text: critiquePrompt }] },
             ];
             const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
             const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
 
-            let finalAnswer = draftText;
             if (strippedCritique) {
               // PASS 3 — Final Polishing, streamed to the user.
               const finalInput = [
