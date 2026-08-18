@@ -3,6 +3,14 @@ import { GoogleGenAI } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+// Detect if a URL is a YouTube video or a direct video file
+function isVideoUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  if (u.includes('youtube.com/watch') || u.includes('youtu.be/') || u.includes('youtube.com/shorts/')) return true;
+  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.mpeg', '.mpg', '.3gpp'];
+  return videoExtensions.some(ext => u.includes(ext));
+}
+
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
 
@@ -275,6 +283,7 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
+    videoUrls?: string[],
     modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
@@ -376,7 +385,8 @@ export const GeminiService = {
 בכל שאלה, חובה לבדוק במסמך העדכונים (Updates) אם קיים עדכון על החוק/הניקוד הרלוונטי, ובספר אם יש החרגה (Exemption) כתובה לחוק. אם יש עדכון או החרגה - ציין אותם וכלול בפסיקה ובניקוד, ואל תציג את החוק כמוחלט. אם אין - פסק לפי החוק בלי להזכיר המילה "עדכון" או "החרגה".
 חובה לסרוק את מסמך העדכונים ואת תמונות ספר החוקים בכל שאלה, ואם כתוב בהן עדכון, "החרגה" או "חריג" לחוק הרלוונטי - לקרוא אותן ולכלול אותן בפסיקה.
 במקרה של סתירה בין חוקי הבסיס בספר לבין מסמך העדכונים (Updates), מסמך העדכונים תמיד קובע ומבטל את חוק הבסיס - אך ציין את העובדה שבחרת לפי העדכון רק אם העדכון רלוונטי לשאלה.
-${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
+${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.
+אם המשתמש סיפק סרטון (YouTube או קובץ וידאו) - צפה בו ונתח אותו כחלק מהשיפוט. התייחס לסרטון כראיה ויזואלית לצד תמונות ספר החוקים. אם הסרטון מראה את הזירה/הרובוט - שפוט לפיו בדיוק כמו תמונת משתמש.`;
 
       let activeSystemPrompt = systemPrompt;
 
@@ -621,6 +631,11 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       if (urls && urls.length > 0) {
         urlContextText += "\n\n[הערת מערכת: המשתמש סיפק קישורים. המערכת קראה את התוכן שלהם כדי לאפשר לך להתייחס אליו:]\n";
         for (const url of urls) {
+          // Skip video URLs - they're handled separately as video parts
+          if (isVideoUrl(url)) {
+            console.log(`Skipping Jina Reader for video URL: ${url}`);
+            continue;
+          }
           try {
             console.log(`Fetching context for URL: ${url}`);
             const jinaRes = await axios.get(`https://r.jina.ai/${url}`);
@@ -657,6 +672,19 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 3. **דיוק כירורגי בעדכוני חוקים (Official Updates Check)**: ודא אם יש עדכונים רשמיים רלוונטיים ואמת אותם.
 4. **ענה בעברית מקצועית, רהוטה וחד-משמעית בלבד.**`;
 
+      // Add video URLs as video parts (YouTube or direct video files)
+      const allVideoUrls = [
+        ...(videoUrls || []),
+        ...(urls ? urls.filter(u => isVideoUrl(u)) : [])
+      ].filter((u, i, arr) => arr.indexOf(u) === i); // dedupe
+
+      if (allVideoUrls.length > 0) {
+        currentParts.push({ text: `\n--- VIDEOS TO ANALYZE (${allVideoUrls.length}) ---\n` });
+        for (const vUrl of allVideoUrls) {
+          currentParts.push({ videoUri: vUrl });
+        }
+      }
+
       currentParts.push({ text: modifiedQuestion });
 
       if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
@@ -689,6 +717,12 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 resolution: 'high',
               };
             }
+            if (p.videoUri) {
+              return {
+                type: 'video',
+                uri: p.videoUri,
+              };
+            }
             return { type: 'text', text: p.text ?? '' };
           }),
         }));
@@ -713,11 +747,15 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       const stepsToContents = (steps: any[]): any[] =>
         (steps || []).map((s: any) => ({
           role: s.type === 'model_output' ? 'model' : 'user',
-          parts: (s.content || []).map((c: any) =>
-            c.type === 'image'
-              ? { inlineData: { data: c.data, mimeType: c.mime_type || 'image/jpeg' } }
-              : { text: c.text ?? '' }
-          ),
+          parts: (s.content || []).map((c: any) => {
+            if (c.type === 'image') {
+              return { inlineData: { data: c.data, mimeType: c.mime_type || 'image/jpeg' } };
+            }
+            if (c.type === 'video') {
+              return { fileData: { fileUri: c.uri, mimeType: 'video/*' } };
+            }
+            return { text: c.text ?? '' };
+          }),
         }));
 
       // Collect streamed text from an Interactions SSE stream.
