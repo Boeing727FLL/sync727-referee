@@ -846,6 +846,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             system_instruction: activeSystemPrompt,
             stream: isStream,
           };
+          console.log('DEBUG stepInput:', JSON.stringify(stepInput).substring(0, 2000));
           if (isStream) {
             const stream = await client.interactions.create(params);
             return collectStreamedText(stream, onText);
