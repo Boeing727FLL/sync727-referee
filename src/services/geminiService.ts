@@ -3,6 +3,31 @@ import { GoogleGenAI } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+// Intercept fetch to debug interactions API calls
+if (typeof window !== 'undefined' && !(window as any).__interactionsFetchHooked) {
+  (window as any).__interactionsFetchHooked = true;
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = async function (...args: any[]) {
+    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+    if (url.includes('/interactions')) {
+      const bodyStr = typeof args[1]?.body === 'string' ? args[1].body : JSON.stringify(args[1]?.body || {});
+      console.log('INTERACTIONS REQ body length:', bodyStr.length);
+      console.log('INTERACTIONS REQ body (first 500):', bodyStr.substring(0, 500));
+      try {
+        const resp = await _origFetch(...args);
+        const clone = resp.clone();
+        const respText = await clone.text();
+        console.log('INTERACTIONS RESP status:', resp.status, 'body:', respText.substring(0, 1000));
+        return resp;
+      } catch (e) {
+        console.error('INTERACTIONS FETCH ERROR:', e);
+        throw e;
+      }
+    }
+    return _origFetch(...args);
+  };
+}
+
 // Detect if a URL is a YouTube video or a direct video file
 function isVideoUrl(url: string): boolean {
   const u = url.toLowerCase();
