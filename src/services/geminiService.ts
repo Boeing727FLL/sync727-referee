@@ -9,20 +9,38 @@ if (typeof window !== 'undefined' && !(window as any).__interactionsFetchHooked)
   const _origFetch = window.fetch.bind(window);
   window.fetch = async function (...args: any[]) {
     const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-    if (url.includes('/interactions')) {
-      const bodyStr = typeof args[1]?.body === 'string' ? args[1].body : JSON.stringify(args[1]?.body || {});
-      console.log('INTERACTIONS REQ body length:', bodyStr.length);
-      console.log('INTERACTIONS REQ body (first 500):', bodyStr.substring(0, 500));
+    if (url.includes('/interactions') && !url.includes('/cancel')) {
       try {
-        const resp = await _origFetch(...args);
-        const clone = resp.clone();
-        const respText = await clone.text();
-        console.log('INTERACTIONS RESP status:', resp.status, 'body:', respText.substring(0, 1000));
-        return resp;
+        // Try to clone and read the body stream
+        const reqClone = (args[1]?.body && typeof args[1].body.clone === 'function') ? args[1].body.clone() : null;
+        if (reqClone) {
+          const reader = reqClone.getReader();
+          const chunks: Uint8Array[] = [];
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const decoder = new TextDecoder();
+          const bodyStr = chunks.map(c => decoder.decode(c, { stream: true })).join('') + (chunks.length ? decoder.decode() : '');
+          console.log('INTERACTIONS REQ body length:', bodyStr.length);
+          // Log structure without huge base64 data
+          try {
+            const parsed = JSON.parse(bodyStr);
+            const lite = { ...parsed, input: Array.isArray(parsed.input) ? parsed.input.map((s: any) => ({ ...s, content: s.content?.map((c: any) => c.type === 'image' ? { type: 'image', data: `[${(c.data||'').length} chars]`, mime_type: c.mime_type, resolution: c.resolution } : c) })) : parsed.input };
+            console.log('INTERACTIONS REQ structure:', JSON.stringify(lite).substring(0, 3000));
+          } catch(e) {
+            console.log('INTERACTIONS REQ body (first 500):', bodyStr.substring(0, 500));
+          }
+        }
       } catch (e) {
-        console.error('INTERACTIONS FETCH ERROR:', e);
-        throw e;
+        console.log('INTERACTIONS REQ (body read failed):', e);
       }
+      const resp = await _origFetch(...args);
+      const clone = resp.clone();
+      const respText = await clone.text();
+      console.log('INTERACTIONS RESP status:', resp.status, 'body:', respText.substring(0, 2000));
+      return resp;
     }
     return _origFetch(...args);
   };
