@@ -3,57 +3,6 @@ import { GoogleGenAI } from '@google/genai';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Intercept fetch to debug interactions API calls
-if (typeof window !== 'undefined' && !(window as any).__interactionsFetchHooked) {
-  (window as any).__interactionsFetchHooked = true;
-  const _origFetch = window.fetch.bind(window);
-  window.fetch = async function (...args: any[]) {
-    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-    if (url.includes('/interactions') && !url.includes('/cancel')) {
-      try {
-        // Try to clone and read the body stream
-        const reqClone = (args[1]?.body && typeof args[1].body.clone === 'function') ? args[1].body.clone() : null;
-        if (reqClone) {
-          const reader = reqClone.getReader();
-          const chunks: Uint8Array[] = [];
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-          }
-          const decoder = new TextDecoder();
-          const bodyStr = chunks.map(c => decoder.decode(c, { stream: true })).join('') + (chunks.length ? decoder.decode() : '');
-          console.log('INTERACTIONS REQ body length:', bodyStr.length);
-          // Log structure without huge base64 data
-          try {
-            const parsed = JSON.parse(bodyStr);
-            const lite = { ...parsed, input: Array.isArray(parsed.input) ? parsed.input.map((s: any) => ({ ...s, content: s.content?.map((c: any) => c.type === 'image' ? { type: 'image', data: `[${(c.data||'').length} chars]`, mime_type: c.mime_type, resolution: c.resolution } : c) })) : parsed.input };
-            console.log('INTERACTIONS REQ structure:', JSON.stringify(lite).substring(0, 3000));
-          } catch(e) {
-            console.log('INTERACTIONS REQ body (first 500):', bodyStr.substring(0, 500));
-          }
-        }
-      } catch (e) {
-        console.log('INTERACTIONS REQ (body read failed):', e);
-      }
-      const resp = await _origFetch(...args);
-      const clone = resp.clone();
-      const respText = await clone.text();
-      console.log('INTERACTIONS RESP status:', resp.status, 'body:', respText.substring(0, 2000));
-      return resp;
-    }
-    return _origFetch(...args);
-  };
-}
-
-// Detect if a URL is a YouTube video or a direct video file
-function isVideoUrl(url: string): boolean {
-  const u = url.toLowerCase();
-  if (u.includes('youtube.com/watch') || u.includes('youtu.be/') || u.includes('youtube.com/shorts/')) return true;
-  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.mpeg', '.mpg', '.3gpp'];
-  return videoExtensions.some(ext => u.includes(ext));
-}
-
 // Cache for extracted rulebook text
 const rulebookCache = new Map<string, string>();
 
@@ -326,7 +275,6 @@ export const GeminiService = {
     rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
     userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
-    videoUrls?: string[],
     modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
@@ -428,8 +376,7 @@ export const GeminiService = {
 בכל שאלה, חובה לבדוק במסמך העדכונים (Updates) אם קיים עדכון על החוק/הניקוד הרלוונטי, ובספר אם יש החרגה (Exemption) כתובה לחוק. אם יש עדכון או החרגה - ציין אותם וכלול בפסיקה ובניקוד, ואל תציג את החוק כמוחלט. אם אין - פסק לפי החוק בלי להזכיר המילה "עדכון" או "החרגה".
 חובה לסרוק את מסמך העדכונים ואת תמונות ספר החוקים בכל שאלה, ואם כתוב בהן עדכון, "החרגה" או "חריג" לחוק הרלוונטי - לקרוא אותן ולכלול אותן בפסיקה.
 במקרה של סתירה בין חוקי הבסיס בספר לבין מסמך העדכונים (Updates), מסמך העדכונים תמיד קובע ומבטל את חוק הבסיס - אך ציין את העובדה שבחרת לפי העדכון רק אם העדכון רלוונטי לשאלה.
-${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.
-ספר החוקים (PDF/תמונות) הוא המקור הראשי והסמכותי לפסיקות ולניקוד. אם סופק סרטון (YouTube או קובץ וידאו) - הוא משני בלבד: צפה בו רק אם חסר לך פרט מסוים, הבהרה, או דוגמה שאינם ברורים מתוך ספר החוקים עצמו. אל תסתור את החוקים שבספר על סמך הסרטון - החוקים גוברים תמיד.`;
+${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
 
@@ -674,11 +621,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       if (urls && urls.length > 0) {
         urlContextText += "\n\n[הערת מערכת: המשתמש סיפק קישורים. המערכת קראה את התוכן שלהם כדי לאפשר לך להתייחס אליו:]\n";
         for (const url of urls) {
-          // Skip video URLs - they're handled separately as video parts
-          if (isVideoUrl(url)) {
-            console.log(`Skipping Jina Reader for video URL: ${url}`);
-            continue;
-          }
           try {
             console.log(`Fetching context for URL: ${url}`);
             const jinaRes = await axios.get(`https://r.jina.ai/${url}`);
@@ -715,19 +657,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 3. **דיוק כירורגי בעדכוני חוקים (Official Updates Check)**: ודא אם יש עדכונים רשמיים רלוונטיים ואמת אותם.
 4. **ענה בעברית מקצועית, רהוטה וחד-משמעית בלבד.**`;
 
-      // Add video URLs as video parts (YouTube or direct video files)
-      const allVideoUrls = [
-        ...(videoUrls || []),
-        ...(urls ? urls.filter(u => isVideoUrl(u)) : [])
-      ].filter((u, i, arr) => arr.indexOf(u) === i); // dedupe
-
-      if (allVideoUrls.length > 0) {
-        currentParts.push({ text: `\n--- VIDEOS TO ANALYZE (${allVideoUrls.length}) ---\n` });
-        for (const vUrl of allVideoUrls) {
-          currentParts.push({ videoUri: vUrl });
-        }
-      }
-
+      // Add user query to the current turn parts
       currentParts.push({ text: modifiedQuestion });
 
       if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
@@ -760,12 +690,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                 resolution: 'high',
               };
             }
-            if (p.videoUri) {
-              return {
-                type: 'video',
-                uri: p.videoUri,
-              };
-            }
             const text = (p.text ?? '').trim();
             if (!text) return null; // skip empty text parts
             return { type: 'text', text: p.text ?? '' };
@@ -779,7 +703,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             type: m.role === 'model' ? 'model_output' : 'user_input',
             content: (m.parts || [])
               .filter((p: any) => {
-                if (p.fileData || p.inlineData || p.videoUri) return false;
+                if (p.fileData || p.inlineData) return false;
                 if (p.text && /^Image \d+:\n---/.test(p.text)) return false;
                 if (p.text && p.text.includes('--- HIGH RESOLUTION ZOOM')) return false;
                 return true;
@@ -796,9 +720,6 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           parts: (s.content || []).map((c: any) => {
             if (c.type === 'image') {
               return { inlineData: { data: c.data, mimeType: c.mime_type || 'image/jpeg' } };
-            }
-            if (c.type === 'video') {
-              return { fileData: { fileUri: c.uri, mimeType: 'video/*' } };
             }
             return { text: c.text ?? '' };
           }),

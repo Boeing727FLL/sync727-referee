@@ -234,7 +234,6 @@ export default function PublicRulebookAI() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
-  const [youtubeUrls, setYoutubeUrls] = useState<string[]>([]);
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
@@ -657,13 +656,12 @@ const fetchLatestRulebook = async () => {
       trackQuestion(resolveRefereeUid() || 'anon');
       
       const response = await GeminiService.askRulebook(
-        finalPrompt, 
-        relevantMessages, 
+        finalPrompt,
+        relevantMessages,
         activeRulebookFiles,
-        seasonName, 
+        seasonName,
         [], // no files - text only
-        youtubeUrls,
-        undefined,
+        undefined, // default model
         (chunkText) => {
           if (controller.signal.aborted) return;
           setMessages(prev => {
@@ -1193,22 +1191,6 @@ const fetchLatestRulebook = async () => {
                   </div>
                 </div>
               )}
-
-              <div className="w-full space-y-2">
-                <label className="text-sm font-bold text-slate-600">{t('admin.youtubeUrls') || 'YouTube Videos (optional)'}</label>
-                <textarea
-                  value={youtubeUrls.join('\n')}
-                  onChange={(e) => setYoutubeUrls(e.target.value.split('\n').map(s => s.trim()).filter(s => s.length > 0))}
-                  placeholder={t('admin.youtubeUrlsPlaceholder') || 'Paste YouTube links here, one per line'}
-                  className="w-full h-20 px-3 py-2 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  dir="ltr"
-                />
-                {youtubeUrls.length > 0 && (
-                  <div className="text-xs text-slate-400">
-                    {youtubeUrls.length} video{youtubeUrls.length > 1 ? 's' : ''} added
-                  </div>
-                )}
-              </div>
 
               <button 
                 onClick={() => setShowUploadModal(false)}
