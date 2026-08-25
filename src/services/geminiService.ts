@@ -236,6 +236,27 @@ async function getAllApiKeys(): Promise<string[]> {
   return list;
 }
 
+// Official referee corrections (admin overrides) loaded from Firestore.
+let REFEREE_CORRECTIONS: string | null = null;
+
+async function getRefereeCorrections(): Promise<string> {
+  if (REFEREE_CORRECTIONS !== null) return REFEREE_CORRECTIONS;
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const docSnap = await getDoc(doc(db, "app_config", "corrections"));
+    REFEREE_CORRECTIONS = docSnap.exists() ? String(docSnap.data().text || '') : '';
+  } catch (err) {
+    console.error("Error fetching referee corrections:", err);
+    REFEREE_CORRECTIONS = '';
+  }
+  return REFEREE_CORRECTIONS;
+}
+
+// Called by the admin page after saving so the next request picks up fresh data.
+export function invalidateCorrectionsCache(): void {
+  REFEREE_CORRECTIONS = null;
+}
+
 async function getNextApiKey(): Promise<string> {
   await ensureKeysLoaded();
 
@@ -379,6 +400,18 @@ export const GeminiService = {
 ${langName} ישרה, ללא LaTeX/$/סוכן/שלב, הצג חישובים פשוטים.`;
 
       let activeSystemPrompt = systemPrompt;
+
+      // Inject official referee corrections (admin overrides) — they take priority over everything.
+      const correctionsText = await getRefereeCorrections();
+      if (correctionsText.trim()) {
+        activeSystemPrompt += `
+
+⚠️⚠️⚠️ תיקוני שופט רשמיים - מחייבים באופן אבסולוטי ⚠️⚠️⚠️
+להלן רשימת תיקונים רשמיים שנקבעו על ידי השופט הראשי. בכל שאלה, בדוק קודם כל אם קיים כאן תיקון שרלוונטי לנושא, למשימה, לחוק או לניקוד שנשאל עליו. אם קיים תיקון רלוונטי - התשובה שלך חייבת להתאים לו במדויק, והוא גובר על כל מקור אחר (ספר החוקים, העדכונים, וכל ידע קודם). אל תזכיר את קיומם של התיקונים בתשובה - פשוט ענה לפיהם.
+--- תחילת תיקונים ---
+${correctionsText.trim()}
+--- סוף תיקונים ---`;
+      }
 
       // Use the requested model directly
       const googleModelName = activeModel;

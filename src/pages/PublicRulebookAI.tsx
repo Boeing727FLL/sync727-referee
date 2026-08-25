@@ -2,9 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon } from 'lucide-react';
-import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { GeminiService } from '../services/geminiService';
+import { GeminiService, invalidateCorrectionsCache } from '../services/geminiService';
 import { s3Client, R2_BUCKET_NAME, getPublicUrl } from '../lib/r2';
 import { Upload } from '@aws-sdk/lib-storage';
 import { ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -234,6 +234,10 @@ export default function PublicRulebookAI() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
+  const [corrections, setCorrections] = useState('');
+  const [correctionsLoading, setCorrectionsLoading] = useState(false);
+  const [correctionsSaving, setCorrectionsSaving] = useState(false);
+  const [correctionsSaved, setCorrectionsSaved] = useState(false);
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
@@ -278,6 +282,33 @@ export default function PublicRulebookAI() {
   const handleTitleClick = () => {
     if (!showAdmin) {
       setAdminClickCount(prev => prev + 1);
+    }
+  };
+
+  const openUploadModal = async () => {
+    setShowUploadModal(true);
+    setCorrectionsLoading(true);
+    try {
+      const snap = await getDoc(doc(db, 'app_config', 'corrections'));
+      setCorrections(snap.exists() ? String(snap.data().text || '') : '');
+    } catch (e) {
+      console.error('load corrections failed:', e);
+    } finally {
+      setCorrectionsLoading(false);
+    }
+  };
+
+  const saveCorrections = async () => {
+    setCorrectionsSaving(true);
+    try {
+      await setDoc(doc(db, 'app_config', 'corrections'), { text: corrections, updatedAt: Date.now() });
+      invalidateCorrectionsCache();
+      setCorrectionsSaved(true);
+      setTimeout(() => setCorrectionsSaved(false), 2000);
+    } catch (e) {
+      console.error('save corrections failed:', e);
+    } finally {
+      setCorrectionsSaving(false);
     }
   };
 
@@ -879,7 +910,7 @@ const fetchLatestRulebook = async () => {
             )}
             {showAdmin && (
               <button 
-                onClick={() => setShowUploadModal(true)}
+                onClick={openUploadModal}
                 className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
                 title={t('admin.upload')}
               >
@@ -1191,6 +1222,42 @@ const fetchLatestRulebook = async () => {
                   </div>
                 </div>
               )}
+
+              <div className="w-full space-y-2">
+                <label className="text-sm font-bold text-slate-600">{t('admin.corrections') || 'Referee Corrections'}</label>
+                {correctionsLoading ? (
+                  <div className="h-20 flex items-center justify-center text-xs text-slate-400 border border-slate-200 rounded-xl">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      value={corrections}
+                      onChange={(e) => setCorrections(e.target.value)}
+                      placeholder={t('admin.correctionsPlaceholder') || 'One correction per line, e.g.: Mission 05 - the correct score is 25 points because...'}
+                      className="w-full h-32 px-3 py-2 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      dir="auto"
+                    />
+                    <button
+                      onClick={saveCorrections}
+                      disabled={correctionsSaving}
+                      className={`w-full py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 ${
+                        correctionsSaved
+                          ? 'bg-green-500 text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50'
+                      }`}
+                    >
+                      {correctionsSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : correctionsSaved ? (
+                        '✓ ' + (t('admin.saved') || 'Saved')
+                      ) : (
+                        t('admin.saveCorrections') || 'Save Corrections'
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
 
               <button 
                 onClick={() => setShowUploadModal(false)}
