@@ -27,7 +27,7 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           src="/bioglow-cutout-placeholder.webp"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-[140%] object-cover object-center blur-[12px] scale-110 opacity-60"
+          className="absolute inset-0 w-full h-[170%] object-cover object-center blur-[12px] scale-110 opacity-60"
           decoding="async"
         />
         <img
@@ -35,7 +35,7 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
           sizes="100vw"
           alt=""
-          className="absolute inset-0 w-full h-[140%] object-cover object-[center_30%] scale-[1.08]"
+          className="absolute inset-0 w-full h-[170%] object-cover object-center"
           fetchPriority="high"
           decoding="sync"
           loading="eager"
