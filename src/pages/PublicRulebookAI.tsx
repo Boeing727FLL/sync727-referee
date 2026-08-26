@@ -1,7 +1,7 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, FileText, Gavel, BookOpen, Zap, Search, Scale, History, Upload as UploadIcon } from 'lucide-react';
+import { Send, Bot, User, Loader2, FileText, Scale, Upload as UploadIcon } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService, invalidateCorrectionsCache } from '../services/geminiService';
@@ -18,27 +18,13 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
 import RefereeLogsModal from '../components/RefereeLogsModal';
 import FeedbackModal from '../components/FeedbackModal';
+import IntroScreen from '../components/IntroScreen';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const stripThinkBlocks = (text: string): string =>
   (text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
-
-const INTRO_STARS = [
-  { top: '8%', left: '10%', size: 3, delay: '0s' },
-  { top: '14%', left: '78%', size: 4, delay: '0.6s' },
-  { top: '22%', left: '32%', size: 2, delay: '1.2s' },
-  { top: '30%', left: '88%', size: 3, delay: '0.3s' },
-  { top: '36%', left: '6%', size: 2, delay: '1.8s' },
-  { top: '44%', left: '55%', size: 3, delay: '0.9s' },
-  { top: '52%', left: '14%', size: 2, delay: '2.1s' },
-  { top: '60%', left: '72%', size: 4, delay: '0.2s' },
-  { top: '68%', left: '40%', size: 2, delay: '1.5s' },
-  { top: '76%', left: '90%', size: 3, delay: '0.7s' },
-  { top: '84%', left: '22%', size: 2, delay: '1.1s' },
-  { top: '90%', left: '58%', size: 3, delay: '2.4s' },
-];
 
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
@@ -1272,274 +1258,20 @@ const fetchLatestRulebook = async () => {
 
       <AnimatePresence>
         {showIntro && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-start justify-center p-4 md:p-0 overflow-y-auto"
-            dir="rtl"
-          >
-            <AnimatePresence mode="wait">
-              {showIntro ? (
-                <motion.div
-                  key="intro"
-                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -15 }}
-                  transition={{ duration: 0.3 }}
-                  className="relative w-full min-h-screen"
-                >
-                  {/* ===== Synthwave Arena Scene ===== */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d1226] to-[#1a1030] overflow-hidden pointer-events-none">
-                    <div className="absolute -top-28 -right-28 w-[28rem] h-[28rem] bg-yellow-400/20 rounded-full blur-3xl animate-blob" />
-                    <div className="absolute top-1/4 -left-32 w-[28rem] h-[28rem] bg-[#37E0C8]/15 rounded-full blur-3xl animate-blob animation-delay-2000" />
-                    <div className="absolute -bottom-32 left-1/4 w-[28rem] h-[28rem] bg-[#7c3aed]/20 rounded-full blur-3xl animate-blob animation-delay-4000" />
-                    {INTRO_STARS.map((s, i) => (
-                      <span
-                        key={i}
-                        className="absolute rounded-full bg-white animate-twinkle"
-                        style={{ top: s.top, left: s.left, width: s.size, height: s.size, animationDelay: s.delay, boxShadow: '0 0 8px rgba(255,255,255,0.8)' }}
-                      />
-                    ))}
-                    {/* 3D floor grid */}
-                    <div className="absolute bottom-0 left-0 right-0 h-44 md:h-60" style={{ perspective: '500px' }}>
-                      <div
-                        className="absolute inset-x-[-40%] top-1/3 bottom-[-120%] animate-grid-move"
-                        style={{
-                          backgroundImage:
-                            'repeating-linear-gradient(90deg, rgba(55,224,200,0.30) 0, rgba(55,224,200,0.30) 1px, transparent 1px, transparent 56px), repeating-linear-gradient(0deg, rgba(55,224,200,0.30) 0, rgba(55,224,200,0.30) 1px, transparent 1px, transparent 56px)',
-                          backgroundSize: '56px 56px',
-                          transform: 'rotateX(63deg)',
-                          transformOrigin: 'center top',
-                        }}
-                      />
-                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#37E0C8]/70 shadow-[0_0_24px_rgba(55,224,200,0.9)] animate-horizon-glow" />
-                      <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-[#37E0C8]/15 to-transparent" />
-                    </div>
-                  </div>
-
-                  {/* ===== Content ===== */}
-                  <div className="relative z-10 flex flex-col min-h-full">
-                    {/* Premium Credit Header */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center"
-                    >
-                      <motion.div
-                        whileHover={{ rotateY: 8, rotateX: -6, scale: 1.05 }}
-                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                        style={{ transformStyle: 'preserve-3d' }}
-                        className="flex items-center gap-4 md:gap-6"
-                      >
-                        <img
-                          src="/boeing_727_logo_transparent_pure_red (1).png"
-                          alt="Boeing 727"
-                          className="h-12 md:h-16 w-auto object-contain drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]"
-                        />
-                        <div className="h-10 w-[2px] bg-gradient-to-b from-transparent via-slate-600 to-transparent" />
-                        <div className="flex flex-col items-start leading-none">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-black tracking-tighter text-2xl md:text-3xl italic">Boeing <span className="text-primary not-italic">727</span></span>
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.5em]">The Team</span>
-                            <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-
-                    <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-10 py-6 md:py-10 text-center">
-                      {/* 3D Floating Logo */}
-                      <div className="mb-5 md:mb-8" style={{ perspective: '1000px' }}>
-                        <motion.div
-                          animate={{ rotateY: [-14, 14, -14], rotateX: [12, -6, 12], y: [0, -10, 0] }}
-                          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                          style={{ transformStyle: 'preserve-3d' }}
-                          className="relative w-28 h-28 md:w-44 md:h-44 mx-auto"
-                        >
-                          <div className="absolute -inset-5 rounded-[28%] bg-yellow-400/25 blur-2xl animate-horizon-glow" />
-                          <div className="absolute -inset-1 rounded-[24%] border-2 border-yellow-400/40" style={{ transform: 'translateZ(24px)' }} />
-                          <img
-                            src="/logoref.png"
-                            alt="שופט וירטואלי"
-                            onClick={handleLogoTap}
-                            className="relative w-full h-full object-contain drop-shadow-[0_26px_50px_rgba(250,204,21,0.35)] cursor-pointer select-none"
-                          />
-                          <div className="absolute inset-0 animate-orbit pointer-events-none">
-                            <div className="absolute top-0 left-1/2 -ml-1.5 w-3 h-3 md:w-4 md:h-4 bg-[#37E0C8] rotate-45 shadow-[0_0_14px_rgba(55,224,200,1)]" />
-                          </div>
-                          <div className="absolute inset-0 animate-orbit pointer-events-none" style={{ animationDirection: 'reverse', animationDuration: '14s' }}>
-                            <div className="absolute top-1/2 right-0 -mt-1 w-2 h-2 md:w-3 md:h-3 bg-yellow-400 rotate-45 shadow-[0_0_12px_rgba(250,204,21,1)]" />
-                          </div>
-                          <div className="absolute inset-0 animate-orbit pointer-events-none" style={{ animationDuration: '18s' }}>
-                            <div className="absolute bottom-0 left-1/4 w-2 h-2 md:w-2.5 md:h-2.5 bg-[#7c3aed] rotate-45 shadow-[0_0_12px_rgba(124,58,237,1)]" />
-                          </div>
-                        </motion.div>
-                      </div>
-
-                      {/* Badge */}
-                      <motion.span
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.15, duration: 0.4 }}
-                        className="inline-block bg-slate-950/80 text-yellow-400 text-[10px] md:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-4 md:mb-6 border border-yellow-400/40 shadow-[0_0_20px_rgba(250,204,21,0.2)] backdrop-blur-sm"
-                      >
-                        Digital Referee Assistant • FIRST Israel
-                      </motion.span>
-
-                      {/* 3D Title */}
-                      <div className="relative mb-3 md:mb-5 max-w-4xl mx-auto w-full">
-                        <h2 className="relative z-10 flex flex-wrap items-center justify-center gap-2 md:gap-3 text-4xl md:text-7xl font-black text-white uppercase leading-tight">
-                          {t('intro.subtitle').split(' ').map((word, i) => (
-                            <motion.span
-                              key={i}
-                              initial={{ opacity: 0, rotateX: -90, y: 18 }}
-                              animate={{ opacity: 1, rotateX: 0, y: 0 }}
-                              transition={{ delay: 0.2 + i * 0.12, duration: 0.5, type: 'spring', stiffness: 160 }}
-                              style={{ transformStyle: 'preserve-3d' }}
-                              className="bg-gradient-to-b from-white via-yellow-100 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_4px_20px_rgba(250,204,21,0.25)]"
-                            >
-                              {word}
-                            </motion.span>
-                          ))}
-                        </h2>
-                      </div>
-
-                      <motion.p
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5, duration: 0.5 }}
-                        className="text-slate-300/90 text-sm md:text-xl font-medium mb-6 md:mb-10 max-w-3xl mx-auto leading-relaxed"
-                      >
-                        {t('intro.descFull')}
-                      </motion.p>
-
-                      {/* Features 3D */}
-                      <div className="space-y-3 md:space-y-5 text-right w-full max-w-2xl mb-8 md:mb-12" style={{ perspective: '1200px' }}>
-                        {[
-                          { icon: <Scale className="w-7 h-7 md:w-9 md:h-9" />, title: t('intro.feature1Title'), desc: t('intro.feature1Desc'), delay: 0.6 },
-                          { icon: <Zap className="w-7 h-7 md:w-9 md:h-9" />, title: t('intro.feature2Title'), desc: t('intro.feature2Desc'), delay: 0.75 },
-                        ].map((f, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, x: i === 0 ? -40 : 40, rotateY: i === 0 ? 14 : -14 }}
-                            animate={{ opacity: 1, x: 0, rotateY: 0 }}
-                            transition={{ delay: f.delay, duration: 0.5 }}
-                            whileHover={{ y: -6, rotateX: -6, scale: 1.02 }}
-                            style={{ transformStyle: 'preserve-3d' }}
-                            className="p-4 md:p-6 bg-slate-950/60 backdrop-blur-sm rounded-2xl md:rounded-3xl border border-white/10 flex items-start gap-4 md:gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] hover:border-yellow-400/50 transition-colors duration-300"
-                          >
-                            <div style={{ transform: 'translateZ(28px)' }}>
-                              <motion.div
-                                whileHover={{ rotate: 12, scale: 1.15 }}
-                                className="p-3 md:p-4 bg-yellow-400/10 rounded-xl md:rounded-2xl text-yellow-400 border border-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.15)]"
-                              >
-                                {f.icon}
-                              </motion.div>
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="text-base md:text-2xl font-black text-slate-100 mb-1">{f.title}</h4>
-                              <p className="text-xs md:text-base text-slate-400 leading-relaxed font-medium">{f.desc}</p>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-
-                      {/* Disclaimer */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.9, duration: 0.4 }}
-                        className="bg-red-950/40 backdrop-blur-sm border-2 border-red-500/40 rounded-2xl px-4 py-3 md:px-8 md:py-4 mb-6 md:mb-8 text-center shadow-[0_0_24px_rgba(239,68,68,0.12)] max-w-2xl w-full"
-                      >
-                        <p className="text-xs md:text-lg text-red-300 leading-relaxed font-bold">
-                          <span className="text-red-400 font-black">{t('intro.disclaimer')}</span>{' '}
-                          {t('intro.disclaimerDesc')}
-                        </p>
-                      </motion.div>
-
-                      {/* CTA */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.0, duration: 0.4 }}
-                        className="w-full max-w-md mx-auto"
-                      >
-                        <button
-                          onClick={() => {
-                            if (hasGoogleToken || user) {
-                              setShowIntro(false);
-                              setChatStarted(true);
-                            } else {
-                              navigate('/login');
-                            }
-                          }}
-                          className="relative w-full overflow-hidden group bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-4 md:py-5 px-6 rounded-2xl transition-all duration-300 shadow-[0_12px_30px_rgba(250,204,21,0.25)] hover:shadow-[0_18px_45px_rgba(250,204,21,0.4)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.96] flex items-center justify-center gap-3 cursor-pointer border-2 border-slate-950/10"
-                        >
-                          <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 to-transparent opacity-60" />
-                          <span className="pointer-events-none absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/70 to-transparent animate-shine" />
-                          <span className="relative text-base md:text-2xl">
-                            {hasGoogleToken || user ? t('intro.continue') : t('intro.continueLogin')}
-                          </span>
-                          <span className="relative text-xl md:text-2xl group-hover:translate-x-1 group-hover:scale-125 transition-transform">🚀</span>
-                        </button>
-                      </motion.div>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="login"
-                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -15 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl p-6 md:p-8 max-w-md w-full text-center relative overflow-hidden my-auto"
-                >
-                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-yellow-400 to-emerald-500" />
-                  
-                  <button 
-                    onClick={() => setShowIntro(true)}
-                    className="absolute top-4 right-4 text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors text-xs font-bold"
-                    title={t('auth.back')}
-                  >
-                    <span>{t('auth.back')}</span>
-                  </button>
-
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-700">
-                    <Gavel className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                  </div>
-                  
-                  <h2 className="text-2xl md:text-3xl font-black text-white mb-3 tracking-tight">{t('auth.loginTitle')}</h2>
-                  <p className="text-slate-400 font-medium mb-6 text-sm md:text-base leading-relaxed">
-                    {t('auth.loginDesc')}
-                  </p>
-                  
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="w-full relative overflow-hidden group bg-white text-slate-900 font-black py-4 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:-translate-y-1 cursor-pointer"
-                  >
-                    <div className="absolute inset-0 bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative flex items-center justify-center gap-3 text-sm md:text-base">
-                      <svg className="w-6 h-6" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" />
-                      </svg>
-                      {t('auth.loginWithEmail')}
-                    </span>
-                  </button>
-                  
-                  {loginError && (
-                    <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-medium leading-relaxed">
-                      {loginError}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          <IntroScreen
+            hasGoogleToken={hasGoogleToken}
+            user={user}
+            onContinue={() => {
+              if (hasGoogleToken || user) {
+                setShowIntro(false);
+                setChatStarted(true);
+              } else {
+                navigate('/login');
+              }
+            }}
+            onLogoTap={handleLogoTap}
+            t={t}
+          />
         )}
       </AnimatePresence>
 
