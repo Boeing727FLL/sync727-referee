@@ -20,8 +20,8 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
-      {/* ===== Background — covers full scrollable height (direct child of scroll container) ===== */}
-      <div className="absolute top-0 left-0 right-0 min-h-[300vh] -z-10 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
+      {/* ===== Background — covers just past the CTA button (direct child of scroll container) ===== */}
+      <div className="absolute top-0 left-0 right-0 min-h-[180vh] -z-10 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
         {/* tiny placeholder for instant paint (600 bytes) */}
         <img
           src="/bioglow-cutout-placeholder.webp"
