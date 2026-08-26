@@ -20,18 +20,20 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
-      {/* ===== Background — BioGlow table + 16 teams (real FLL shirts, no heads) ===== */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+      {/* ===== Background — 16 real teams cutout (3000px + 2x) on dark slate ===== */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
         <img
-          src="/bioglow-hero-16.jpg"
+          src="/bioglow-cutout-2x.webp"
+          srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
+          sizes="100vw"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-contain object-center p-3 md:p-8"
           fetchPriority="high"
           decoding="async"
         />
-        {/* dark veil so text stays readable — lighter because hero already has dark background */}
-        <div className="absolute inset-0 bg-slate-950/55" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-slate-950/80" />
+        {/* very light veil — cutout already isolated, just soften for text */}
+        <div className="absolute inset-0 bg-slate-950/25" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/50" />
         {/* subtle top glow — cheap, no animation */}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
