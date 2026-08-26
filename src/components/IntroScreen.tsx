@@ -74,7 +74,9 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           </div>
         </motion.div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-6 md:py-8 text-center w-full max-w-5xl mx-auto">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-6 md:py-8 text-center w-full max-w-5xl mx-auto relative">
+          {/* Dark backdrop for text readability */}
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm rounded-2xl" aria-hidden />
           {/* Logo — static, no 3D/orbit */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
