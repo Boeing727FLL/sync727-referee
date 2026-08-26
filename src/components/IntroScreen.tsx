@@ -20,14 +20,14 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
-      {/* ===== Background — 16 real teams cutout (3000px wide, full-bleed) ===== */}
+      {/* ===== Background — 16 real teams cutout (wide, visible behind CTA) ===== */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
         {/* tiny placeholder for instant paint (600 bytes) */}
         <img
           src="/bioglow-cutout-placeholder.webp"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
+          className="absolute inset-0 w-full h-[140%] object-cover object-center blur-[12px] scale-110 opacity-60"
           decoding="async"
         />
         <img
@@ -35,26 +35,26 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
           sizes="100vw"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-[140%] object-cover object-[center_30%] scale-[1.08]"
           fetchPriority="high"
           decoding="sync"
           loading="eager"
         />
-        {/* light veil so text stays readable — wide hero needs same as before */}
-        <div className="absolute inset-0 bg-slate-950/35" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950/60" />
+        {/* light veil so text stays readable — lighter at bottom so image shows behind button */}
+        <div className="absolute inset-0 bg-slate-950/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/25 via-transparent to-slate-950/45" />
         {/* subtle top glow — cheap, no animation */}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* ===== Content ===== */}
       <div className="relative z-10 flex flex-col min-h-full flex-1">
-        {/* Header — Boeing 727 credit stays BIG as requested */}
+        {/* Header — sticky, moves with scroll as requested */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
-          className="border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center shrink-0 bg-slate-950/30 backdrop-blur-[2px]"
+          className="sticky top-0 z-50 border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center shrink-0 bg-slate-950/70 backdrop-blur-md"
         >
           <div className="flex items-center gap-4 md:gap-6">
             <img
