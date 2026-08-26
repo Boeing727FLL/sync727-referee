@@ -20,18 +20,18 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
-      {/* ===== Background — real BioGlow field photo ===== */}
+      {/* ===== Background — BioGlow table + 16 teams (real FLL shirts, no heads) ===== */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <img
-          src="/bioglow-table.jpg"
+          src="/bioglow-hero-16.jpg"
           alt=""
           className="absolute inset-0 w-full h-full object-cover object-center"
           fetchPriority="high"
           decoding="async"
         />
-        {/* dark veil so text stays readable */}
-        <div className="absolute inset-0 bg-slate-950/75" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-transparent to-slate-950" />
+        {/* dark veil so text stays readable — lighter because hero already has dark background */}
+        <div className="absolute inset-0 bg-slate-950/55" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-slate-950/80" />
         {/* subtle top glow — cheap, no animation */}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
