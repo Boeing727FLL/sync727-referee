@@ -1269,7 +1269,6 @@ const fetchLatestRulebook = async () => {
                 navigate('/login');
               }
             }}
-            onLogoTap={handleLogoTap}
             t={t}
           />
         )}

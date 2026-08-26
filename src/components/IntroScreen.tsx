@@ -5,11 +5,10 @@ interface IntroScreenProps {
   hasGoogleToken: boolean;
   user: unknown;
   onContinue: () => void;
-  onLogoTap: () => void;
   t: (key: string) => string;
 }
 
-export default function IntroScreen({ hasGoogleToken, user, onContinue, onLogoTap, t }: IntroScreenProps) {
+export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: IntroScreenProps) {
   const isLoggedIn = Boolean(hasGoogleToken || user);
 
   return (
@@ -75,13 +74,14 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, onLogoTa
             className="relative mb-4 md:mb-5"
           >
             <div className="absolute -inset-6 bg-yellow-400/15 blur-2xl rounded-full pointer-events-none" aria-hidden />
-            <img
-              src="/logoref.png"
-              alt="שופט וירטואלי"
-              onClick={onLogoTap}
-              className="relative w-24 h-24 md:w-36 md:h-36 object-contain drop-shadow-[0_16px_32px_rgba(0,0,0,0.45)] cursor-pointer select-none"
-              draggable={false}
-            />
+            <div className="relative w-24 h-24 md:w-36 md:h-36 rounded-full bg-white border-2 border-slate-950 shadow-[0_8px_24px_rgba(0,0,0,0.25)] overflow-hidden flex items-center justify-center">
+              <img
+                src="/logoref.png"
+                alt="שופט וירטואלי"
+                className="w-[85%] h-[85%] object-contain select-none"
+                draggable={false}
+              />
+            </div>
           </motion.div>
 
           {/* Badge — NOT official FIRST, community tool by Boeing 727 */}
