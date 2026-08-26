@@ -20,35 +20,34 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
-      {/* ===== Background — 16 real teams cutout (wide, visible behind CTA) ===== */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
-        {/* tiny placeholder for instant paint (600 bytes) */}
-        <img
-          src="/bioglow-cutout-placeholder.webp"
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
-          decoding="async"
-        />
-        <img
-          src="/bioglow-cutout-3000.webp"
-          srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
-          sizes="100vw"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          fetchPriority="high"
-          decoding="sync"
-          loading="eager"
-        />
-        {/* veil — very light at bottom so image stays visible behind CTA */}
-        <div className="absolute inset-0 bg-slate-950/15" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/20" />
-        {/* subtle top glow — cheap, no animation */}
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
-      </div>
-
-      {/* ===== Content ===== */}
+      {/* ===== Content (with background inside scrollable area) ===== */}
       <div className="relative z-10 flex flex-col min-h-full flex-1">
+        {/* ===== Background — 16 real teams cutout (inside scrollable area, full height) ===== */}
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
+          {/* tiny placeholder for instant paint (600 bytes) */}
+          <img
+            src="/bioglow-cutout-placeholder.webp"
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
+            decoding="async"
+          />
+          <img
+            src="/bioglow-cutout-3000.webp"
+            srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
+            sizes="100vw"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            fetchPriority="high"
+            decoding="sync"
+            loading="eager"
+          />
+          {/* veil — very light so image stays visible behind CTA */}
+          <div className="absolute inset-0 bg-slate-950/10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/15 via-transparent to-slate-950/15" />
+          {/* subtle top glow — cheap, no animation */}
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
+        </div>
         {/* Header — sticky, moves with scroll as requested */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
