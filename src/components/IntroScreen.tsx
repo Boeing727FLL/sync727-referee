@@ -27,7 +27,7 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           src="/bioglow-cutout-placeholder.webp"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-[170%] object-cover object-center blur-[12px] scale-110 opacity-60"
+          className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
           decoding="async"
         />
         <img
@@ -35,14 +35,14 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
           sizes="100vw"
           alt=""
-          className="absolute inset-0 w-full h-[170%] object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center"
           fetchPriority="high"
           decoding="sync"
           loading="eager"
         />
-        {/* light veil so text stays readable — lighter at bottom so image shows behind button */}
-        <div className="absolute inset-0 bg-slate-950/20" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/25 via-transparent to-slate-950/45" />
+        {/* veil — very light at bottom so image stays visible behind CTA */}
+        <div className="absolute inset-0 bg-slate-950/15" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/20" />
         {/* subtle top glow — cheap, no animation */}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
