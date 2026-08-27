@@ -40,9 +40,9 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           decoding="sync"
           loading="eager"
         />
-        {/* veil — very light so image stays visible behind CTA */}
-        <div className="absolute inset-0 bg-slate-950/10" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/15 via-transparent to-slate-950/15" />
+        {/* veil — darker for text readability, no card needed */}
+        <div className="absolute inset-0 bg-slate-950/35" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/15 to-slate-950/40" />
         {/* subtle top glow — cheap, no animation */}
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
@@ -74,9 +74,7 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           </div>
         </motion.div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-6 md:py-8 text-center w-full max-w-5xl mx-auto relative">
-          {/* Dark backdrop for text readability */}
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm rounded-2xl" aria-hidden />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-6 md:py-8 text-center w-full max-w-5xl mx-auto">
           {/* Logo — static, no 3D/orbit */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
