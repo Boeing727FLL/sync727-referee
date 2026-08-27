@@ -142,27 +142,27 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
             ].map((f, i) => (
               <div
                 key={i}
-                className="bg-white/[0.06] backdrop-blur border border-white/10 rounded-2xl p-4 md:p-5 flex md:flex-col items-start md:items-center md:text-center gap-3 md:gap-3 hover:bg-white/[0.08] hover:border-white/15 transition-colors"
+                className="bg-slate-900/70 backdrop-blur-xl border border-white/15 rounded-2xl p-4 md:p-5 flex md:flex-col items-start md:items-center md:text-center gap-3 md:gap-3 hover:bg-slate-900/80 hover:border-white/20 transition-colors shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
               >
-                <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-yellow-400/15 border border-yellow-400/20 flex items-center justify-center text-yellow-400">
+                <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-yellow-400/20 border border-yellow-400/25 flex items-center justify-center text-yellow-400">
                   <f.icon className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
                 <div className="flex-1 md:flex-none min-w-0">
                   <h4 className="text-sm md:text-[15px] font-black text-white leading-tight mb-1">{f.title}</h4>
-                  <p className="text-xs md:text-xs text-slate-400 leading-relaxed font-medium">{f.desc}</p>
+                  <p className="text-xs md:text-xs text-slate-200 leading-relaxed font-medium">{f.desc}</p>
                 </div>
               </div>
             ))}
           </motion.div>
 
-          {/* Disclaimer — compact, not big red box */}
+          {/* Disclaimer — darker for visibility */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45, duration: 0.4 }}
-            className="w-full max-w-2xl mb-6 md:mb-8 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/15 text-center"
+            className="w-full max-w-2xl mb-6 md:mb-8 px-4 py-3 rounded-xl bg-slate-900/60 backdrop-blur-md border border-amber-500/20 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
           >
-            <p className="text-[11px] md:text-xs text-amber-200/80 leading-relaxed font-medium">
+            <p className="text-[11px] md:text-xs text-amber-100 leading-relaxed font-medium">
               <span className="font-black text-amber-300">{t('intro.disclaimer')}</span>{' '}
               {t('intro.disclaimerDesc')}
             </p>
