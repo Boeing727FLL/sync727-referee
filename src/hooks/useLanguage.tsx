@@ -95,7 +95,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'כלי קהילתי מבית Boeing 727 • לקהילת ה-FLL',
     'intro.feature3Title': 'עדכוני שיפוט',
     'intro.feature3Desc': 'הבהרות, פסיקות ושינויים שפורסמו לאורך העונה — במקום אחד.',
-    'intro.notOfficial': 'כלי קהילתי — אינו מוצר רשמי של FIRST'
+    'intro.notOfficial': 'כלי קהילתי — אינו מוצר רשמי של FIRST',
+    'disclaimerPopup.title': 'רגע לפני שנכנסים ⚠️',
+    'disclaimerPopup.body': 'השופט הווירטואלי הוא רובוט חכם שעוזר לכם להבין את החוקים, אבל גם הוא יכול לטעות — כמו שכולנו לפעמים מתבלבלים.\n\nהוא לא קובע מה נכון בתחרות. בתחרות עצמה רק השופטים האמיתיים בזירה מחליטים, ומה שהם אומרים — זה מה שקובע, תמיד.\n\nאם יש לכם ספק, תמיד כדאי לשאול שופט אמיתי בזירה.',
+    'disclaimerPopup.confirm': 'קראתי והבנתי — כניסה לשופט'
   },
   en: {
     'app.title': 'Virtual Referee',
@@ -165,7 +168,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Community tool by Boeing 727 • For the FLL community',
     'intro.feature3Title': 'Referee Updates',
     'intro.feature3Desc': 'Clarifications, rulings and changes published throughout the season — in one place.',
-    'intro.notOfficial': 'Community tool — not an official FIRST product'
+    'intro.notOfficial': 'Community tool — not an official FIRST product',
+    'disclaimerPopup.title': 'Heads up before you enter ⚠️',
+    'disclaimerPopup.body': 'The Virtual Referee is a smart AI that tries to help you understand the rules, but it can make mistakes — just like we all sometimes get confused.\n\nIt does NOT decide what is correct in a competition. In the real competition, only the human field referees decide, and what they say is always final.\n\nIf in doubt, always ask a real field referee.',
+    'disclaimerPopup.confirm': 'I read and understood — Enter Referee'
   },
   ar: {
     'app.title': 'الحكم الافتراضي',
@@ -226,7 +232,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'أداة مجتمعية من Boeing 727 • لمجتمع FLL',
     'intro.feature3Title': 'تحديثات التحكيم',
     'intro.feature3Desc': 'التوضيحات والقرارات والتغييرات المنشورة طوال الموسم — في مكان واحد.',
-    'intro.notOfficial': 'أداة مجتمعية — ليست منتجاً رسمياً من FIRST'
+    'intro.notOfficial': 'أداة مجتمعية — ليست منتجاً رسمياً من FIRST',
+    'disclaimerPopup.title': 'تنبيه قبل الدخول ⚠️',
+    'disclaimerPopup.body': 'الحكم الافتراضي هو ذكاء اصطناعي ذكي يحاول مساعدتك، لكنه قد يخطئ — مثلنا جميعاً.\n\nهو لا يقرر ما هو صحيح في المسابقة. في المسابقة الحقيقية فقط الحكام البشريون في الملعب يقررون، وما يقولونه هو النهائي دائماً.\n\nإذا كان لديك شك، اسأل دائماً حكماً حقيقياً في الملعب.',
+    'disclaimerPopup.confirm': 'قرأت وفهمت — دخول إلى الحكم'
   },
   es: {
     'app.title': 'Árbitro Virtual',
@@ -287,7 +296,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Herramienta comunitaria de Boeing 727 • Para la comunidad FLL',
     'intro.feature3Title': 'Actualizaciones del árbitro',
     'intro.feature3Desc': 'Aclaraciones, fallos y cambios publicados durante la temporada — en un solo lugar.',
-    'intro.notOfficial': 'Herramienta comunitaria — no es un producto oficial de FIRST'
+    'intro.notOfficial': 'Herramienta comunitaria — no es un producto oficial de FIRST',
+    'disclaimerPopup.title': 'Aviso antes de entrar ⚠️',
+    'disclaimerPopup.body': 'El Árbitro Virtual es una IA inteligente que intenta ayudar, pero puede cometer errores — como todos nos confundimos a veces.\n\nNo decide qué es correcto en una competición. En la competición real solo los árbitros humanos de la zona deciden, y lo que dicen es siempre definitivo.\n\nSi tienes dudas, pregunta siempre a un árbitro real de la zona.',
+    'disclaimerPopup.confirm': 'He leído y entendido — Entrar al Árbitro'
   },
   fr: {
     'app.title': 'Arbitre Virtuel',
@@ -348,7 +360,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Outil communautaire par Boeing 727 • Pour la communauté FLL',
     'intro.feature3Title': 'Mises à jour de l\'arbitre',
     'intro.feature3Desc': 'Clarifications, décisions et changements publiés pendant la saison — en un seul endroit.',
-    'intro.notOfficial': 'Outil communautaire — pas un produit officiel FIRST'
+    'intro.notOfficial': 'Outil communautaire — pas un produit officiel FIRST',
+    'disclaimerPopup.title': 'Attention avant d\'entrer ⚠️',
+    'disclaimerPopup.body': 'L\'Arbitre Virtuel est une IA intelligente qui essaie d\'aider, mais elle peut se tromper — comme nous tous.\n\nElle ne décide pas de ce qui est correct en compétition. Lors de la vraie compétition, seuls les arbitres humains de l\'arène décident, et ce qu\'ils disent est toujours définitif.\n\nEn cas de doute, demandez toujours à un vrai arbitre de l\'arène.',
+    'disclaimerPopup.confirm': 'J\'ai lu et compris — Entrer chez l\'Arbitre'
   },
   de: {
     'app.title': 'Virtueller Schiedsrichter',
@@ -409,7 +424,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Community-Tool von Boeing 727 • Für die FLL-Community',
     'intro.feature3Title': 'Schiedsrichter-Updates',
     'intro.feature3Desc': 'Klarstellungen, Entscheidungen und Änderungen der Saison — an einem Ort.',
-    'intro.notOfficial': 'Community-Tool — kein offizielles FIRST-Produkt'
+    'intro.notOfficial': 'Community-Tool — kein offizielles FIRST-Produkt',
+    'disclaimerPopup.title': 'Hinweis vor dem Eintritt ⚠️',
+    'disclaimerPopup.body': 'Der Virtuelle Schiedsrichter ist eine schlaue KI, die helfen will, kann aber Fehler machen — wie wir alle.\n\nEr entscheidet nicht, was im Wettbewerb richtig ist. Im echten Wettbewerb entscheiden nur die menschlichen Feldschiedsrichter, und was sie sagen, ist immer endgültig.\n\nIm Zweifel immer einen echten Feldschiedsrichter fragen.',
+    'disclaimerPopup.confirm': 'Gelesen und verstanden — Zum Schiedsrichter'
   },
   ru: {
     'app.title': 'Виртуальный судья',
@@ -470,7 +488,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Инструмент сообщества от Boeing 727 • Для сообщества FLL',
     'intro.feature3Title': 'Обновления судьи',
     'intro.feature3Desc': 'Разъяснения, решения и изменения сезона — в одном месте.',
-    'intro.notOfficial': 'Инструмент сообщества — не официальный продукт FIRST'
+    'intro.notOfficial': 'Инструмент сообщества — не официальный продукт FIRST',
+    'disclaimerPopup.title': 'Внимание перед входом ⚠️',
+    'disclaimerPopup.body': 'Виртуальный судья — умный ИИ, который старается помочь, но может ошибаться — как и мы все.\n\nОн не решает, что правильно на соревновании. На настоящем соревновании решают только живые судьи зоны, и их слово — всегда окончательное.\n\nЕсли сомневаетесь, всегда спрашивайте настоящего судью зоны.',
+    'disclaimerPopup.confirm': 'Прочитал и понял — Войти к судье'
   },
   pt: {
     'app.title': 'Juiz Virtual',
@@ -531,7 +552,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Ferramenta comunitária da Boeing 727 • Para a comunidade FLL',
     'intro.feature3Title': 'Atualizações do árbitro',
     'intro.feature3Desc': 'Esclarecimentos, decisões e alterações da temporada — em um só lugar.',
-    'intro.notOfficial': 'Ferramenta comunitária — não é um produto oficial da FIRST'
+    'intro.notOfficial': 'Ferramenta comunitária — não é um produto oficial da FIRST',
+    'disclaimerPopup.title': 'Aviso antes de entrar ⚠️',
+    'disclaimerPopup.body': 'O Juiz Virtual é uma IA inteligente que tenta ajudar, mas pode cometer erros — como todos nós.\n\nEle não decide o que é correto na competição. Na competição real apenas os juízes humanos da arena decidem, e o que eles dizem é sempre final.\n\nEm caso de dúvida, pergunte sempre a um juiz real da arena.',
+    'disclaimerPopup.confirm': 'Li e entendi — Entrar no Juiz'
   },
   it: {
     'app.title': 'Arbitro Virtuale',
@@ -592,7 +616,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Strumento comunitario di Boeing 727 • Per la comunità FLL',
     'intro.feature3Title': 'Aggiornamenti arbitro',
     'intro.feature3Desc': 'Chiarimenti, decisioni e modifiche della stagione — in un unico posto.',
-    'intro.notOfficial': 'Strumento comunitario — non è un prodotto ufficiale FIRST'
+    'intro.notOfficial': 'Strumento comunitario — non è un prodotto ufficiale FIRST',
+    'disclaimerPopup.title': 'Avviso prima di entrare ⚠️',
+    'disclaimerPopup.body': 'L\'Arbitro Virtuale è un\'IA intelligente che cerca di aiutare, ma può sbagliare — come tutti noi.\n\nNon decide cosa è corretto in gara. Nella gara reale decidono solo gli arbitri umani dell\'arena, e ciò che dicono è sempre definitivo.\n\nIn caso di dubbio, chiedi sempre a un vero arbitro dell\'arena.',
+    'disclaimerPopup.confirm': 'Ho letto e compreso — Entra nell\'Arbitro'
   },
   zh: {
     'app.title': '虚拟裁判',
@@ -653,7 +680,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Boeing 727 社区工具 • 献给FLL社区',
     'intro.feature3Title': '裁判更新',
     'intro.feature3Desc': '赛季中发布的澄清、裁决和变更 — 尽在一处。',
-    'intro.notOfficial': '社区工具 — 非FIRST官方产品'
+    'intro.notOfficial': '社区工具 — 非FIRST官方产品',
+    'disclaimerPopup.title': '进入前请注意 ⚠️',
+    'disclaimerPopup.body': '虚拟裁判是一个试图帮助你的智能AI，但它也会犯错——就像我们有时也会困惑一样。\n\n它不能决定比赛中什么是正确的。在真正的比赛中，只有现场的人类裁判才能决定，他们说的永远是最终结果。\n\n如有疑问，请务必询问真正的现场裁判。',
+    'disclaimerPopup.confirm': '我已阅读并理解 — 进入裁判'
   },
   ja: {
     'app.title': 'バーチャル審判',
@@ -714,7 +744,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Boeing 727 コミュニティツール • FLLコミュニティのために',
     'intro.feature3Title': '審判アップデート',
     'intro.feature3Desc': 'シーズン中に公開された澄清、裁定、変更 — 一箇所に。',
-    'intro.notOfficial': 'コミュニティツール — FIRST公式製品ではありません'
+    'intro.notOfficial': 'コミュニティツール — FIRST公式製品ではありません',
+    'disclaimerPopup.title': '入る前の注意 ⚠️',
+    'disclaimerPopup.body': 'バーチャル審判はルールを理解するのを手伝おうとする賢いAIですが、時々間違えることがあります — 私たちも混乱するように。\n\nそれは競技で何が正しいかを決定しません。本当の競技では、現場の人間の審判だけが決定し、彼らの言葉が常に最終決定です。\n\n疑問がある場合は、必ず本物の現場審判に聞いてください。',
+    'disclaimerPopup.confirm': '読んで理解しました — 審判に入る'
   },
   ko: {
     'app.title': '가상 심판',
@@ -775,7 +808,10 @@ const translations: TranslationsDict = {
     'intro.badge': 'Boeing 727 커뮤니티 도구 • FLL 커뮤니티를 위해',
     'intro.feature3Title': '심판 업데이트',
     'intro.feature3Desc': '시즌 동안 게시된 설명, 판정 및 변경 사항 — 한 곳에서.',
-    'intro.notOfficial': '커뮤니티 도구 — 공식 FIRST 제품이 아닙니다'
+    'intro.notOfficial': '커뮤니티 도구 — 공식 FIRST 제품이 아닙니다',
+    'disclaimerPopup.title': '입장 전 주의 ⚠️',
+    'disclaimerPopup.body': '가상 심판은 규칙을 이해하도록 돕는 똑똑한 AI이지만, 우리처럼 가끔 실수할 수 있습니다.\n\n그것은 대회에서 무엇이 옳은지 결정하지 않습니다. 실제 대회에서는 현장의 인간 심판만이 결정하며, 그들이 말하는 것이 항상 최종입니다.\n\n의심스러우면 항상 실제 현장 심판에게 물어보세요.',
+    'disclaimerPopup.confirm': '읽고 이해했습니다 — 심판으로 입장'
   },
 };
 

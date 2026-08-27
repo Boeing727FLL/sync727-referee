@@ -19,6 +19,7 @@ import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
 import RefereeLogsModal from '../components/RefereeLogsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
+import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -44,6 +45,8 @@ export default function PublicRulebookAI() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [chatStarted, setChatStarted] = useState<boolean>(false);
   const [showEnterAnimation, setShowEnterAnimation] = useState<boolean>(false);
+  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
+  const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
   const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
@@ -99,17 +102,41 @@ export default function PublicRulebookAI() {
       .catch(() => {});
   }, []);
 
-  // Auto-enter chat after login with entrance animation
+  // Auto-enter chat after login — always show mandatory disclaimer before entering
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
-      setShowEnterAnimation(true);
+      setPendingEnterChat(true);
+      setShowDisclaimer(true);
+    }
+  }, [user, hasGoogleToken]);
+
+  const handleDisclaimerConfirm = () => {
+    setShowDisclaimer(false);
+    // animate entrance then enter chat
+    if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
+      setShowEnterAnimation(true);
+      setShowIntro(false);
+      setChatStarted(true);
+      setTimeout(() => setShowEnterAnimation(false), 800);
+      setPendingEnterChat(false);
+    } else {
+      // intro path: has token, confirm -> enter chat
+      setShowEnterAnimation(true);
       setShowIntro(false);
       setChatStarted(true);
       setTimeout(() => setShowEnterAnimation(false), 800);
     }
-  }, [user, hasGoogleToken]);
+  };
+
+  const handleIntroContinue = () => {
+    if (hasGoogleToken || user) {
+      setShowDisclaimer(true);
+    } else {
+      navigate('/login');
+    }
+  };
 
   // Resolve the real logged-in referee user uid (from auth context or the new LoginPage's localStorage)
   const resolveRefereeUid = (): string | null => {
@@ -1261,18 +1288,13 @@ const fetchLatestRulebook = async () => {
           <IntroScreen
             hasGoogleToken={hasGoogleToken}
             user={user}
-            onContinue={() => {
-              if (hasGoogleToken || user) {
-                setShowIntro(false);
-                setChatStarted(true);
-              } else {
-                navigate('/login');
-              }
-            }}
+            onContinue={handleIntroContinue}
             t={t}
           />
         )}
       </AnimatePresence>
+
+      <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
 
       <ConfirmationModal
         isOpen={showLogoutConfirm}
