@@ -22,17 +22,17 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
     >
       {/* ===== Background — covers just barely past the CTA button (direct child of scroll container) ===== */}
       <div className="absolute top-0 left-0 right-0 min-h-[115vh] -z-10 overflow-hidden pointer-events-none bg-slate-950" aria-hidden>
-        {/* tiny placeholder for instant paint (600 bytes) */}
+        {/* tiny placeholder for instant paint (600 bytes) - v2 fictional names */}
         <img
-          src="/bioglow-cutout-placeholder.webp"
+          src="/bioglow-cutout-placeholder.webp?v=2"
           alt=""
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
           decoding="async"
         />
         <img
-          src="/bioglow-cutout-3000.webp"
-          srcSet="/bioglow-cutout-2x.webp 1500w, /bioglow-cutout-3000.webp 3000w"
+          src="/bioglow-cutout-3000.webp?v=2"
+          srcSet="/bioglow-cutout-2x.webp?v=2 1500w, /bioglow-cutout-3000.webp?v=2 3000w"
           sizes="100vw"
           alt=""
           className="absolute inset-0 w-full h-full object-cover object-center"
