@@ -125,24 +125,54 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setResetSent(false);
+    const emailTrim = resetEmail.trim();
+    if (!emailTrim) {
+      setError('נא להזין כתובת אימייל.');
+      return;
+    }
     setLoading(true);
+    // Ensure email is sent in Hebrew
+    auth.languageCode = 'he';
 
-    try {
-      await sendPasswordResetEmail(auth, resetEmail, {
+    const tryWithActionCode = async () => {
+      await sendPasswordResetEmail(auth, emailTrim, {
         url: `${window.location.origin}/reset-password`,
         handleCodeInApp: true,
       });
+    };
+
+    try {
+      try {
+        await tryWithActionCode();
+      } catch (inner: any) {
+        const code = inner?.code || '';
+        // New project may not have the continue URL whitelisted yet — fallback to plain reset
+        if (code === 'auth/unauthorized-continue-uri' || code === 'auth/invalid-continue-uri' || code === 'auth/missing-continue-uri') {
+          console.warn('continueUrl not whitelisted, falling back to default handler:', inner);
+          await sendPasswordResetEmail(auth, emailTrim);
+        } else {
+          throw inner;
+        }
+      }
       setResetSent(true);
     } catch (err: any) {
-      const code = err.code;
+      const code = err?.code || '';
+      // With Email Enumeration Protection, user-not-found is hidden — treat as success
       if (code === 'auth/user-not-found') {
-        setError('לא נמצא חשבון עם האימייל הזה.');
+        // Don't leak existence — still show success
+        setResetSent(true);
       } else if (code === 'auth/invalid-email') {
         setError('כתובת אימייל לא תקינה.');
       } else if (code === 'auth/too-many-requests') {
         setError('יותר מדי ניסיונות. נסה שוב מאוחר יותר.');
+      } else if (code === 'auth/missing-email' || code === 'auth/invalid-recipient-email') {
+        setError('כתובת אימייל לא תקינה.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('שגיאת רשת. בדוק חיבור לאינטרנט ונסה שוב.');
       } else {
-        setError(err.message);
+        // Fallback: show raw message for debugging, but also handle enumeration
+        console.error('sendPasswordResetEmail failed:', err);
+        setError(err?.message || 'שגיאה בשליחת אימייל. נסה שוב.');
       }
     } finally {
       setLoading(false);

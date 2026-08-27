@@ -8,6 +8,7 @@ import { getMessaging, isSupported } from "firebase/messaging";
 const firebaseConfig = {
   apiKey: "AIzaSyAShqcVG0F-Vjkg8uVK9QYRjgLGyUAI_PI",
   authDomain: "sync-727-referee.firebaseapp.com",
+  databaseURL: "https://sync-727-referee-default-rtdb.firebaseio.com",
   projectId: "sync-727-referee",
   storageBucket: "sync-727-referee.firebasestorage.app",
   messagingSenderId: "804828140815",
