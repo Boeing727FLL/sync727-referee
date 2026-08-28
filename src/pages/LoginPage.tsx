@@ -136,8 +136,8 @@ export default function LoginPage() {
 
     const tryWithActionCode = async () => {
       await sendPasswordResetEmail(auth, emailTrim, {
-        url: `${window.location.origin}/reset-password`,
-        handleCodeInApp: true,
+        url: `${window.location.origin}/`,
+        handleCodeInApp: false,
       });
     };
 

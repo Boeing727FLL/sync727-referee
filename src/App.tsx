@@ -4,7 +4,6 @@ import { AuthProvider } from './hooks/useAuth';
 import { LanguageProvider } from './hooks/useLanguage';
 import PublicRulebookAI from './pages/PublicRulebookAI';
 import LoginPage from './pages/LoginPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
 import FeedbackAdminPage from './pages/FeedbackAdminPage';
 
 function App() {
@@ -17,7 +16,6 @@ function App() {
               <Route path="/" element={<PublicRulebookAI />} />
               <Route path="/app" element={<PublicRulebookAI />} />
               <Route path="/login" element={<LoginPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/feedback-view" element={<FeedbackAdminPage />} />
               <Route path="*" element={<PublicRulebookAI />} />
             </Routes>
