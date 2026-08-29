@@ -96,9 +96,9 @@ const translations: TranslationsDict = {
     'intro.feature3Title': 'מבוסס על המסמכים הרשמיים',
     'intro.feature3Desc': 'התשובות נשענות על החוקים והעדכונים הרשמיים של פירסט.',
     'intro.notOfficial': 'כלי קהילתי — אינו מוצר רשמי של FIRST',
-    'disclaimerPopup.title': 'רגע לפני שנכנסים ⚠️',
-    'disclaimerPopup.body': 'השופט הווירטואלי הוא רובוט חכם שעוזר לכם להבין את החוקים, אבל גם הוא יכול לטעות — כמו שכולנו לפעמים מתבלבלים.\n\nהוא לא קובע מה נכון בתחרות. בתחרות עצמה רק השופטים האמיתיים בזירה מחליטים, ומה שהם אומרים — זה מה שקובע, תמיד.\n\nאם יש לכם ספק, תמיד כדאי לשאול שופט אמיתי בזירה.',
-    'disclaimerPopup.confirm': 'קראתי והבנתי — כניסה לשופט'
+    'disclaimerPopup.title': 'רגע לפני שנכנסים',
+    'disclaimerPopup.body': 'שופט הזירה הווירטואלי הוא צ\'אט AI שנועד לעזור בהבנת חוקי המשחק, ולפעמים הוא יכול לטעות. לכן אם אתם לא בטוחים במשהו, תמיד כדאי לאמת מול שופט זירה אמיתי.',
+    'disclaimerPopup.confirm': 'קראתי והבנתי, כניסה לשופט'
   },
   en: {
     'app.title': 'Virtual Referee',
@@ -169,9 +169,9 @@ const translations: TranslationsDict = {
     'intro.feature3Title': 'Referee Updates',
     'intro.feature3Desc': 'Clarifications, rulings and changes published throughout the season — in one place.',
     'intro.notOfficial': 'Community tool — not an official FIRST product',
-    'disclaimerPopup.title': 'Heads up before you enter ⚠️',
-    'disclaimerPopup.body': 'The Virtual Referee is a smart AI that tries to help you understand the rules, but it can make mistakes — just like we all sometimes get confused.\n\nIt does NOT decide what is correct in a competition. In the real competition, only the human field referees decide, and what they say is always final.\n\nIf in doubt, always ask a real field referee.',
-    'disclaimerPopup.confirm': 'I read and understood — Enter Referee'
+    'disclaimerPopup.title': 'Heads up before you enter',
+    'disclaimerPopup.body': 'The Virtual Field Referee is a chat AI designed to help understand the game rules, and sometimes it can make mistakes. Therefore if you are not sure about something, always verify with a real field referee.',
+    'disclaimerPopup.confirm': 'I read and understood, enter referee'
   },
   ar: {
     'app.title': 'الحكم الافتراضي',

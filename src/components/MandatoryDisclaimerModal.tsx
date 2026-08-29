@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -30,8 +30,14 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             aria-modal="true"
           >
             <div className="p-6 md:p-7 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/15 border border-amber-500/25 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-amber-400" />
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute -inset-3 bg-yellow-400/25 blur-xl rounded-full pointer-events-none" aria-hidden />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 p-[2px] shadow-[0_4px_16px_rgba(250,204,21,0.4)]">
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                    <Check className="w-8 h-8 text-amber-600 stroke-[3]" />
+                  </div>
+                </div>
+                <div className="absolute -inset-1 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
               </div>
               <h3 className="text-xl md:text-2xl font-black text-white mb-3 leading-tight">
                 {t('disclaimerPopup.title')}
