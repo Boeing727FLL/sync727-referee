@@ -75,58 +75,94 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
         </motion.div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-6 md:py-8 text-center w-full max-w-5xl mx-auto">
-          {/* Logo — static, no 3D/orbit */}
+          {/* Logo — premium gold frame, competition energy + quiet luxury */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            initial={{ opacity: 0, scale: 0.9, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.1 }}
-            className="relative mb-4 md:mb-5"
+            transition={{ duration: 0.6, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+            className="relative mb-5 md:mb-6 group"
           >
-            <div className="absolute -inset-6 bg-yellow-400/15 blur-2xl rounded-full pointer-events-none" aria-hidden />
-            <div className="relative w-24 h-24 md:w-36 md:h-36 rounded-full bg-white border-2 border-slate-950 shadow-[0_8px_24px_rgba(0,0,0,0.25)] overflow-hidden flex items-center justify-center">
-              <img
-                src="/logoref.png"
-                alt="שופט וירטואלי"
-                className="w-[85%] h-[85%] object-contain select-none"
-                draggable={false}
-              />
+            {/* outer glow */}
+            <div className="absolute -inset-8 bg-gradient-to-b from-yellow-400/25 via-amber-500/15 to-transparent blur-2xl rounded-full pointer-events-none" aria-hidden />
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-yellow-300/30 via-transparent to-amber-500/20 blur-sm pointer-events-none" aria-hidden />
+            {/* gold frame */}
+            <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full p-[3px] bg-gradient-to-br from-yellow-200 via-yellow-400 to-amber-600 shadow-[0_8px_32px_rgba(250,204,21,0.4),0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.6)]">
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden relative shadow-[inset_0_2px_12px_rgba(0,0,0,0.08)]">
+                <img
+                  src="/logoref.png"
+                  alt="שופט וירטואלי"
+                  className="w-[84%] h-[84%] object-contain select-none relative z-10"
+                  draggable={false}
+                />
+                {/* inner highlight */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 via-transparent to-transparent opacity-60 pointer-events-none" aria-hidden />
+                {/* shine sweep */}
+                <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none" aria-hidden>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out opacity-0 group-hover:opacity-100" />
+                </div>
+              </div>
             </div>
+            {/* thin outer ring */}
+            <div className="absolute -inset-1.5 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
           </motion.div>
 
-          {/* Badge — NOT official FIRST, community tool by Boeing 727 */}
+          {/* Badge — premium glass pill */}
           <motion.span
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.18, duration: 0.35 }}
-            className="inline-flex items-center gap-2 bg-white/10 backdrop-blur text-yellow-300 text-[11px] md:text-xs font-bold px-4 py-1.5 rounded-full border border-yellow-400/25 mb-4 md:mb-5"
+            className="inline-flex items-center gap-2 bg-slate-900/50 backdrop-blur-xl text-yellow-300 text-[11px] md:text-xs font-bold px-4 md:px-5 py-1.5 md:py-2 rounded-full border border-yellow-400/30 shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] mb-5 md:mb-6"
           >
-            <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]" aria-hidden />
+            <span className="relative w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]" aria-hidden>
+              <span className="absolute inset-0 rounded-full bg-yellow-400 animate-ping opacity-30" aria-hidden />
+            </span>
             {t('intro.badge')}
           </motion.span>
 
-          {/* Title — simple, no per-word 3D */}
-          <motion.h2
+          {/* Title — premium, competition energy */}
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.22, duration: 0.4 }}
-            className="text-3xl md:text-6xl font-black text-white leading-tight mb-3 md:mb-4 tracking-tight"
-            style={{ textWrap: 'balance' } as React.CSSProperties}
+            transition={{ delay: 0.22, duration: 0.45 }}
+            className="mb-3 md:mb-4"
           >
-            <span className="bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent">
+            <h2
+              className="text-3xl md:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)]"
+              style={{ textWrap: 'balance' } as React.CSSProperties}
+            >
               {t('intro.subtitle')}
-            </span>
-          </motion.h2>
+            </h2>
+            {/* gold underline + side fades - quiet luxury */}
+            <div className="flex items-center justify-center gap-3 mt-3 md:mt-4">
+              <div className="h-[1px] w-8 md:w-12 bg-gradient-to-r from-transparent to-white/20" aria-hidden />
+              <div className="w-16 md:w-24 h-[2.5px] bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 rounded-full shadow-[0_0_12px_rgba(250,204,21,0.5)]" aria-hidden />
+              <div className="h-[1px] w-8 md:w-12 bg-gradient-to-l from-transparent to-white/20" aria-hidden />
+            </div>
+          </motion.div>
 
-          {/* Subtitle — Hebrew only, text-only (no photo scoring) */}
-          <motion.p
+          {/* Subtitle — wide card but not too wide, premium glass */}
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.28, duration: 0.4 }}
-            className="text-slate-200 text-sm md:text-lg font-medium leading-relaxed max-w-2xl mx-auto mb-6 md:mb-8"
-            style={{ textWrap: 'pretty' } as React.CSSProperties}
+            transition={{ delay: 0.28, duration: 0.45 }}
+            className="w-full max-w-3xl mx-auto mb-6 md:mb-8"
           >
-            {t('intro.descFull')}
-          </motion.p>
+            <div className="relative bg-slate-900/35 backdrop-blur-xl border border-white/10 rounded-2xl px-5 md:px-8 py-5 md:py-6 shadow-[0_12px_32px_rgba(0,0,0,0.4)] overflow-hidden">
+              {/* top gold accent */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 md:w-36 h-[2px] bg-gradient-to-r from-transparent via-yellow-400/70 to-transparent" aria-hidden />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] via-transparent to-transparent pointer-events-none" aria-hidden />
+              {/* subtle quote watermark */}
+              <div className="absolute -top-2 -right-2 text-6xl font-black text-white/[0.04] select-none pointer-events-none leading-none" aria-hidden>
+                “
+              </div>
+              <p
+                className="relative text-white/92 text-sm md:text-[17px] font-semibold leading-7 md:leading-8"
+                style={{ textWrap: 'pretty' } as React.CSSProperties}
+              >
+                {t('intro.descFull')}
+              </p>
+            </div>
+          </motion.div>
 
           {/* 3 feature cards — text-only, lightweight */}
           <motion.div
