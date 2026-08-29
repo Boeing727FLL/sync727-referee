@@ -113,18 +113,22 @@ export default function PublicRulebookAI() {
 
   const handleDisclaimerConfirm = () => {
     setShowDisclaimer(false);
-    // impressive but visible 2-3s as requested
+    // overlay first to avoid flash of referee before animation
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setShowEnterAnimation(true);
-      setShowIntro(false);
-      setChatStarted(true);
+      setTimeout(() => {
+        setShowIntro(false);
+        setChatStarted(true);
+      }, 300);
       setTimeout(() => setShowEnterAnimation(false), 2600);
       setPendingEnterChat(false);
     } else {
       setShowEnterAnimation(true);
-      setShowIntro(false);
-      setChatStarted(true);
+      setTimeout(() => {
+        setShowIntro(false);
+        setChatStarted(true);
+      }, 300);
       setTimeout(() => setShowEnterAnimation(false), 2600);
     }
   };
@@ -1341,8 +1345,8 @@ const fetchLatestRulebook = async () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[9997] bg-slate-950 flex flex-col items-center justify-center gap-6 p-4"
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[10010] bg-slate-950 flex flex-col items-center justify-center gap-6 p-4"
             dir="rtl"
           >
             <motion.div
