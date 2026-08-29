@@ -191,19 +191,6 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
             ))}
           </motion.div>
 
-          {/* Disclaimer — darker for visibility */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.45, duration: 0.4 }}
-            className="w-full max-w-2xl mb-6 md:mb-8 px-4 py-3 rounded-xl bg-slate-900/60 backdrop-blur-md border border-amber-500/20 text-center shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
-          >
-            <p className="text-[11px] md:text-xs text-amber-100 leading-relaxed font-medium">
-              <span className="font-black text-amber-300">{t('intro.disclaimer')}</span>{' '}
-              {t('intro.disclaimerDesc')}
-            </p>
-          </motion.div>
-
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
