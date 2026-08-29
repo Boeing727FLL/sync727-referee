@@ -35,7 +35,7 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
           srcSet="/bioglow-cutout-2x.webp?v=2 1500w, /bioglow-cutout-3000.webp?v=2 3000w"
           sizes="100vw"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center blur-[5px] md:blur-[6px] scale-[1.03]"
           fetchPriority="high"
           decoding="sync"
           loading="eager"
