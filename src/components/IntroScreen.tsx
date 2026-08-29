@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { BookOpen, Scale, History } from 'lucide-react';
+import { MessageCircle, Smartphone, FileCheck } from 'lucide-react';
 
 interface IntroScreenProps {
   hasGoogleToken: boolean;
@@ -172,9 +172,9 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
             className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-3xl mb-6 md:mb-8 text-right"
           >
             {[
-              { icon: BookOpen, title: t('intro.feature1Title'), desc: t('intro.feature1Desc') },
-              { icon: Scale, title: t('intro.feature2Title'), desc: t('intro.feature2Desc') },
-              { icon: History, title: t('intro.feature3Title'), desc: t('intro.feature3Desc') },
+              { icon: MessageCircle, title: t('intro.feature1Title'), desc: t('intro.feature1Desc') },
+              { icon: Smartphone, title: t('intro.feature2Title'), desc: t('intro.feature2Desc') },
+              { icon: FileCheck, title: t('intro.feature3Title'), desc: t('intro.feature3Desc') },
             ].map((f, i) => (
               <div
                 key={i}
