@@ -343,13 +343,14 @@ export default function PublicRulebookAI() {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      if (showEnterAnimation) return;
       setTypewriterCount(prev => {
         if (prev >= typewriterTargetRef.current) return prev;
         return prev + 1;
       });
     }, 35);
     return () => clearInterval(interval);
-  }, []);
+  }, [showEnterAnimation]);
 
   useEffect(() => {
     if (loading) {
@@ -359,11 +360,18 @@ export default function PublicRulebookAI() {
   }, [loading]);
 
   useEffect(() => {
-    if (chatStarted) {
+    if (chatStarted && !showEnterAnimation) {
       setTypewriterCount(0);
       typewriterTargetRef.current = 0;
     }
-  }, [chatStarted]);
+  }, [chatStarted, showEnterAnimation]);
+
+  useEffect(() => {
+    if (!showEnterAnimation && chatStarted) {
+      setTypewriterCount(0);
+      typewriterTargetRef.current = 0;
+    }
+  }, [showEnterAnimation]);
 
   const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
 
@@ -955,10 +963,10 @@ const fetchLatestRulebook = async () => {
             }
           }
 
-          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0) {
+          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0 && !showEnterAnimation) {
             typewriterTargetRef.current = finalRenderText.length;
           }
-          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterCount < typewriterTargetRef.current;
+          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && !showEnterAnimation && typewriterCount < typewriterTargetRef.current;
           if (isTypewriting) {
             finalRenderText = finalRenderText.substring(0, typewriterCount);
           }
@@ -1357,7 +1365,7 @@ const fetchLatestRulebook = async () => {
               transition={{ delay: 0.35, duration: 0.4 }}
               className="text-yellow-400 font-black text-lg md:text-xl tracking-wide"
             >
-              נכנסים לזירה...
+              מפעיל את השופט הווירטואלי...
             </motion.p>
             <motion.div
               initial={{ scaleX: 0 }}
