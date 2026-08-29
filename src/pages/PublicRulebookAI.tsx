@@ -113,20 +113,19 @@ export default function PublicRulebookAI() {
 
   const handleDisclaimerConfirm = () => {
     setShowDisclaimer(false);
-    // animate entrance then enter chat
+    // premium minimal: logo expands + chat rises, 0.6s total
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setShowEnterAnimation(true);
       setShowIntro(false);
       setChatStarted(true);
-      setTimeout(() => setShowEnterAnimation(false), 800);
+      setTimeout(() => setShowEnterAnimation(false), 600);
       setPendingEnterChat(false);
     } else {
-      // intro path: has token, confirm -> enter chat
       setShowEnterAnimation(true);
       setShowIntro(false);
       setChatStarted(true);
-      setTimeout(() => setShowEnterAnimation(false), 800);
+      setTimeout(() => setShowEnterAnimation(false), 600);
     }
   };
 
@@ -857,7 +856,7 @@ const fetchLatestRulebook = async () => {
     <motion.div
       initial={showEnterAnimation ? { opacity: 0, scale: 0.96, filter: 'blur(8px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
       
