@@ -113,19 +113,19 @@ export default function PublicRulebookAI() {
 
   const handleDisclaimerConfirm = () => {
     setShowDisclaimer(false);
-    // premium minimal: logo expands + chat rises, 0.6s total
+    // impressive but visible 2-3s as requested
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setShowEnterAnimation(true);
       setShowIntro(false);
       setChatStarted(true);
-      setTimeout(() => setShowEnterAnimation(false), 600);
+      setTimeout(() => setShowEnterAnimation(false), 2600);
       setPendingEnterChat(false);
     } else {
       setShowEnterAnimation(true);
       setShowIntro(false);
       setChatStarted(true);
-      setTimeout(() => setShowEnterAnimation(false), 600);
+      setTimeout(() => setShowEnterAnimation(false), 2600);
     }
   };
 
@@ -854,9 +854,9 @@ const fetchLatestRulebook = async () => {
 
   return (
     <motion.div
-      initial={showEnterAnimation ? { opacity: 0, scale: 0.96, filter: 'blur(8px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      initial={showEnterAnimation ? { opacity: 0, scale: 0.94, filter: 'blur(10px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
       
@@ -1326,6 +1326,49 @@ const fetchLatestRulebook = async () => {
         season={seasonName}
         uid={resolveRefereeUid()}
       />
+
+      <AnimatePresence>
+        {showEnterAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[9997] bg-slate-950 flex flex-col items-center justify-center gap-6 p-4"
+            dir="rtl"
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, rotate: -5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 1.15, opacity: 0, filter: 'blur(8px)' }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative"
+            >
+              <div className="absolute -inset-8 bg-yellow-400/25 blur-3xl rounded-full pointer-events-none" aria-hidden />
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 blur-sm opacity-60 pointer-events-none" aria-hidden />
+              <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full bg-white border-[3px] border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.5)] flex items-center justify-center overflow-hidden">
+                <img src="/logoref.png" alt="שופט וירטואלי" className="w-[85%] h-[85%] object-contain" />
+              </div>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+              className="text-yellow-400 font-black text-lg md:text-xl tracking-wide"
+            >
+              נכנסים לזירה...
+            </motion.p>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.8, ease: "easeInOut", delay: 0.4 }}
+              className="w-[160px] h-1.5 bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 rounded-full origin-center shadow-[0_0_12px_rgba(250,204,21,0.5)]"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {sessionKicked && (

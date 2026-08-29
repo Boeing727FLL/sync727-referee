@@ -23,8 +23,8 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 1.04, opacity: 0, y: -8, filter: 'blur(6px)' }}
-            transition={{ duration: 0.28, ease: [0.4, 0, 1, 1] }}
+            exit={{ scale: 1.08, opacity: 0, y: -12, filter: 'blur(8px)' }}
+            transition={{ duration: 0.65, ease: [0.4, 0, 1, 1] }}
             className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             role="dialog"
             aria-modal="true"
