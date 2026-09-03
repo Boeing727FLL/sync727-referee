@@ -4,6 +4,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported } from "firebase/messaging";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAShqcVG0F-Vjkg8uVK9QYRjgLGyUAI_PI",
@@ -16,6 +17,24 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
+
+// App Check with reCAPTCHA Enterprise — prevents stolen keys from being used off-site.
+// Site key: 6LcEk6ctAAAAAGS3vCurKE6m51gjwgF57dAOuZk1 (fllref.abrdns.com, fllref.netlify.app)
+if (typeof window !== 'undefined') {
+  try {
+    // Enable debug token on localhost so you can register it in Console → App Check → Manage debug tokens
+    // @ts-ignore
+    (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider('6LcEk6ctAAAAAGS3vCurKE6m51gjwgF57dAOuZk1'),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch (e) {
+    console.warn('App Check init failed:', e);
+  }
+}
+
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
