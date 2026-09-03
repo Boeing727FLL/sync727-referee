@@ -36,12 +36,12 @@ export default function PublicRulebookAI() {
   
   // Login state comes only from Firebase Auth (user) or the saved auth_user.
   // URL bypass params were removed for security, everyone must log in.
-  const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(() => {
-    return !!localStorage.getItem('google_access_token') ||
-      !!localStorage.getItem('auth_user');
-  });
+  const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(false);
+  const [showMigrationBanner, setShowMigrationBanner] = useState<boolean>(false);
   // Keep hasGoogleToken in sync with Firebase Auth so the
   // browserLocalPersistence session survives close/reopen the next day.
+  // If a stale localStorage entry exists from the old inMemory days
+  // (hasLocal true but no Firebase user), clear it and ask for one-time re-login.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
@@ -49,7 +49,17 @@ export default function PublicRulebookAI() {
       } else {
         const hasLocal = !!localStorage.getItem('google_access_token') ||
           !!localStorage.getItem('auth_user');
-        setHasGoogleToken(hasLocal);
+        if (hasLocal) {
+          localStorage.removeItem('google_access_token');
+          localStorage.removeItem('auth_user');
+          localStorage.removeItem('user_picture');
+          localStorage.removeItem('user_name');
+          setHasGoogleToken(false);
+          setShowMigrationBanner(true);
+          setTimeout(() => setShowMigrationBanner(false), 6000);
+        } else {
+          setHasGoogleToken(false);
+        }
       }
     });
     return () => unsub();
@@ -995,6 +1005,18 @@ const fetchLatestRulebook = async () => {
       transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
+      <AnimatePresence>
+        {showMigrationBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0"
+          >
+            שדרוג אבטחה — יש להתחבר מחדש פעם אחת
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Referee Ribbon */}
       <div className="h-3.5 bg-[repeating-linear-gradient(45deg,#000000,#000000_15px,#ffffff_15px,#ffffff_30px)] border-b border-slate-950 w-full shrink-0 relative">
