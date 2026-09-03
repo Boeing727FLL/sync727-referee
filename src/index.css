@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&family=IBM+Plex+Sans+Hebrew:wght@100;200;300;400;500;600;700&family=Rubik:wght@300;400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800;900&family=IBM+Plex+Sans+Hebrew:wght@100;200;300;400;500;600;700&family=Rubik:wght@300;400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -13,6 +13,10 @@
   html {
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html, body, #root {
     height: 100%;
