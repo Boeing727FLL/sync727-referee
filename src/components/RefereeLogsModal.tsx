@@ -1,6 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, ScrollText, MessageSquareText, Search, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  X,
+  Lock,
+  ScrollText,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Copy,
+  Check,
+  MessageCircle,
+  Bot,
+  Sparkles,
+  CalendarDays,
+  ArrowDownWideNarrow,
+  RotateCcw,
+  ShieldCheck,
+  CircleAlert,
+} from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -23,6 +41,42 @@ type LogEntry = {
   createdAt?: any;
 };
 
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  try {
+    if (typeof v.toDate === 'function') return v.toDate();
+    if (v.seconds) return new Date(v.seconds * 1000);
+    if (typeof v === 'number') return new Date(v);
+    if (typeof v === 'string') {
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function timeAgo(v: any): string {
+  const d = toDate(v);
+  if (!d) return '';
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'ממש עכשיו';
+  if (min < 60) return `לפני ${min} דקות`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `לפני ${h} שעות`;
+  const days = Math.floor(h / 24);
+  if (days < 30) return `לפני ${days} ימים`;
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+}
+
+function fullDate(v: any): string {
+  const d = toDate(v);
+  if (!d) return '';
+  return d.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalProps) {
   const [code, setCode] = useState('');
   const [unlocked, setUnlocked] = useState(false);
@@ -30,7 +84,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'ok' | 'fail'>('all');
+  const [sortNew, setSortNew] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -39,6 +96,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       setUnlocked(false);
       setExpanded(new Set());
       setSearch('');
+      setFilter('all');
+      setSortNew(true);
       return;
     }
   }, [isOpen]);
@@ -47,28 +106,29 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     if (!unlocked) return;
     setLoading(true);
     const q = query(collection(db, 'referee_logs'), orderBy('createdAt', 'desc'), limit(200));
-    const unsub = onSnapshot(q, (snap) => {
-      const entries: LogEntry[] = [];
-      snap.docs.forEach(d => {
-        const data = d.data();
-        entries.push({
-          id: d.id,
-          question: data.question,
-          answer: data.answer,
-          season: data.season,
-          language: data.language,
-          uid: data.uid,
-          model: data.model,
-          ok: data.ok,
-          createdAt: data.createdAt,
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const entries: LogEntry[] = [];
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          entries.push({
+            id: d.id,
+            question: data.question,
+            answer: data.answer,
+            season: data.season,
+            language: data.language,
+            uid: data.uid,
+            model: data.model,
+            ok: data.ok,
+            createdAt: data.createdAt,
+          });
         });
-      });
-      setLogs(entries);
-      setLoading(false);
-    }, (err) => {
-      console.warn("referee logs snapshot failed:", err);
-      setLoading(false);
-    });
+        setLogs(entries);
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
     return () => unsub();
   }, [unlocked]);
 
@@ -82,7 +142,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   };
 
   const toggleExpand = (id: string) => {
-    setExpanded(prev => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -93,21 +153,47 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'referee_logs', id));
-      setExpanded(prev => {
+      setExpanded((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
-    } catch (e) {
-      console.warn("delete log failed:", e);
+    } catch {
+      return;
     }
   };
 
-  const filtered = logs.filter(l => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (l.question || '').toLowerCase().includes(q) || (l.answer || '').toLowerCase().includes(q);
-  });
+  const copyText = async (key: string, text?: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(key);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {
+      return;
+    }
+  };
+
+  const stats = useMemo(() => {
+    const ok = logs.filter((l) => l.ok !== false).length;
+    return { total: logs.length, ok, fail: logs.length - ok };
+  }, [logs]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = logs.filter((l) => {
+      if (filter === 'ok' && l.ok === false) return false;
+      if (filter === 'fail' && l.ok !== false) return false;
+      if (!q) return true;
+      return (
+        (l.question || '').toLowerCase().includes(q) ||
+        (l.answer || '').toLowerCase().includes(q) ||
+        (l.season || '').toLowerCase().includes(q)
+      );
+    });
+    if (!sortNew) list = [...list].reverse();
+    return list;
+  }, [logs, search, filter, sortNew]);
 
   return (
     <AnimatePresence>
@@ -116,121 +202,318 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 md:p-4"
           dir="rtl"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{ scale: 0.92, opacity: 0, y: 24 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            onClick={e => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]"
+            exit={{ scale: 0.92, opacity: 0, y: 24 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
           >
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <ScrollText className="w-5 h-5 text-yellow-400" />
-                <h3 className="text-lg font-black text-white">יומן שאלות ותשובות</h3>
+            <div className="h-1 w-full bg-gradient-to-l from-yellow-300 via-amber-400 to-yellow-500 shrink-0" />
+
+            <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-white/10 bg-white/[0.03] shrink-0">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className="absolute -inset-2 bg-yellow-400/20 blur-xl rounded-full pointer-events-none" aria-hidden />
+                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 p-[2px] shadow-[0_4px_16px_rgba(250,204,21,0.35)]">
+                      <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center">
+                        <ScrollText className="w-5 h-5 text-yellow-400" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">יומן שאלות ותשובות</h3>
+                    <p className="text-[11px] md:text-xs text-slate-400 font-medium">
+                      {unlocked ? `סך הכל ${stats.total} רשומות, ${stats.ok} תקינות` : 'גישה לשופטים ראשיים בלבד'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="shrink-0 w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer"
+                  aria-label="סגור"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <div className="p-5 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {!unlocked ? (
-                <div className="space-y-4 m-auto w-full max-w-sm py-6">
-                  <div className="text-center py-2">
-                    <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-3">
-                      <Lock className="w-6 h-6 text-slate-400" />
+                <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute -inset-3 bg-yellow-400/15 blur-xl rounded-full" aria-hidden />
+                    <div className="relative w-full h-full rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-yellow-400" />
                     </div>
-                    <p className="text-slate-400 text-sm">הזן קוד כדי לגשת ליומן</p>
                   </div>
+                  <h4 className="text-white font-black mb-1">אזור מוגן</h4>
+                  <p className="text-slate-400 text-sm mb-5">הזינו קוד כדי לצפות ביומן</p>
                   <input
                     type="password"
                     value={code}
-                    onChange={e => { setCode(e.target.value); setError(false); }}
-                    onKeyDown={e => e.key === 'Enter' && handleUnlock()}
-                    placeholder="קוד"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all ${
-                      error ? 'border-red-500 focus:ring-red-500/40' : 'border-slate-700 focus:ring-yellow-500/40 focus:border-yellow-500'
+                    onChange={(e) => {
+                      setCode(e.target.value);
+                      setError(false);
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                    placeholder="קוד גישה"
+                    className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
+                      error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-yellow-400/30 focus:border-yellow-400/40'
                     }`}
                   />
-                  {error && <p className="text-red-500 text-xs font-semibold">קוד שגוי</p>}
+                  {error && <p className="text-red-400 text-xs font-bold mt-2">קוד שגוי, נסו שוב</p>}
                   <button
                     onClick={handleUnlock}
-                    className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
+                    className="mt-4 w-full py-3 rounded-xl bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   >
-                    כניסה
+                    כניסה ליומן
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3 flex-1 min-h-0">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative flex-1">
-                      <Search className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="חיפוש בשאלה או בתשובה..."
-                        className="w-full pr-9 pl-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-500/40 focus:border-yellow-500 text-sm"
-                      />
+                <div className="flex flex-col flex-1 min-h-0">
+                  <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/5 shrink-0 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="חיפוש בשאלה, בתשובה או בעונה"
+                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400/40 text-sm transition-all"
+                        />
+                        {search && (
+                          <button
+                            onClick={() => setSearch('')}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-white/5 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                            aria-label="נקה חיפוש"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setSortNew((v) => !v)}
+                        title={sortNew ? 'החדש ביותר למעלה' : 'הישן ביותר למעלה'}
+                        className="shrink-0 h-[42px] px-3 rounded-xl bg-slate-800/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                      >
+                        <ArrowDownWideNarrow className="w-4 h-4 text-yellow-400" />
+                        <span className="hidden sm:inline">{sortNew ? 'חדש קודם' : 'ישן קודם'}</span>
+                      </button>
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-sm font-bold shrink-0">
-                      <MessageSquareText className="w-4 h-4 text-yellow-400" />
-                      {logs.length}
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {(
+                        [
+                          { key: 'all', label: `הכל ${stats.total}` },
+                          { key: 'ok', label: `תקין ${stats.ok}` },
+                          { key: 'fail', label: `שגוי ${stats.fail}` },
+                        ] as const
+                      ).map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={() => setFilter(c.key)}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-black border transition-all cursor-pointer ${
+                            filter === c.key
+                              ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 border-yellow-300 shadow-[0_4px_12px_rgba(250,204,21,0.3)]'
+                              : 'bg-white/5 text-slate-400 border-white/10 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                      {(search || filter !== 'all') && (
+                        <button
+                          onClick={() => {
+                            setSearch('');
+                            setFilter('all');
+                          }}
+                          className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          איפוס
+                        </button>
+                      )}
+                      <span className="mr-auto text-[11px] text-slate-500 font-medium">
+                        מציג {filtered.length} מתוך {stats.total}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4 space-y-3">
                     {loading ? (
-                      <div className="flex items-center justify-center py-10 text-slate-500">
-                        <RefreshCw className="w-5 h-5 animate-spin ml-2" />
-                        טוען יומן...
-                      </div>
+                      [0, 1, 2].map((i) => (
+                        <div key={i} className="rounded-2xl border border-white/5 bg-slate-800/40 p-4 animate-pulse">
+                          <div className="h-4 w-3/4 rounded bg-slate-700/60 mb-3" />
+                          <div className="h-3 w-1/2 rounded bg-slate-700/40" />
+                        </div>
+                      ))
                     ) : filtered.length === 0 ? (
-                      <div className="text-center py-10 text-slate-500 text-sm">
-                        אין רשומות עדיין
+                      <div className="text-center py-14">
+                        <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                          <Sparkles className="w-6 h-6 text-slate-500" />
+                        </div>
+                        <p className="text-slate-300 font-bold text-sm">אין תוצאות</p>
+                        <p className="text-slate-500 text-xs mt-1">נסו לחפש משהו אחר או לאפס סינון</p>
                       </div>
                     ) : (
-                      filtered.map(entry => {
+                      filtered.map((entry, idx) => {
                         const isExpanded = expanded.has(entry.id);
+                        const ok = entry.ok !== false;
                         return (
-                          <div key={entry.id} className="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(idx * 0.03, 0.3), duration: 0.3 }}
+                            className={`rounded-2xl border overflow-hidden transition-colors ${
+                              isExpanded
+                                ? 'border-yellow-400/25 bg-slate-800/70 shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+                                : 'border-white/8 bg-slate-800/40 hover:border-white/15 hover:bg-slate-800/60'
+                            }`}
+                          >
                             <div
                               onClick={() => toggleExpand(entry.id)}
                               role="button"
                               tabIndex={0}
-                              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-800 transition-colors text-right cursor-pointer"
+                              onKeyDown={(e) => e.key === 'Enter' && toggleExpand(entry.id)}
+                              className="w-full flex items-center gap-3 px-4 py-3 cursor-pointer text-right"
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                {isExpanded ? <ChevronUp className="w-4 h-4 text-yellow-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
-                                <span className="text-sm font-bold text-white truncate">
-                                  {entry.question || '(ללא שאלה)'}
-                                </span>
-                              </div>
-                              <button
-                                onClick={e => { e.stopPropagation(); handleDelete(entry.id); }}
-                                className="shrink-0 p-1.5 rounded-lg text-red-400 hover:text-white hover:bg-red-500/30 transition-colors"
-                                title="מחק"
+                              <div
+                                className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border ${
+                                  ok
+                                    ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400'
+                                    : 'bg-red-400/10 border-red-400/20 text-red-400'
+                                }`}
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            {isExpanded && (
-                              <div className="px-3 pb-3 space-y-2">
-                                <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-                                  <div className="text-[10px] text-yellow-500 font-black mb-1">שאלה</div>
-                                  <div className="text-sm text-slate-200 whitespace-pre-wrap break-words">{entry.question}</div>
+                                {ok ? <ShieldCheck className="w-4 h-4" /> : <CircleAlert className="w-4 h-4" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-white truncate leading-snug">
+                                  {entry.question || 'ללא שאלה'}
                                 </div>
-                                <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-                                  <div className="text-[10px] text-emerald-400 font-black mb-1">תשובה</div>
-                                  <div className="text-sm text-slate-200 whitespace-pre-wrap break-words">{entry.answer}</div>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {entry.season && (
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">
+                                      {entry.season}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+                                    <CalendarDays className="w-3 h-3" />
+                                    {timeAgo(entry.createdAt)}
+                                  </span>
                                 </div>
                               </div>
-                            )}
-                          </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(entry.id);
+                                  }}
+                                  className="p-2 rounded-xl text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
+                                  title="מחיקת רשומה"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-yellow-400" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <AnimatePresence initial={false}>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="px-4 pb-4 space-y-2.5">
+                                    <div className="rounded-xl border border-amber-400/15 bg-amber-400/[0.06] p-3.5">
+                                      <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-amber-300">
+                                          <MessageCircle className="w-3.5 h-3.5" />
+                                          שאלה
+                                        </span>
+                                        <button
+                                          onClick={() => copyText(`${entry.id}q`, entry.question)}
+                                          className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                          {copiedId === `${entry.id}q` ? (
+                                            <>
+                                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                              <span className="text-emerald-400">הועתק</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy className="w-3.5 h-3.5" />
+                                              העתק
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="text-sm text-slate-100 leading-relaxed whitespace-pre-wrap break-words">
+                                        {entry.question}
+                                      </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3.5">
+                                      <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-emerald-300">
+                                          <Bot className="w-3.5 h-3.5" />
+                                          תשובה
+                                        </span>
+                                        <button
+                                          onClick={() => copyText(`${entry.id}a`, entry.answer)}
+                                          className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                          {copiedId === `${entry.id}a` ? (
+                                            <>
+                                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                              <span className="text-emerald-400">הועתק</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy className="w-3.5 h-3.5" />
+                                              העתק
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+                                        {entry.answer || 'אין תשובה שמורה'}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 flex-wrap text-[10px] text-slate-500 font-medium px-1">
+                                      <span>{fullDate(entry.createdAt)}</span>
+                                      {entry.language && <span>שפה {entry.language}</span>}
+                                      {entry.model && <span>{entry.model}</span>}
+                                      {entry.uid && (
+                                        <span className="font-mono" dir="ltr">
+                                          {String(entry.uid).slice(0, 8)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
                         );
                       })
                     )}
