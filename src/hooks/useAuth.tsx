@@ -144,6 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isTeamVerified, navigate]);
 
   const runDailyMeetingPushReminder = async () => {
+    // Disabled: push backend does not exist, no notifications are ever sent.
+    return;
     try {
       // 1. Get today's date in Jerusalem timezone (YYYY-MM-DD)
       const options = { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' } as const;
@@ -520,6 +522,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const subscribeToPushNotifications = async (userId: string, role: string) => {
+    // Disabled: no push backend exists. Do not prompt for notification
+    // permission and do not collect device tokens.
+    void userId;
+    void role;
+    return;
     try {
       if (!('serviceWorker' in navigator)) {
         console.log('Service workers are not supported by the browser.');

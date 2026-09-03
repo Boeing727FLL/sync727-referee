@@ -284,7 +284,6 @@ async function getNextApiKey(): Promise<string> {
 
 function markKeyUnhealthy(key: string) {
   if (key === 'proxy-key') return;
-  console.warn(`Marking API key as unhealthy: ${key.substring(0, 10)}...`);
   unhealthyKeys.add(key);
 }
 
@@ -646,30 +645,8 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
         currentParts.push({ text: "\n--- END OF FILES ---\n\n" });
       }
 
-      // Extract URL context using Jina Reader API if URLs are present in the question
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const urls = question.match(urlRegex);
-      let urlContextText = '';
-      if (urls && urls.length > 0) {
-        urlContextText += "\n\n[הערת מערכת: המשתמש סיפק קישורים. המערכת קראה את התוכן שלהם כדי לאפשר לך להתייחס אליו:]\n";
-        for (const url of urls) {
-          try {
-            console.log(`Fetching context for URL: ${url}`);
-            const jinaRes = await axios.get(`https://r.jina.ai/${url}`);
-            if (typeof jinaRes.data === 'string') {
-               urlContextText += `\n--- תוכן מהאתר ${url} ---\n${jinaRes.data.substring(0, 15000)}\n------------------------\n`;
-            } else if (jinaRes.data && jinaRes.data.data && jinaRes.data.data.content) {
-               urlContextText += `\n--- תוכן מהאתר ${url} ---\n${jinaRes.data.data.content.substring(0, 15000)}\n------------------------\n`;
-            }
-          } catch (err) {
-            console.error(`Failed to fetch context for ${url}:`, err);
-            urlContextText += `\n--- שגיאה בחילוץ תוכן מהאתר ${url} ---\n`;
-          }
-        }
-      }
-
       // Add user query to the current turn parts
-      let modifiedQuestion = question + urlContextText;
+      let modifiedQuestion = question;
 
       const hasUserFiles = userFiles && userFiles.length > 0;
       if (hasUserFiles) {
@@ -944,21 +921,15 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
             responseText = finalAnswer;
             success = true;
-            console.log(`Referee answer generated with model ${modelEntry.name} (key ${key.substring(0, 10)}...).`);
             break;
           } catch (err: any) {
             const errMsg = err?.message || JSON.stringify(err);
             if (isKeyInvalidErr(errMsg)) {
-              console.warn(`Key ${key.substring(0, 10)}... invalid (${errMsg.substring(0, 120)}). Moving to next key.`);
               markKeyUnhealthy(key);
             } else if (isRequestLevelErr(errMsg)) {
-              console.warn(`Model ${modelEntry.name} unusable for this request (${errMsg.substring(0, 120)}). Switching to next model.`);
               break; // Same request error will repeat for every key — fail fast to the next model.
             } else if (isTransientErr(errMsg)) {
-              console.warn(`Transient error on model ${modelEntry.name}, key ${key.substring(0, 10)}... (${errMsg.substring(0, 120)}). Rotating key.`);
               if (isQuotaErr(errMsg)) markKeyUnhealthy(key);
-            } else {
-              console.warn(`Model ${modelEntry.name}, key ${key.substring(0, 10)}... failed (${errMsg.substring(0, 150)}). Moving to next key.`);
             }
           }
         }
