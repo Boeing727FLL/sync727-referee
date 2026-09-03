@@ -28,7 +28,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
   const [code, setCode] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
-  const [text, setText] = useState('');
+  const [lines, setLines] = useState<string[]>([]);
   const [initialText, setInitialText] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,7 +42,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setCode('');
       setError(false);
       setUnlocked(false);
-      setText('');
+      setLines([]);
       setInitialText('');
       setSearch('');
       setNewLine('');
@@ -58,7 +58,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       const snap = await getDoc(doc(db, 'app_config', 'corrections'));
       const t = snap.exists() ? String(snap.data().text || '') : '';
       const u = snap.exists() ? Number(snap.data().updatedAt || 0) : 0;
-      setText(t);
+      setLines(t ? t.split('\n') : []);
       setInitialText(t);
       setUpdatedAt(u || null);
     } catch {
@@ -86,9 +86,10 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     setSaving(true);
     try {
       const now = Date.now();
-      await setDoc(doc(db, 'app_config', 'corrections'), { text, updatedAt: now });
+      const t = lines.join('\n');
+      await setDoc(doc(db, 'app_config', 'corrections'), { text: t, updatedAt: now });
       invalidateCorrectionsCache();
-      setInitialText(text);
+      setInitialText(t);
       setUpdatedAt(now);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -99,31 +100,31 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     }
   };
 
-  const lines = useMemo(() => {
-    return text
-      .split('\n')
-      .map((l, i) => ({ line: l, index: i }))
-      .filter((o) => o.line.trim().length > 0);
-  }, [text]);
+  const nonEmptyCount = useMemo(() => lines.filter((l) => l.trim().length > 0).length, [lines]);
 
   const visibleLines = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return lines;
-    return lines.filter((o) => o.line.toLowerCase().includes(q));
+    const all = lines.map((line, index) => ({ line, index }));
+    if (!q) return all;
+    return all.filter((o) => o.line.toLowerCase().includes(q));
   }, [lines, search]);
 
   const deleteLine = (index: number) => {
-    setText((prev) => prev.split('\n').filter((_, i) => i !== index).join('\n'));
+    setLines((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const editLine = (index: number, value: string) => {
+    setLines((prev) => prev.map((l, i) => (i === index ? value : l)));
   };
 
   const addLine = () => {
     const v = newLine.trim();
     if (!v) return;
-    setText((prev) => (prev.trim() ? `${prev.trim()}\n${v}` : v));
+    setLines((prev) => [...prev, v]);
     setNewLine('');
   };
 
-  const dirty = text !== initialText;
+  const dirty = lines.join('\n') !== initialText;
 
   return (
     <AnimatePresence>
@@ -168,7 +169,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                   <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-black text-white leading-tight">תיקון שופט</h3>
                     <p className="text-[11px] md:text-xs text-slate-400 font-medium">
-                      {unlocked ? `סך הכל ${lines.length} תיקונים` : 'גישה לשופטים ראשיים בלבד'}
+                      {unlocked ? `סך הכל ${nonEmptyCount} תיקונים` : 'גישה לשופטים ראשיים בלבד'}
                     </p>
                   </div>
                 </div>
@@ -224,16 +225,8 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                 <div className="flex flex-col flex-1 min-h-0">
                   <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/5 shrink-0 space-y-3">
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      כל שורה היא תיקון אחד שהשופט יקח בחשבון בתשובות הבאות. כתבו תיקון אחד בכל שורה.
+                      לחצו על תיקון כדי לערוך אותו ישירות. כל שורה נשמרת כתיקון אחד שהשופט יקח בחשבון.
                     </p>
-                    <textarea
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      placeholder="תיקון אחד בכל שורה, למשל, משימה 05 הניקוד הנכון הוא 25 נקודות כי"
-                      rows={5}
-                      className="w-full px-4 py-3 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 text-sm leading-relaxed resize-y min-h-[120px] transition-all"
-                      dir="auto"
-                    />
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={handleSave}
@@ -262,15 +255,15 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         טען מחדש
                       </button>
                       <button
-                        onClick={() => setText('')}
-                        disabled={!text}
+                        onClick={() => setLines([])}
+                        disabled={lines.length === 0}
                         className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-red-300 hover:bg-red-500/10 text-sm font-bold transition-colors cursor-pointer disabled:opacity-40"
                       >
                         <Trash2 className="w-4 h-4" />
                         נקה הכל
                       </button>
                       <span className="mr-auto text-[11px] text-slate-500 font-medium">
-                        {lines.length} שורות{updatedAt ? `, עודכן ${new Date(updatedAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
+                        {nonEmptyCount} שורות{updatedAt ? `, עודכן ${new Date(updatedAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
                         {dirty ? ', יש שינויים שלא נשמרו' : ''}
                       </span>
                     </div>
@@ -317,7 +310,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                     </div>
                     <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold mt-2 mb-1 px-1">
                       <ListOrdered className="w-3.5 h-3.5" />
-                      מציג {visibleLines.length} מתוך {lines.length}
+                      מציג {visibleLines.length} מתוך {nonEmptyCount}
                     </p>
                   </div>
 
@@ -333,10 +326,17 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                           key={`${o.index}`}
                           className="flex items-start gap-3 rounded-xl border border-white/8 bg-slate-800/40 hover:border-white/15 px-3 py-2.5 transition-colors"
                         >
-                          <span className="shrink-0 w-6 h-6 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-200 text-[11px] font-black flex items-center justify-center">
+                          <span className="shrink-0 w-6 h-6 mt-1 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-200 text-[11px] font-black flex items-center justify-center">
                             {n + 1}
                           </span>
-                          <p className="flex-1 min-w-0 text-sm text-slate-100 leading-relaxed break-words">{o.line}</p>
+                          <textarea
+                            value={o.line}
+                            onChange={(e) => editLine(o.index, e.target.value)}
+                            rows={2}
+                            placeholder="כתבו תיקון"
+                            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
+                            dir="auto"
+                          />
                           <button
                             onClick={() => deleteLine(o.index)}
                             className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
