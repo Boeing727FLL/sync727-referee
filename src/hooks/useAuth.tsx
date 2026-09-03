@@ -10,8 +10,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   setPersistence,
-  inMemoryPersistence,
-  browserSessionPersistence
+  browserLocalPersistence
 } from 'firebase/auth';
 import { auth, googleProvider, messaging } from '../lib/firebase';
 import { getToken } from 'firebase/messaging';
@@ -78,8 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Set persistence to SESSION (clears when tab is closed or refreshed)
-    setPersistence(auth, inMemoryPersistence).catch((e) => console.warn("Persistence warning:", e));
+    // Persist login in the browser so Firestore rules (auth-only reads)
+    // keep working after refresh. In-memory persistence wiped auth on every
+    // reload and caused "Missing or insufficient permissions" on the key pool.
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
 
     // 1. Listen for Auth State
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
