@@ -327,7 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData: User = {
         uid: deterministicId,
         name: cleanName,
-        picture: userDocSnap.exists() && userDocSnap.data().picture ? userDocSnap.data().picture : `https://api.dicebear.com/7.x/initials/svg?seed=${deterministicId}`,
+        picture: userDocSnap.exists() && userDocSnap.data().picture ? userDocSnap.data().picture : '',
         email: role === 'mentor' ? 'mentor@sync727.com' : 'team@sync727.com',
         role: role,
         isAdmin: isAdmin
@@ -419,8 +419,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Token acquired:", !!token);
 
       if (token) {
-        console.log("Sending token to server...");
-        localStorage.setItem('google_access_token', token);
+        // Login state lives in Firebase Auth itself, tokens are never
+        // stored in localStorage anymore.
 
         // Store user picture/name in localStorage IMMEDIATELY (before server session)
         if (result.user.photoURL) {

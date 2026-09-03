@@ -15,21 +15,6 @@
     <link rel="preload" as="image" href="/bioglow-cutout-2x.webp?v=2" imagesrcset="/bioglow-cutout-2x.webp?v=2 1500w, /bioglow-cutout-3000.webp?v=2 3000w" imagesizes="100vw" fetchpriority="high" />
     <link rel="preload" as="image" href="/bioglow-cutout-3000.webp?v=2" fetchpriority="high" />
     <title>שופט וירטואלי | Boeing727</title>
-    <script async src="https://js.puter.com/v2/"></script>
-    <script>
-      window.addEventListener('error', (event) => {
-        if (event.message === 'Script error.' || (event.message && (event.message.includes('WebSocket closed without opened') || event.message.includes('failed to connect to websocket') || event.message.includes('puter.quiet')))) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-        }
-      });
-      window.addEventListener('unhandledrejection', (event) => {
-        if (event.reason && (event.reason.message && (event.reason.message.includes('WebSocket closed without opened') || event.reason.message.includes('failed to connect to websocket')))) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-        }
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>

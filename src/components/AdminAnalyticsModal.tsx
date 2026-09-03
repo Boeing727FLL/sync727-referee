@@ -3,30 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck, MessageSquareHeart } from 'lucide-react';
 import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
+import { isCurrentUserOwner } from '../lib/owner';
 
 interface AdminAnalyticsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SECRET_PASSWORD = '2601';
-
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
   const navigate = useNavigate();
-  const [password, setPassword] = useState('');
   const [unlocked, setUnlocked] = useState(false);
-  const [error, setError] = useState(false);
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [resetting, setResetting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
-      setPassword('');
-      setError(false);
       setUnlocked(false);
+      setConfirmReset(false);
       return;
     }
+    setUnlocked(isCurrentUserOwner());
     const unsubOnline = onOnlineUsersChange(setOnlineUsers);
     return () => unsubOnline();
   }, [isOpen]);
@@ -37,19 +35,15 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     return () => unsubAnalytics();
   }, [unlocked]);
 
-  const handleUnlock = () => {
-    if (password === SECRET_PASSWORD) {
-      setUnlocked(true);
-      setError(false);
-    } else {
-      setError(true);
-    }
-  };
-
   const handleReset = async () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
     setResetting(true);
     await resetQuestions();
     setResetting(false);
+    setConfirmReset(false);
   };
 
   const openFeedbackPage = () => {
@@ -102,28 +96,17 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
             <div className="p-5">
               {!unlocked ? (
                 <div className="space-y-4">
-                  <div className="text-center py-2">
+                  <div className="text-center py-6">
                     <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-3">
                       <Lock className="w-6 h-6 text-slate-400" />
                     </div>
-                    <p className="text-slate-400 text-sm">הזן סיסמה כדי לגשת לאנליטיקס</p>
+                    <p className="text-slate-400 text-sm">האנליטיקס פתוח לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setError(false); }}
-                    onKeyDown={e => e.key === 'Enter' && handleUnlock()}
-                    placeholder="סיסמה"
-                    className={`w-full px-4 py-3 rounded-lg bg-slate-800 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all ${
-                      error ? 'border-red-500 focus:ring-red-500/40' : 'border-slate-700 focus:ring-yellow-500/40 focus:border-yellow-500'
-                    }`}
-                  />
-                  {error && <p className="text-red-500 text-xs font-semibold">סיסמה שגויה</p>}
                   <button
-                    onClick={handleUnlock}
-                    className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
+                    onClick={onClose}
+                    className="w-full py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-black transition-colors"
                   >
-                    כניסה
+                    סגור
                   </button>
                 </div>
               ) : (
@@ -148,7 +131,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-bold hover:bg-red-500/30 transition-colors disabled:opacity-50"
                     >
                       <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
-                      אפס את ספירת השאלות
+                      {confirmReset ? 'לחצו שוב לאישור האיפוס' : 'אפס את ספירת השאלות'}
                     </button>
                   </div>
                 </div>

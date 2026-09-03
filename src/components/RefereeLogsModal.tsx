@@ -17,7 +17,7 @@ import {
   ArrowDownWideNarrow,
   RotateCcw,
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface RefereeLogsModalProps {
@@ -92,6 +92,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [sortNew, setSortNew] = useState(true);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmOld, setConfirmOld] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -164,6 +166,32 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       });
     } catch {
       return;
+    }
+  };
+
+  const cleanOldLogs = async () => {
+    if (!confirmOld) {
+      setConfirmOld(true);
+      return;
+    }
+    setCleaning(true);
+    try {
+      const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+      const batch = writeBatch(db);
+      let n = 0;
+      for (const l of logs) {
+        const d = toDate(l.createdAt);
+        if (d && d.getTime() < cutoff && n < 400) {
+          batch.delete(doc(db, 'referee_logs', l.id));
+          n++;
+        }
+      }
+      if (n > 0) await batch.commit();
+    } catch {
+      return;
+    } finally {
+      setCleaning(false);
+      setConfirmOld(false);
     }
   };
 
@@ -359,6 +387,13 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                           איפוס
                         </button>
                       )}
+                      <button
+                        onClick={cleanOldLogs}
+                        disabled={cleaning || logs.length === 0}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-red-300 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        {cleaning ? 'מנקה' : confirmOld ? 'לחצו שוב למחיקת ישנות מ90 יום' : 'נקה ישנות מ90 יום'}
+                      </button>
                       <span className="mr-auto text-[11px] text-slate-500 font-medium">
                         מציג {filtered.length} מתוך {counts.total}
                       </span>

@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, Star, MessageSquareHeart, RefreshCw, Trash2, ArrowLeft, Inbox } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch, getDocsFromServer } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { isCurrentUserOwner } from '../lib/owner';
 
-const SECRET_PASSWORD = '2601';
 const AUTO_UNLOCK_KEY = 'referee_feedback_unlocked';
 
 type FeedbackEntry = {
@@ -20,9 +20,7 @@ type FeedbackEntry = {
 
 export default function FeedbackAdminPage() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState('');
   const [unlocked, setUnlocked] = useState(false);
-  const [error, setError] = useState(false);
   const [items, setItems] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -68,10 +66,8 @@ export default function FeedbackAdminPage() {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem(AUTO_UNLOCK_KEY) === '1') {
-      sessionStorage.removeItem(AUTO_UNLOCK_KEY);
-      setUnlocked(true);
-    }
+    sessionStorage.removeItem(AUTO_UNLOCK_KEY);
+    setUnlocked(isCurrentUserOwner());
   }, []);
 
   useEffect(() => {
@@ -84,15 +80,6 @@ export default function FeedbackAdminPage() {
     });
     return () => unsub();
   }, [unlocked]);
-
-  const handleUnlock = () => {
-    if (password.trim() === SECRET_PASSWORD) {
-      setUnlocked(true);
-      setError(false);
-    } else {
-      setError(true);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -172,24 +159,13 @@ export default function FeedbackAdminPage() {
               <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-3">
                 <Lock className="w-6 h-6 text-slate-400" />
               </div>
-              <p className="text-slate-400 text-sm mb-4">הזן סיסמה כדי לצפות בפידבקים</p>
+              <p className="text-slate-400 text-sm mb-4">הפידבקים פתוחים לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError(false); }}
-              onKeyDown={e => e.key === 'Enter' && handleUnlock()}
-              placeholder="סיסמה"
-              className={`w-full px-4 py-3 rounded-lg bg-slate-800 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all ${
-                error ? 'border-red-500 focus:ring-red-500/40' : 'border-slate-700 focus:ring-yellow-500/40 focus:border-yellow-500'
-              }`}
-            />
-            {error && <p className="text-red-500 text-xs font-semibold mt-2">סיסמה שגויה</p>}
             <button
-              onClick={handleUnlock}
-              className="w-full mt-4 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
+              onClick={() => navigate('/')}
+              className="w-full mt-4 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-black transition-colors"
             >
-              כניסה
+              חזרה לאפליקציה
             </button>
           </motion.div>
         ) : (

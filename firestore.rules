@@ -2,86 +2,183 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow read/write to all collections since the app uses its own passcode-based authentication.
-    // In a production environment, you should restrict this using Firebase Auth.
-    
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email.lower() == 'boeing727.il@gmail.com';
+    }
+
+    function isSelf(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users: owners see all, users see and edit only themselves.
+    // Signup creates the doc, so any signed-in user may create their own doc.
     match /users/{userId} {
-      allow read, write: if true;
+      allow get: if isOwner() || isSelf(userId);
+      allow list: if isOwner();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isOwner() || isSelf(userId);
+      allow delete: if isOwner();
     }
-    
+
+    // App config (rulebook, corrections, whitelists): read for signed-in users,
+    // writes for the owner only.
     match /app_config/{docId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
+    // API keys pool: readable by signed-in app users only, writable by owner only.
+    match /secrets/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner();
+    }
+
+    // Password collections: owner only, no public access at all.
     match /app_passwords/{docId} {
-      allow read, write: if true;
+      allow read, write: if isOwner();
     }
-    
+
+    // Q&A journal: any signed-in user may append one entry per question.
+    // Only the owner may read the journal or delete entries.
+    match /referee_logs/{logId} {
+      allow get, list: if isOwner();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(
+          ['question', 'answer', 'season', 'language', 'uid', 'model', 'ok', 'createdAt'])
+        && request.resource.data.question is string
+        && request.resource.data.question.size() > 0
+        && request.resource.data.question.size() < 2000
+        && (!('answer' in request.resource.data) || request.resource.data.answer is string)
+        && (!('answer' in request.resource.data) || request.resource.data.answer.size() < 20000);
+      allow update: if false;
+      allow delete: if isOwner();
+    }
+
+    // Feedback: same pattern, rating must be 1-5.
+    match /referee_feedback/{feedbackId} {
+      allow get, list: if isOwner();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(
+          ['rating', 'improvements', 'uid', 'season', 'language', 'createdAt'])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow update: if false;
+      allow delete: if isOwner();
+    }
+
+    // Counters: anyone signed in may bump counters, but may not rewrite
+    // anything else in the document.
+    match /analytics/{docId} {
+      allow get: if isOwner();
+      allow list: if false;
+      allow create, delete: if isOwner();
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['totalQuestions', 'perUser', 'refereeUsers']);
+    }
+
+    // Single-session lock: a user may only touch their own session doc,
+    // so nobody can kick anyone else offline anymore.
+    match /sessions/{userId} {
+      allow read, write: if isSelf(userId) || isOwner();
+    }
+
+    // Presence heartbeats: signed-in users only.
+    match /presence/{sessionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Legacy team-app collections live in the same project.
+    // Locked the same way: read for signed-in users, writes for the owner.
     match /experts/{expertId} {
-      allow read, write: if true;
-      
+      allow read: if isSignedIn();
+      allow write: if isOwner();
       match /messages/{messageId} {
-        allow read, write: if true;
+        allow read: if isSignedIn();
+        allow write: if isOwner();
       }
       match /files/{fileId} {
-        allow read, write: if true;
+        allow read: if isSignedIn();
+        allow write: if isOwner();
       }
       match /push_subscriptions/{subId} {
-        allow read, write: if true;
+        allow read: if isSignedIn();
+        allow write: if isOwner();
       }
     }
 
+    match /push_subscriptions/{subId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner();
+    }
+
     match /tasks/{taskId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /sprint_tasks/{taskId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /budget_items/{itemId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /forms/{formId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /sponsors/{sponsorId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /attendance/{recordId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /fll_progress/{docId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /global_settings/{docId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /robot_status/{docId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /impact_events/{eventId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
+
     match /judging_feedback/{feedbackId} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isOwner();
     }
-    
-    match /referee_feedback/{feedbackId} {
-      allow read, write: if true;
-    }
-    
+
+    // Default deny: anything not listed above is closed.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

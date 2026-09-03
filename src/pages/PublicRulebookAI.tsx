@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, FileText, Scale, Upload as UploadIcon } from 'lucide-react';
-import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService, invalidateCorrectionsCache } from '../services/geminiService';
 import { s3Client, R2_BUCKET_NAME, getPublicUrl } from '../lib/r2';
@@ -21,8 +21,9 @@ import JudgeCorrectionsModal from '../components/JudgeCorrectionsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
+import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
-import { signOut } from 'firebase/auth';
+import { signOut, deleteUser } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const stripThinkBlocks = (text: string): string =>
@@ -33,14 +34,11 @@ export default function PublicRulebookAI() {
   const { connectDrive, user, logout } = useAuth();
   const { t, language, isRTL } = useLanguage();
   
-  // Local state to check if user has google access token, since PublicRulebookAI might be used without full login
-  // Actually, we can just check localStorage for 'google_access_token' or URL bypass params directly to show/hide the overlay
+  // Login state comes only from Firebase Auth (user) or the saved auth_user.
+  // URL bypass params were removed for security, everyone must log in.
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(() => {
-    return !!localStorage.getItem('google_access_token') || 
-      !!localStorage.getItem('auth_user') ||
-      window.location.search.includes('verify=true') || 
-      window.location.search.includes('bypass=true') || 
-      window.location.search.includes('google=true');
+    return !!localStorage.getItem('google_access_token') ||
+      !!localStorage.getItem('auth_user');
   });
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
@@ -244,6 +242,41 @@ export default function PublicRulebookAI() {
     localStorage.removeItem('auth_user');
     setHasGoogleToken(false);
     setShowLogoutConfirm(false);
+  };
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const current = auth.currentUser;
+      const stored: { uid?: string } = (() => {
+        try { return JSON.parse(localStorage.getItem('auth_user') || '{}'); } catch { return {}; }
+      })();
+      const uid = current?.uid || stored.uid;
+      if (uid) {
+        try {
+          await deleteDoc(doc(db, 'users', uid));
+        } catch { /* doc may not exist, continue */ }
+      }
+      if (current) {
+        try {
+          await deleteUser(current);
+        } catch { /* needs recent login, user can re-login and retry */ }
+      }
+    } finally {
+      try { await logout(); } catch { /* ignore */ }
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('user_picture');
+      localStorage.removeItem('user_name');
+      setHasGoogleToken(false);
+      setShowDeleteConfirm(false);
+      setDeletingAccount(false);
+      setShowIntro(true);
+      setChatStarted(false);
+    }
   };
 
   const [sessionKicked, setSessionKicked] = useState(false);
@@ -540,10 +573,46 @@ const fetchLatestRulebook = async () => {
     return 'UNKNOWN';
   };
 
+  const [wipePending, setWipePending] = useState<{ file: File; fileName: string; season: string; oldCount: number } | null>(null);
+  const [wipeTyped, setWipeTyped] = useState('');
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = '';
     if (!file) return;
 
+    // New season uploads wipe all old rule files, so they need a typed
+    // double confirmation BEFORE anything is uploaded or deleted.
+    const detected = extractSeasonFromFilename(`fll-rules/${file.name}`);
+    if (detected !== 'UNKNOWN' && detected !== seasonName) {
+      let oldCount = 0;
+      try {
+        const resp = await s3Client.send(new ListObjectsV2Command({
+          Bucket: R2_BUCKET_NAME,
+          Prefix: 'fll-rules',
+        }));
+        oldCount = (resp.Contents || []).filter((f: any) =>
+          f.Key && f.Key !== `fll-rules/${file.name}` && f.Key !== 'fll-rules/').length;
+      } catch {
+        oldCount = 0;
+      }
+      setWipePending({ file, fileName: file.name, season: detected, oldCount });
+      setWipeTyped('');
+      return;
+    }
+    await performUpload(file);
+  };
+
+  const confirmSeasonWipe = async () => {
+    if (!wipePending) return;
+    if (wipeTyped.trim().toUpperCase() !== wipePending.season.toUpperCase()) return;
+    const file = wipePending.file;
+    setWipePending(null);
+    setWipeTyped('');
+    await performUpload(file);
+  };
+
+  const performUpload = async (file: File) => {
     setUploading(true);
     setUploadProgress(0);
     try {
@@ -698,8 +767,34 @@ const fetchLatestRulebook = async () => {
 
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
-    
+
     if (!textToSend.trim() || loading) return;
+
+    // Client-side rate limit: at most one question every 4 seconds
+    // and 120 questions per hour per device.
+    try {
+      const now = Date.now();
+      const lastSend = Number(localStorage.getItem('referee_last_send') || 0);
+      if (now - lastSend < 4000) {
+        setMessages(prev => [...prev, { role: 'model', text: 'חכו כמה שניות בין שאלה לשאלה.' }]);
+        return;
+      }
+      const hour = new Date().toISOString().slice(0, 13);
+      const bucketRaw = localStorage.getItem('referee_hour_bucket');
+      let count = 0;
+      if (bucketRaw) {
+        try {
+          const bucket = JSON.parse(bucketRaw);
+          if (bucket.hour === hour) count = Number(bucket.count) || 0;
+        } catch { count = 0; }
+      }
+      if (count >= 120) {
+        setMessages(prev => [...prev, { role: 'model', text: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' }]);
+        return;
+      }
+      localStorage.setItem('referee_last_send', String(now));
+      localStorage.setItem('referee_hour_bucket', JSON.stringify({ hour, count: count + 1 }));
+    } catch { /* storage unavailable, continue without limits */ }
 
     const userMessage = textToSend.trim();
     
@@ -926,18 +1021,32 @@ const fetchLatestRulebook = async () => {
               <div className="flex items-center gap-1 md:gap-3">
                 <div className="hidden sm:flex flex-col items-end">
                   <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{user.name}</span>
-                  <button 
-                    onClick={() => setShowLogoutConfirm(true)} 
+                  <button
+                    onClick={() => setShowLogoutConfirm(true)}
                     className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
                   >
                     {t('auth.logout')}
                    </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-[10px] text-slate-400 font-bold hover:text-red-800 hover:underline cursor-pointer transition-colors"
+                  >
+                    מחיקת חשבון
+                   </button>
                 </div>
-                <img 
-                  src={user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
-                  alt="" 
-                  className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]" 
-                />
+                {user.picture ? (
+                  <img
+                    src={user.picture}
+                    alt=""
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                  />
+                ) : (
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                    <span className="text-xs md:text-sm font-black text-slate-950">
+                      {(user.name || 'U').trim().charAt(0)}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <button 
@@ -947,8 +1056,8 @@ const fetchLatestRulebook = async () => {
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            {showAdmin && (
-              <button 
+            {showAdmin && isCurrentUserOwner() && (
+              <button
                 onClick={openUploadModal}
                 className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
                 title={t('admin.upload')}
@@ -1298,12 +1407,62 @@ const fetchLatestRulebook = async () => {
                 )}
               </div>
 
-              <button 
+              <button
                 onClick={() => setShowUploadModal(false)}
                 className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
               >
                 {t('admin.cancel')}
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {wipePending && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-2">⚠️</div>
+                <h3 className="text-xl font-black text-slate-800">מחיקת עונה שלמה</h3>
+                <p className="text-slate-500 text-sm mt-2 leading-relaxed">
+                  הקובץ {wipePending.fileName} מזוהה כעונה חדשה ({wipePending.season}).
+                  ההעלאה תמחק {wipePending.oldCount} קבצי חוקים ישנים. כדי לאשר, הקלידו את שם העונה.
+                </p>
+              </div>
+              <input
+                type="text"
+                value={wipeTyped}
+                onChange={(e) => setWipeTyped(e.target.value)}
+                placeholder={wipePending.season}
+                className="w-full px-4 py-3 rounded-xl border-2 border-red-300 bg-red-50 text-slate-900 font-black text-center tracking-widest outline-none focus:border-red-500 transition-all"
+                dir="ltr"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setWipePending(null); setWipeTyped(''); }}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={confirmSeasonWipe}
+                  disabled={wipeTyped.trim().toUpperCase() !== wipePending.season.toUpperCase()}
+                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  מחק והעלה
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1331,6 +1490,17 @@ const fetchLatestRulebook = async () => {
         confirmText={t('auth.logoutConfirmYes')}
         cancelText={t('auth.logoutConfirmNo')}
         variant="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => { if (!deletingAccount) setShowDeleteConfirm(false); }}
+        onConfirm={handleDeleteAccount}
+        title="מחיקת החשבון לצמיתות"
+        message="החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. להמשיך?"
+        confirmText={deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
+        cancelText="ביטול"
+        variant="danger"
       />
 
       <AdminAnalyticsModal

@@ -210,6 +210,10 @@ export default function IntroScreen({ hasGoogleToken, user, onContinue, t }: Int
             </button>
             <p className="mt-3 text-[11px] text-white/45 font-medium">
               {t('intro.notOfficial')}
+              {' · '}
+              <a href="/privacy" className="underline hover:text-white/70 transition-colors">
+                פרטיות
+              </a>
             </p>
           </motion.div>
         </div>

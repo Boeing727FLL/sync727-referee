@@ -16,18 +16,15 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { invalidateCorrectionsCache } from '../services/geminiService';
+import { isCurrentUserOwner } from '../lib/owner';
 
 interface JudgeCorrectionsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SECRET_CODE = '6767';
-
 export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrectionsModalProps) {
-  const [code, setCode] = useState('');
   const [unlocked, setUnlocked] = useState(false);
-  const [error, setError] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const [initialText, setInitialText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,8 +36,6 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
 
   useEffect(() => {
     if (!isOpen) {
-      setCode('');
-      setError(false);
       setUnlocked(false);
       setLines([]);
       setInitialText('');
@@ -50,6 +45,8 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setUpdatedAt(null);
       return;
     }
+    // Access is decided by the signed-in account, no code anymore.
+    setUnlocked(isCurrentUserOwner());
   }, [isOpen]);
 
   const load = async () => {
@@ -72,15 +69,6 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     if (unlocked && isOpen) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
-
-  const handleUnlock = () => {
-    if (code.trim() === SECRET_CODE) {
-      setUnlocked(true);
-      setError(false);
-    } else {
-      setError(true);
-    }
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -193,28 +181,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                     </div>
                   </div>
                   <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-                  <p className="text-slate-400 text-sm mb-5">הזינו קוד כדי לערוך תיקוני שופט</p>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    value={code}
-                    onChange={(e) => {
-                      setCode(e.target.value);
-                      setError(false);
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                    placeholder="קוד גישה"
-                    className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
-                      error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-blue-500/30 focus:border-blue-500/50'
-                    }`}
-                  />
-                  {error && <p className="text-red-400 text-xs font-bold mt-2">קוד שגוי, נסו שוב</p>}
-                  <button
-                    onClick={handleUnlock}
-                    className="mt-4 w-full py-3 rounded-xl bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-black transition-all shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                  >
-                    כניסה לעריכה
-                  </button>
+                  <p className="text-slate-400 text-sm">עריכת תיקונים פתוחה לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
                 </div>
               ) : loading ? (
                 <div className="m-auto px-6 py-10 text-center">

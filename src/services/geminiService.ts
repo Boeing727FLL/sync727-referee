@@ -205,7 +205,6 @@ async function ensureKeysLoaded(): Promise<void> {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      console.log("Firebase API keys document data:", data);
       if (data.gemini_keys && Array.isArray(data.gemini_keys)) {
         GEMINI_KEYS = data.gemini_keys;
       } else {
@@ -218,7 +217,7 @@ async function ensureKeysLoaded(): Promise<void> {
         }
         if (keys.length > 0) GEMINI_KEYS = keys;
       }
-      console.log("Loaded GEMINI_KEYS from Firebase:", GEMINI_KEYS.length, "keys.");
+      console.log("Gemini key pool loaded.");
     }
   } catch (err) {
     console.error("Error fetching Gemini keys from Firestore:", err);
