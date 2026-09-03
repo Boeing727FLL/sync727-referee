@@ -16,8 +16,6 @@ import {
   CalendarDays,
   ArrowDownWideNarrow,
   RotateCcw,
-  ShieldCheck,
-  CircleAlert,
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -77,6 +75,12 @@ function fullDate(v: any): string {
   return d.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function inLastDays(v: any, days: number): boolean {
+  const d = toDate(v);
+  if (!d) return false;
+  return Date.now() - d.getTime() <= days * 24 * 60 * 60 * 1000;
+}
+
 export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalProps) {
   const [code, setCode] = useState('');
   const [unlocked, setUnlocked] = useState(false);
@@ -84,7 +88,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'ok' | 'fail'>('all');
+  const [filter, setFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [sortNew, setSortNew] = useState(true);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -174,16 +178,21 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     }
   };
 
-  const stats = useMemo(() => {
-    const ok = logs.filter((l) => l.ok !== false).length;
-    return { total: logs.length, ok, fail: logs.length - ok };
+  const counts = useMemo(() => {
+    return {
+      total: logs.length,
+      today: logs.filter((l) => inLastDays(l.createdAt, 1)).length,
+      week: logs.filter((l) => inLastDays(l.createdAt, 7)).length,
+      month: logs.filter((l) => inLastDays(l.createdAt, 30)).length,
+    };
   }, [logs]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = logs.filter((l) => {
-      if (filter === 'ok' && l.ok === false) return false;
-      if (filter === 'fail' && l.ok !== false) return false;
+      if (filter === 'today' && !inLastDays(l.createdAt, 1)) return false;
+      if (filter === 'week' && !inLastDays(l.createdAt, 7)) return false;
+      if (filter === 'month' && !inLastDays(l.createdAt, 30)) return false;
       if (!q) return true;
       return (
         (l.question || '').toLowerCase().includes(q) ||
@@ -215,23 +224,30 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
           >
-            <div className="h-1 w-full bg-gradient-to-l from-yellow-300 via-amber-400 to-yellow-500 shrink-0" />
+            <div className="flex w-full h-1 shrink-0" aria-hidden>
+              <div className="flex-1 bg-blue-600" />
+              <div className="flex-1 bg-white" />
+              <div className="flex-1 bg-red-600" />
+            </div>
 
             <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-white/10 bg-white/[0.03] shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative shrink-0">
-                    <div className="absolute -inset-2 bg-yellow-400/20 blur-xl rounded-full pointer-events-none" aria-hidden />
-                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 p-[2px] shadow-[0_4px_16px_rgba(250,204,21,0.35)]">
+                    <div className="absolute -inset-2 rounded-full pointer-events-none" aria-hidden>
+                      <div className="absolute inset-0 bg-blue-500/25 blur-xl rounded-full" />
+                      <div className="absolute inset-0 bg-red-500/15 blur-xl rounded-full" />
+                    </div>
+                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-red-600 p-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
                       <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center">
-                        <ScrollText className="w-5 h-5 text-yellow-400" />
+                        <ScrollText className="w-5 h-5 text-white" />
                       </div>
                     </div>
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-black text-white leading-tight">יומן שאלות ותשובות</h3>
                     <p className="text-[11px] md:text-xs text-slate-400 font-medium">
-                      {unlocked ? `סך הכל ${stats.total} רשומות, ${stats.ok} תקינות` : 'גישה לשופטים ראשיים בלבד'}
+                      {unlocked ? `סך הכל ${counts.total} רשומות` : 'גישה לשופטים ראשיים בלבד'}
                     </p>
                   </div>
                 </div>
@@ -249,9 +265,9 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
               {!unlocked ? (
                 <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
-                    <div className="absolute -inset-3 bg-yellow-400/15 blur-xl rounded-full" aria-hidden />
+                    <div className="absolute -inset-3 bg-blue-500/15 blur-xl rounded-full" aria-hidden />
                     <div className="relative w-full h-full rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-yellow-400" />
+                      <Lock className="w-6 h-6 text-blue-400" />
                     </div>
                   </div>
                   <h4 className="text-white font-black mb-1">אזור מוגן</h4>
@@ -266,13 +282,13 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
                     placeholder="קוד גישה"
                     className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
-                      error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-yellow-400/30 focus:border-yellow-400/40'
+                      error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-blue-500/30 focus:border-blue-500/50'
                     }`}
                   />
                   {error && <p className="text-red-400 text-xs font-bold mt-2">קוד שגוי, נסו שוב</p>}
                   <button
                     onClick={handleUnlock}
-                    className="mt-4 w-full py-3 rounded-xl bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                    className="mt-4 w-full py-3 rounded-xl bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-black transition-all shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   >
                     כניסה ליומן
                   </button>
@@ -288,7 +304,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           placeholder="חיפוש בשאלה, בתשובה או בעונה"
-                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400/40 text-sm transition-all"
+                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 text-sm transition-all"
                         />
                         {search && (
                           <button
@@ -305,7 +321,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         title={sortNew ? 'החדש ביותר למעלה' : 'הישן ביותר למעלה'}
                         className="shrink-0 h-[42px] px-3 rounded-xl bg-slate-800/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
                       >
-                        <ArrowDownWideNarrow className="w-4 h-4 text-yellow-400" />
+                        <ArrowDownWideNarrow className="w-4 h-4 text-blue-400" />
                         <span className="hidden sm:inline">{sortNew ? 'חדש קודם' : 'ישן קודם'}</span>
                       </button>
                     </div>
@@ -313,9 +329,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     <div className="flex items-center gap-2 flex-wrap">
                       {(
                         [
-                          { key: 'all', label: `הכל ${stats.total}` },
-                          { key: 'ok', label: `תקין ${stats.ok}` },
-                          { key: 'fail', label: `שגוי ${stats.fail}` },
+                          { key: 'all', label: `הכל ${counts.total}` },
+                          { key: 'today', label: `היום ${counts.today}` },
+                          { key: 'week', label: `7 ימים ${counts.week}` },
+                          { key: 'month', label: `30 ימים ${counts.month}` },
                         ] as const
                       ).map((c) => (
                         <button
@@ -323,7 +340,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                           onClick={() => setFilter(c.key)}
                           className={`px-3.5 py-1.5 rounded-full text-xs font-black border transition-all cursor-pointer ${
                             filter === c.key
-                              ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 border-yellow-300 shadow-[0_4px_12px_rgba(250,204,21,0.3)]'
+                              ? 'bg-gradient-to-b from-blue-500 to-blue-700 text-white border-blue-500 shadow-[0_4px_12px_rgba(37,99,235,0.35)]'
                               : 'bg-white/5 text-slate-400 border-white/10 hover:text-white hover:bg-white/10'
                           }`}
                         >
@@ -343,7 +360,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         </button>
                       )}
                       <span className="mr-auto text-[11px] text-slate-500 font-medium">
-                        מציג {filtered.length} מתוך {stats.total}
+                        מציג {filtered.length} מתוך {counts.total}
                       </span>
                     </div>
                   </div>
@@ -367,7 +384,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     ) : (
                       filtered.map((entry, idx) => {
                         const isExpanded = expanded.has(entry.id);
-                        const ok = entry.ok !== false;
                         return (
                           <motion.div
                             key={entry.id}
@@ -376,7 +392,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                             transition={{ delay: Math.min(idx * 0.03, 0.3), duration: 0.3 }}
                             className={`rounded-2xl border overflow-hidden transition-colors ${
                               isExpanded
-                                ? 'border-yellow-400/25 bg-slate-800/70 shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+                                ? 'border-blue-500/30 bg-slate-800/70 shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
                                 : 'border-white/8 bg-slate-800/40 hover:border-white/15 hover:bg-slate-800/60'
                             }`}
                           >
@@ -387,14 +403,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                               onKeyDown={(e) => e.key === 'Enter' && toggleExpand(entry.id)}
                               className="w-full flex items-center gap-3 px-4 py-3 cursor-pointer text-right"
                             >
-                              <div
-                                className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border ${
-                                  ok
-                                    ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400'
-                                    : 'bg-red-400/10 border-red-400/20 text-red-400'
-                                }`}
-                              >
-                                {ok ? <ShieldCheck className="w-4 h-4" /> : <CircleAlert className="w-4 h-4" />}
+                              <div className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border bg-blue-500/10 border-blue-500/25 text-blue-300">
+                                <MessageCircle className="w-4 h-4" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-white truncate leading-snug">
@@ -402,7 +412,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                 </div>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {entry.season && (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-200">
                                       {entry.season}
                                     </span>
                                   )}
@@ -425,7 +435,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                 </button>
                                 <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                                   {isExpanded ? (
-                                    <ChevronUp className="w-4 h-4 text-yellow-400" />
+                                    <ChevronUp className="w-4 h-4 text-blue-300" />
                                   ) : (
                                     <ChevronDown className="w-4 h-4 text-slate-400" />
                                   )}
@@ -443,9 +453,9 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                   className="overflow-hidden"
                                 >
                                   <div className="px-4 pb-4 space-y-2.5">
-                                    <div className="rounded-xl border border-amber-400/15 bg-amber-400/[0.06] p-3.5">
+                                    <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.07] p-3.5">
                                       <div className="flex items-center justify-between gap-2 mb-2">
-                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-amber-300">
+                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-blue-200">
                                           <MessageCircle className="w-3.5 h-3.5" />
                                           שאלה
                                         </span>
@@ -473,7 +483,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
 
                                     <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3.5">
                                       <div className="flex items-center justify-between gap-2 mb-2">
-                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-emerald-300">
+                                        <span className="flex items-center gap-1.5 text-[11px] font-black text-slate-200">
                                           <Bot className="w-3.5 h-3.5" />
                                           תשובה
                                         </span>
@@ -499,15 +509,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 flex-wrap text-[10px] text-slate-500 font-medium px-1">
-                                      <span>{fullDate(entry.createdAt)}</span>
-                                      {entry.language && <span>שפה {entry.language}</span>}
-                                      {entry.model && <span>{entry.model}</span>}
-                                      {entry.uid && (
-                                        <span className="font-mono" dir="ltr">
-                                          {String(entry.uid).slice(0, 8)}
-                                        </span>
-                                      )}
+                                    <div className="px-1">
+                                      <span className="text-[10px] text-slate-500 font-medium">
+                                        {fullDate(entry.createdAt)}
+                                      </span>
                                     </div>
                                   </div>
                                 </motion.div>
