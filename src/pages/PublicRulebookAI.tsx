@@ -64,6 +64,35 @@ export default function PublicRulebookAI() {
     });
     return () => unsub();
   }, []);
+  // Force reload when a new version is deployed so cached outdated clients get App Check
+  useEffect(() => {
+    // @ts-ignore
+    const localVer = typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '';
+    if (!localVer) return;
+    const checkVersion = async () => {
+      try {
+        const r = await fetch('/version.json?cb=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        const serverVer = String(j.version || '');
+        if (serverVer && localVer && serverVer !== localVer) {
+          window.location.reload();
+        }
+      } catch {}
+    };
+    const t1 = setTimeout(checkVersion, 5000);
+    const iv = setInterval(checkVersion, 60000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') checkVersion();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearTimeout(t1);
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [chatStarted, setChatStarted] = useState<boolean>(false);
