@@ -23,7 +23,7 @@ import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
-import { signOut, deleteUser } from 'firebase/auth';
+import { signOut, deleteUser, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const stripThinkBlocks = (text: string): string =>
@@ -40,6 +40,20 @@ export default function PublicRulebookAI() {
     return !!localStorage.getItem('google_access_token') ||
       !!localStorage.getItem('auth_user');
   });
+  // Keep hasGoogleToken in sync with Firebase Auth so the
+  // browserLocalPersistence session survives close/reopen the next day.
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        setHasGoogleToken(true);
+      } else {
+        const hasLocal = !!localStorage.getItem('google_access_token') ||
+          !!localStorage.getItem('auth_user');
+        setHasGoogleToken(hasLocal);
+      }
+    });
+    return () => unsub();
+  }, []);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [chatStarted, setChatStarted] = useState<boolean>(false);
