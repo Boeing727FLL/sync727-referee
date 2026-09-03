@@ -17,6 +17,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
 import RefereeLogsModal from '../components/RefereeLogsModal';
+import JudgeCorrectionsModal from '../components/JudgeCorrectionsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
@@ -50,10 +51,12 @@ export default function PublicRulebookAI() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
   const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
+  const [showJudgeCorrections, setShowJudgeCorrections] = useState<boolean>(false);
   const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logoTapTimesRef = useRef<number[]>([]);
   const developByTapTimesRef = useRef<number[]>([]);
+  const boeingTapTimesRef = useRef<number[]>([]);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent;
@@ -192,11 +195,23 @@ export default function PublicRulebookAI() {
   };
 
   // Secret: 5 taps on the "Developed By" caption opens the head-referee logs screen
-  const handleDevelopByTap = () => {
+  const handleDevelopByTap = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     developByTapTimesRef.current.push(Date.now());
     if (developByTapTimesRef.current.length >= 5) {
       developByTapTimesRef.current = [];
       setShowRefereeLogs(true);
+    }
+  };
+
+  // Secret: 5 rapid taps on the Boeing badge opens the judge corrections editor (code 6767)
+  const handleBoeingTap = () => {
+    const now = Date.now();
+    boeingTapTimesRef.current = boeingTapTimesRef.current.filter(t => now - t < 2000);
+    boeingTapTimesRef.current.push(now);
+    if (boeingTapTimesRef.current.length >= 5) {
+      boeingTapTimesRef.current = [];
+      setShowJudgeCorrections(true);
     }
   };
 
@@ -899,7 +914,7 @@ const fetchLatestRulebook = async () => {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
-            <div className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0">
+            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0 cursor-pointer select-none">
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
               <div className="h-3 md:h-6 w-px bg-slate-300" />
               <div className="flex flex-col leading-tight">
@@ -1326,6 +1341,11 @@ const fetchLatestRulebook = async () => {
       <RefereeLogsModal
         isOpen={showRefereeLogs}
         onClose={() => setShowRefereeLogs(false)}
+      />
+
+      <JudgeCorrectionsModal
+        isOpen={showJudgeCorrections}
+        onClose={() => setShowJudgeCorrections(false)}
       />
 
       <FeedbackModal
