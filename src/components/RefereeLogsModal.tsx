@@ -329,10 +329,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     <div className="flex items-center gap-2 flex-wrap">
                       {(
                         [
-                          { key: 'all', label: `הכל ${counts.total}` },
-                          { key: 'today', label: `היום ${counts.today}` },
-                          { key: 'week', label: `7 ימים ${counts.week}` },
-                          { key: 'month', label: `30 ימים ${counts.month}` },
+                          { key: 'all', label: 'הכל' },
+                          { key: 'today', label: 'היום' },
+                          { key: 'week', label: '7 ימים' },
+                          { key: 'month', label: '30 ימים' },
                         ] as const
                       ).map((c) => (
                         <button
