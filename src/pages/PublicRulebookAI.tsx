@@ -1,7 +1,7 @@
-﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown } from 'lucide-react';
+import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, Sparkles, BookOpen, History } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -71,7 +71,7 @@ export default function PublicRulebookAI() {
       const fb = auth.currentUser as any;
       if (fb?.email || fb?.displayName) {
         return {
-          name: fb.displayName || fb.email?.split('@')[0] || 'משתמש',
+          name: fb.displayName || fb.email?.split('@')[0] || '�����',
           picture: fb.photoURL || '',
           email: fb.email || '',
         } as any;
@@ -81,7 +81,7 @@ export default function PublicRulebookAI() {
         const p = JSON.parse(raw);
         if (p?.email || p?.name) {
           return {
-            name: p.name || p.email?.split('@')[0] || 'משתמש',
+            name: p.name || p.email?.split('@')[0] || '�����',
             picture: p.picture || '',
             email: p.email || '',
           } as any;
@@ -90,7 +90,7 @@ export default function PublicRulebookAI() {
       const pic = localStorage.getItem('user_picture');
       const nm = localStorage.getItem('user_name');
       if (pic || nm) {
-        return { name: nm || 'משתמש', picture: pic || '', email: '' } as any;
+        return { name: nm || '�����', picture: pic || '', email: '' } as any;
       }
     } catch {}
     return null;
@@ -201,7 +201,7 @@ export default function PublicRulebookAI() {
       .catch(() => {});
   }, []);
 
-  // Auto-enter chat after login — always show mandatory disclaimer before entering
+  // Auto-enter chat after login � always show mandatory disclaimer before entering
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
@@ -347,11 +347,11 @@ export default function PublicRulebookAI() {
     setDeleteError(null);
     const current = auth.currentUser;
     if (!current || !current.email) {
-      setDeleteError('אין משתמש מחובר. התחברו ונסו שוב.');
+      setDeleteError('��� ����� �����. ������ ���� ���.');
       return;
     }
     if (!deletePassword) {
-      setDeleteError('יש להזין סיסמה כדי לאשר מחיקה.');
+      setDeleteError('�� ����� ����� ��� ���� �����.');
       return;
     }
     setDeletingAccount(true);
@@ -360,7 +360,7 @@ export default function PublicRulebookAI() {
       await reauthenticateWithCredential(current, cred);
     } catch {
       setDeletingAccount(false);
-      setDeleteError('סיסמה שגויה. המחיקה לא בוצעה.');
+      setDeleteError('����� �����. ������ �� �����.');
       return;
     }
     const uid = current.uid;
@@ -368,14 +368,14 @@ export default function PublicRulebookAI() {
       await deleteDoc(doc(db, 'users', uid));
     } catch (e) {
       setDeletingAccount(false);
-      setDeleteError('מחיקת מסמך המשתמש נכשלה. נסו שוב.');
+      setDeleteError('����� ���� ������ �����. ��� ���.');
       return;
     }
     try {
       await deleteUser(current);
     } catch {
       setDeletingAccount(false);
-      setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
+      setDeleteError('����� ������ �����. ������ ���� ���� ���.');
       return;
     }
     try {
@@ -440,7 +440,7 @@ export default function PublicRulebookAI() {
       faviconElement.href = "/favicon-192.png?v=3";
     }
     
-    document.title = 'שופט וירטואלי | Boeing727';
+    document.title = '���� �������� | Boeing727';
 
     return () => {
       document.title = originalTitle;
@@ -812,8 +812,8 @@ const fetchLatestRulebook = async () => {
         }
       }
 
-      const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "חדש";
-      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות...`, isProgress: true }]);
+      const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "���";
+      setMessages(prev => [...prev, { role: 'model', text: `���� ����� ��� (${file.name}) �����. ���� ${seasonLabel}. ���� ������...`, isProgress: true }]);
 
       let uploadedPageCount = -1;
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -838,7 +838,7 @@ const fetchLatestRulebook = async () => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
               if (last?.role === 'model' && (last as any).isProgress) {
-                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות... ${pct}% (${i + 1}/${images.length})` };
+                newMsgs[newMsgs.length - 1] = { ...last, text: `���� ����� ��� (${file.name}) �����. ���� ${seasonLabel}. ���� ������... ${pct}% (${i + 1}/${images.length})` };
               }
               return newMsgs;
             });
@@ -849,12 +849,12 @@ const fetchLatestRulebook = async () => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
               if (last?.role === 'model' && (last as any).isProgress) {
-                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ החוקים (${file.name}) הועלה, אבל המרת העמודים לתמונות נכשלה. נסו להעלות שוב.` };
+                newMsgs[newMsgs.length - 1] = { ...last, text: `���� ������ (${file.name}) �����, ��� ���� ������� ������� �����. ��� ������ ���.` };
               }
               return newMsgs;
             });
           } else if (okCount < images.length) {
-            setMessages(prev => [...prev, { role: 'model', text: `שימו לב: הועלו ${okCount} מתוך ${images.length} עמודים. כדאי להעלות שוב כדי להשלים.` }]);
+            setMessages(prev => [...prev, { role: 'model', text: `���� ��: ����� ${okCount} ���� ${images.length} ������. ���� ������ ��� ��� ������.` }]);
           }
         } catch (imgErr) {
           console.error("Failed to convert/upload PDF pages:", imgErr);
@@ -869,10 +869,10 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const newMsgs = [...prev];
           if (newMsgs.length > 0 && (newMsgs[newMsgs.length - 1] as any).isProgress) {
-            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' };
+            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: '����� �� �������� ����� ������! ����� ���� ���� ����� ������ ��� �����.' };
             delete (newMsgs[newMsgs.length - 1] as any).isProgress;
           } else {
-            newMsgs.push({ role: 'model', text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' });
+            newMsgs.push({ role: 'model', text: '����� �� �������� ����� ������! ����� ���� ���� ����� ������ ��� �����.' });
           }
           return newMsgs;
         });
@@ -880,7 +880,7 @@ const fetchLatestRulebook = async () => {
 
     } catch (error: any) {
       console.error('Upload error:', error);
-      alert('שגיאה בהעלאת הקובץ: ' + error.message);
+      alert('����� ������ �����: ' + error.message);
       setUploading(false);
       setUploadProgress(0);
     }
@@ -898,7 +898,7 @@ const fetchLatestRulebook = async () => {
       setMessages(prev => [
         ...prev,
         { role: 'user', text: textToSend.trim() },
-        { role: 'model', text: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.' },
+        { role: 'model', text: '��� ����� ����� ����� ����, ���� ��� �� ���� ��� �� ������. ���� ���� ����� ��� ��� ������ ���� ���.' },
       ]);
       return;
     }
@@ -909,7 +909,7 @@ const fetchLatestRulebook = async () => {
       const now = Date.now();
       const lastSend = Number(localStorage.getItem('referee_last_send') || 0);
       if (now - lastSend < 4000) {
-        setMessages(prev => [...prev, { role: 'model', text: 'חכו כמה שניות בין שאלה לשאלה.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: '��� ��� ����� ��� ���� �����.' }]);
         return;
       }
       const hour = new Date().toISOString().slice(0, 13);
@@ -922,7 +922,7 @@ const fetchLatestRulebook = async () => {
         } catch { count = 0; }
       }
       if (count >= 120) {
-        setMessages(prev => [...prev, { role: 'model', text: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: '����� ����� ������ ���� ������. ��� ��� ����� ����.' }]);
         return;
       }
       localStorage.setItem('referee_last_send', String(now));
@@ -930,13 +930,15 @@ const fetchLatestRulebook = async () => {
     } catch { /* storage unavailable, continue without limits */ }
 
     const userMessage = textToSend.trim();
-    
+
     setInput('');
-    
+
+    // Drop the lone greeting bubble when the hero stands in for it,
+    // so it never pops in fully typed above the first real exchange.
     setMessages(prev => [
-      ...prev, 
-      { 
-        role: 'user', 
+      ...(prev.length <= 1 ? [] : prev),
+      {
+        role: 'user',
         text: userMessage
       }
     ]);
@@ -949,7 +951,7 @@ const fetchLatestRulebook = async () => {
     try {
       let relevantMessages = messages;
 
-      let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
+      let finalPrompt = userMessage + "\n\n(����� �����: �� ����� ����� ������ ���� �� ��� ��� - ����� ������� ������ ���� ��� ��� ����� ��� ����� �� ������� �� ������ �����.)";
       
       trackQuestion(resolveRefereeUid() || 'anon');
       
@@ -986,7 +988,7 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+          return [...prev, { role: 'model', text: '?? ������ ������ �� ��� ������.' }];
         });
       } else {
         logRefereeQA({
@@ -1010,7 +1012,7 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+          return [...prev, { role: 'model', text: '?? ������ ������ �� ��� ������.' }];
         });
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
@@ -1038,6 +1040,8 @@ const fetchLatestRulebook = async () => {
     t('chat.suggestion3'),
     t('chat.suggestion4')
   ];
+  const heroActive = chatStarted && messages.length <= 1 && !loading;
+  const heroIcons = [Sparkles, Scale, BookOpen, History];
 
   const playWhistleSound = () => {
     try {
@@ -1090,18 +1094,18 @@ const fetchLatestRulebook = async () => {
   const handleWhistleBlow = () => {
     playWhistleSound();
     const refereeTips = [
-      "📋 **הנחיית שופט וירטואלי:** רוח ספורטיבית (Gracious Professionalism) קודמת לכל הישג! כבדו את חבריכם ואת קבוצות היריב.",
-      "⏱️ **חוקי הזירה:** ברגע שהגעתם לשולחן, יש לכם בדיוק 2:30 דקות להפעיל את כל המשימות שתרגלתם. בהצלחה!",
-      "⚙️ **טיפ מקצועי:** זכרו, אם הרובוט יוצא מאזור הבית או משתבש במרכז המגרש - החזרתו לבית באקט ידני תגרור סימון עונש (דיסק משימה פנוי שעובר למשבצת העונשים).",
-      "📏 **חוקי המבנה:** כל הציוד שלכם (כולל רובוט, אביזרים חלופיים וחלקי חילוף) חייב להיכנס במלואו לתחום אזור הבית או אזור השיגור קודם תחילת המקצה!",
-      "🎯 **שימו לב:** השופט הווירטואלי מבוסס על בינה מלאכותית ומסתמך על ספר החוקים הרשמי. במקרה של ספק, מומלץ לפנות לשופט זירה אנושי."
+      "?? **������ ���� ��������:** ��� ��������� (Gracious Professionalism) ����� ��� ����! ���� �� ������ ��� ������ �����.",
+      "?? **���� �����:** ���� ������ ������, �� ��� ����� 2:30 ���� ������ �� �� ������� �������. ������!",
+      "?? **��� ������:** ����, �� ������ ���� ����� ���� �� ����� ����� ����� - ������ ���� ���� ���� ����� ����� ���� (���� ����� ���� ����� ������ �������).",
+      "?? **���� �����:** �� ����� ���� (���� �����, ������� ������� ����� �����) ���� ������ ������ ����� ���� ���� �� ���� ������ ���� ����� �����!",
+      "?? **���� ��:** ����� ���������� ����� �� ���� �������� ������ �� ��� ������ �����. ����� �� ���, ����� ����� ����� ���� �����."
     ];
     const quote = refereeTips[Math.floor(Math.random() * refereeTips.length)];
     setMessages(prev => [
       ...prev,
       {
         role: 'model',
-        text: `😗💨🎵 *שריקה חדה מהזירה!* \n\n${quote}`
+        text: `?????? *����� ��� ������!* \n\n${quote}`
       }
     ]);
   };
@@ -1130,7 +1134,7 @@ const fetchLatestRulebook = async () => {
             exit={{ opacity: 0, y: -8 }}
             className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0 relative"
           >
-            שדרוג אבטחה — יש להתחבר מחדש פעם אחת
+            ����� ����� � �� ������ ���� ��� ���
           </motion.div>
         )}
       </AnimatePresence>
@@ -1144,7 +1148,7 @@ const fetchLatestRulebook = async () => {
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(250,204,21,0.35)] ring-2 ring-yellow-400/70 overflow-hidden">
-              <img src="/logoref.png" alt="שופט וירטואלי" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
+              <img src="/logoref.png" alt="���� ��������" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
             </div>
             <div className="min-w-0">
                 <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-white flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
@@ -1220,7 +1224,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <LogOut className="w-4 h-4 text-slate-500" />
-                          התנתק
+                          �����
                         </button>
                         <button
                           onClick={() => {
@@ -1230,7 +1234,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
-                          מחיקת חשבון
+                          ����� �����
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <a
@@ -1239,7 +1243,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
-                          פרטיות
+                          ������
                         </a>
                       </div>
                     </motion.div>
@@ -1276,10 +1280,57 @@ const fetchLatestRulebook = async () => {
         </div>
       </div>
 
-      {/* Chat Area - premium AI console */}
+      {/* Chat Area - premium AI console, full screen */}
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
-        <div className="w-full max-w-3xl mx-auto px-3 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
-        {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && !chatStarted)).map((msg, idx) => {
+        <div className="w-full px-3 md:px-10 py-4 md:py-8 space-y-4 md:space-y-6">
+        {heroActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center text-center py-6 md:py-10"
+          >
+            <div className="relative mb-4 md:mb-5">
+              <div className="absolute -inset-8 bg-yellow-400/20 blur-3xl rounded-full pointer-events-none" aria-hidden />
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.4)] overflow-hidden">
+                <img src="/logoref.png" alt="���� ��������" className="w-full h-full object-contain" />
+              </div>
+            </div>
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
+              {t('intro.subtitle')}
+            </h2>
+            <p className="text-sm md:text-base text-slate-400 font-medium mt-2 max-w-xl">
+              {t('intro.descFull')}
+            </p>
+            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-xl">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain" />
+              <span className="text-[11px] md:text-xs font-bold text-slate-300">
+                ���� �������� ��� ����� Boeing 727 ������ �-FLL
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mt-6 md:mt-8 w-full max-w-2xl">
+              {quickQuestions.map((q, i) => {
+                const Icon = heroIcons[i % heroIcons.length];
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(q)}
+                    disabled={loading || isLearning}
+                    className="flex items-center gap-3 text-right px-4 py-3.5 rounded-2xl bg-white/[0.05] hover:bg-yellow-400/10 border border-white/10 hover:border-yellow-400/30 transition-all cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="shrink-0 w-9 h-9 rounded-xl bg-yellow-400/15 border border-yellow-400/20 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform">
+                      <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                    </span>
+                    <span className="text-[13px] md:text-sm font-bold text-slate-200 group-hover:text-white transition-colors">
+                      {q}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+        {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && (!chatStarted || messages.length <= 1))).map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
           const isThinking = isOpenThink && loading && idx === messages.length - 1;
           const thinkContent = msg.text.includes('<think>') ? msg.text.split('<think>')[1]?.split('</think>')[0]?.trim() || '' : '';
@@ -1361,7 +1412,7 @@ const fetchLatestRulebook = async () => {
                   )
                 ) : (
                   <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden">
-                    <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
+                    <img src="/logoref.png" alt="���� ��������" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -1379,7 +1430,7 @@ const fetchLatestRulebook = async () => {
                       <span className="text-[9px] md:text-[10px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
-                      {finalRenderText.includes("שריקה") && (
+                      {finalRenderText.includes("�����") && (
                         <span className="text-[9px] md:text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
                             {t('chat.foulTag')}
                         </span>
@@ -1413,12 +1464,12 @@ const fetchLatestRulebook = async () => {
                           components={{
                             em: ({children, ...props}) => {
                               const txt = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null;
-                              if (txt === '█') return <span className="typewriter-cursor">█</span>;
+                              if (txt === '?') return <span className="typewriter-cursor">?</span>;
                               return <em {...props}>{children}</em>;
                             }
                           }}
                         >
-                          {isTypewriting ? finalRenderText + '*█*' : finalRenderText}
+                          {isTypewriting ? finalRenderText + '*?*' : finalRenderText}
                         </ReactMarkdown>
                       </div>
                     )}
@@ -1436,7 +1487,7 @@ const fetchLatestRulebook = async () => {
                       {t('chat.copy')}
                     </button>
                     <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer">
-                      👍
+                      ??
                     </button>
                   </div>
                 )}
@@ -1469,14 +1520,15 @@ const fetchLatestRulebook = async () => {
         </div>
       </div>
 
-      {/* Quick Actions - soft AI suggestion pills */}
+      {/* Quick Actions - soft AI suggestion pills (hidden while hero shows them) */}
+      {!heroActive && (
       <div className="relative z-10 shrink-0">
-        <div className="w-full max-w-3xl mx-auto px-3 md:px-6 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="w-full px-3 md:px-10 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
           {quickQuestions.map((q, i) => (
             <button
               key={i}
               onClick={() => handleSend(q)}
-              disabled={loading || isLearning || isTypewriterActive}
+              disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
               className="shrink-0 whitespace-nowrap px-3.5 md:px-4 py-2 bg-white/[0.06] hover:bg-yellow-400/15 text-slate-200 hover:text-yellow-200 border border-white/10 hover:border-yellow-400/30 rounded-full text-[11px] md:text-xs font-bold backdrop-blur-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {q}
@@ -1484,24 +1536,25 @@ const fetchLatestRulebook = async () => {
           ))}
         </div>
       </div>
+      )}
 
       {/* Input Area - floating AI pill */}
-      <div className="px-3 md:px-6 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="w-full max-w-3xl mx-auto flex items-center gap-2 bg-slate-900/80 backdrop-blur-2xl border border-white/12 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-yellow-400/40 focus-within:shadow-[0_12px_40px_rgba(250,204,21,0.12)] transition-all">
+      <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
+        <div className="w-full flex items-center gap-2 bg-slate-900/80 backdrop-blur-2xl border border-white/12 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-yellow-400/40 focus-within:shadow-[0_12px_40px_rgba(250,204,21,0.12)] transition-all">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
-            disabled={loading || isLearning || isTypewriterActive}
+            disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
             style={{ flex: 1, minWidth: 0 }}
             className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-[14px] md:text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
           <button
             onClick={() => handleSend()}
-            disabled={loading || isLearning || isTypewriterActive || !input.trim()}
+            disabled={loading || isLearning || (isTypewriterActive && !heroActive) || !input.trim()}
             style={{ flexShrink: 0 }}
             aria-label={t('chat.send')}
             className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
@@ -1509,9 +1562,12 @@ const fetchLatestRulebook = async () => {
             <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
           </button>
         </div>
-        <p className="text-center text-[10px] text-slate-600 font-medium mt-1.5">
-          {t('intro.notOfficial')}
-        </p>
+        <div className="flex items-center justify-center gap-1.5 mt-2">
+          <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
+          <p className="text-[10px] text-slate-500 font-medium">
+            נבנה בהתנדבות ע״י קבוצת Boeing 727 לקהילת ה-FLL · {t('intro.notOfficial')}
+          </p>
+        </div>
       </div>
 
       {/* Upload Modal */}
@@ -1595,11 +1651,11 @@ const fetchLatestRulebook = async () => {
               className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4"
             >
               <div className="text-center">
-                <div className="text-4xl mb-2">⚠️</div>
-                <h3 className="text-xl font-black text-slate-800">מחיקת עונה שלמה</h3>
+                <div className="text-4xl mb-2">??</div>
+                <h3 className="text-xl font-black text-slate-800">����� ���� ����</h3>
                 <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                  הקובץ {wipePending.fileName} מזוהה כעונה חדשה ({wipePending.season}).
-                  ההעלאה תמחק {wipePending.oldCount} קבצי חוקים ישנים. כדי לאשר, הקלידו את שם העונה.
+                  ����� {wipePending.fileName} ����� ����� ���� ({wipePending.season}).
+                  ������ ���� {wipePending.oldCount} ���� ����� �����. ��� ����, ������ �� �� �����.
                 </p>
               </div>
               <input
@@ -1615,14 +1671,14 @@ const fetchLatestRulebook = async () => {
                   onClick={() => { setWipePending(null); setWipeTyped(''); }}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
                 >
-                  ביטול
+                  �����
                 </button>
                 <button
                   onClick={confirmSeasonWipe}
                   disabled={wipeTyped.trim().toUpperCase() !== wipePending.season.toUpperCase()}
                   className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  מחק והעלה
+                  ��� �����
                 </button>
               </div>
             </motion.div>
@@ -1671,16 +1727,16 @@ const fetchLatestRulebook = async () => {
               className="bg-slate-900 border border-red-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 text-center space-y-4">
-                <h3 className="text-xl font-bold text-white">מחיקת החשבון לצמיתות</h3>
+                <h3 className="text-xl font-bold text-white">����� ������ �������</h3>
                 <p className="text-slate-400 text-sm">
-                  החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. לאישור, הזינו את הסיסמה.
+                  ������ ����� ������ ������ ��� ���� ���� �����. ������, ����� �� ������.
                 </p>
                 <input
                   type="password"
                   value={deletePassword}
                   onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(null); }}
                   onKeyDown={(e) => e.key === 'Enter' && !deletingAccount && handleDeleteAccount()}
-                  placeholder="סיסמה"
+                  placeholder="�����"
                   className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
                 />
                 {deleteError && (
@@ -1697,14 +1753,14 @@ const fetchLatestRulebook = async () => {
                   }}
                   className="px-4 py-2 rounded-lg text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
                 >
-                  ביטול
+                  �����
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deletingAccount || !deletePassword}
                   className="px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
+                  {deletingAccount ? '����' : '��, ��� ���'}
                 </button>
               </div>
             </motion.div>
@@ -1756,15 +1812,15 @@ const fetchLatestRulebook = async () => {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/15 flex items-center justify-center">
                   <Scale className="w-8 h-8 text-red-400" />
                 </div>
-                <h3 className="text-lg font-black text-white mb-2">החשבון נפתח במקום אחר</h3>
+                <h3 className="text-lg font-black text-white mb-2">������ ���� ����� ���</h3>
                 <p className="text-slate-400 text-sm mb-6">
-                  המשתמש שלך נכנס ממכשיר אחר, ולכן התחברות זו נותקה כדי למנוע חוסר עקביות בנתוני האנליטיקס.
+                  ������ ��� ���� ������ ���, ���� ������� �� ����� ��� ����� ���� ������ ������ ���������.
                 </p>
                 <button
                   onClick={() => { setSessionKicked(false); navigate('/login'); }}
                   className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
                 >
-                  חזרה לכניסה
+                  ���� ������
                 </button>
               </div>
             </motion.div>
