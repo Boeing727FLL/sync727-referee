@@ -1114,41 +1114,45 @@ const fetchLatestRulebook = async () => {
         ? { opacity: [0, 1], scale: [0.98, 1], filter: ['blur(6px)', 'blur(0px)'] }
         : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
       transition={{ duration: 1.0, ease: 'easeOut' }}
-      className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
+      className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
+      {/* Ambient premium glows */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.07] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.08] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.05] rounded-full blur-3xl" />
+      </div>
       <AnimatePresence>
         {showMigrationBanner && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0"
+            className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0 relative"
           >
             שדרוג אבטחה — יש להתחבר מחדש פעם אחת
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Referee Ribbon */}
-      <div className="h-3.5 bg-[repeating-linear-gradient(45deg,#000000,#000000_15px,#ffffff_15px,#ffffff_30px)] border-b border-slate-950 w-full shrink-0 relative">
-        <div className="absolute inset-0 bg-yellow-400/20 mix-blend-multiply pointer-events-none" />
-      </div>
 
-      {/* Header */}
-      <div className="border-b-2 border-slate-950 bg-amber-50 z-10 shadow-sm shrink-0">
+      {/* Referee Ribbon - slim identity strip */}
+      <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0 relative z-10" />
+
+      {/* Header - dark glass, premium AI console */}
+      <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border-2 border-slate-950 overflow-hidden">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(250,204,21,0.35)] ring-2 ring-yellow-400/70 overflow-hidden">
               <img src="/logoref.png" alt="שופט וירטואלי" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
             </div>
             <div className="min-w-0">
-                <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-slate-900 flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
-                  {t('app.title')} <span className="text-[7px] md:text-xs bg-slate-900 text-yellow-400 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400">{t('app.titleEn')}</span>
+                <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-white flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
+                  {t('app.title')} <span className="text-[7px] md:text-xs bg-yellow-400/10 text-yellow-300 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400/30">{t('app.titleEn')}</span>
                 </h1>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className={`w-[6px] h-[6px] md:w-2.5 md:h-2.5 rounded-full shrink-0 border border-slate-950 ${isLearning ? 'bg-yellow-400 animate-bounce' : 'bg-emerald-500'}`} />
-                <span className="text-[7px] md:text-[10px] font-black text-slate-950 uppercase tracking-wide bg-yellow-400 px-1 md:px-1.5 py-[1px] md:py-0.5 rounded border-2 border-slate-950 shadow-[1px_1px_0px_#000]">
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`w-[6px] h-[6px] md:w-2 md:h-2 rounded-full shrink-0 ${isLearning ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`} />
+                <span className="text-[7px] md:text-[10px] font-bold text-slate-300 tracking-wide">
                   {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
@@ -1160,11 +1164,11 @@ const fetchLatestRulebook = async () => {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:border-white/60 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all cursor-pointer"
+                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer"
                 >
                   <div className="hidden sm:flex flex-col items-end text-right">
-                    <span className="text-xs font-black text-slate-900 max-w-[120px] truncate leading-none">{displayUser.name}</span>
-                    <span className="text-[10px] text-slate-600 font-medium truncate max-w-[120px]" dir="ltr">
+                    <span className="text-xs font-black text-white max-w-[120px] truncate leading-none">{displayUser.name}</span>
+                    <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]" dir="ltr">
                       {displayUser.email}
                     </span>
                   </div>
@@ -1245,23 +1249,23 @@ const fetchLatestRulebook = async () => {
             ) : (
               <button
                 onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
-                className="text-[10px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
+                className="text-[10px] md:text-xs bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl transition-all shadow-[0_4px_16px_rgba(250,204,21,0.3)] active:scale-95 cursor-pointer flex items-center gap-1"
               >
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0 cursor-pointer select-none">
+            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/[0.06] backdrop-blur-xl rounded-xl border border-white/10 group hover:bg-white/10 hover:border-white/20 transition-all duration-300 whitespace-nowrap shrink-0 cursor-pointer select-none">
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
-              <div className="h-3 md:h-6 w-px bg-slate-300" />
+              <div className="h-3 md:h-6 w-px bg-white/15" />
               <div className="flex flex-col leading-tight">
-                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
-                <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
+                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-500 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
+                <span className="text-[7px] md:text-sm font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
             {showAdmin && isCurrentUserOwner() && (
               <button
                 onClick={openUploadModal}
-                className="p-1.5 md:p-2 bg-white text-slate-900 border-2 border-slate-950 hover:bg-yellow-400 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                className="p-1.5 md:p-2 bg-white/[0.06] text-slate-200 border border-white/10 hover:bg-yellow-400 hover:text-slate-950 hover:border-yellow-400 rounded-xl transition-all"
                 title={t('admin.upload')}
               >
                 <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
@@ -1272,9 +1276,9 @@ const fetchLatestRulebook = async () => {
         </div>
       </div>
 
-      {/* Chat Area - Green field canvas background */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-8 space-y-4 md:space-y-8 bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] border-b border-slate-200 scroll-smooth" ref={scrollRef}>
-        
+      {/* Chat Area - premium AI console */}
+      <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
+        <div className="w-full max-w-3xl mx-auto px-3 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
         {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && !chatStarted)).map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
           const isThinking = isOpenThink && loading && idx === messages.length - 1;
@@ -1308,34 +1312,27 @@ const fetchLatestRulebook = async () => {
 
           if (isThinking) {
             return (
-              <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
-                <div className="w-9 h-9 md:w-11 md:h-11 shrink-0 rounded-xl bg-white border-2 border-slate-950 shadow-[1px_1px_0px_#000] overflow-hidden flex items-center justify-center">
-                  <img src="/logoref.png" alt="" className="w-7 h-7 md:w-9 md:h-9 object-contain" />
+              <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
+                <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+                  <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
                 </div>
-                <div className="relative bg-white border-2 border-slate-950 p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex flex-col gap-3 max-w-[85%] md:max-w-[75%] overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-100/40 to-transparent -translate-x-full animate-shine pointer-events-none" />
-                  <div className="relative flex items-center gap-3">
-                    <div className="flex items-end gap-1.5 md:gap-2 h-7 md:h-8">
+                <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
                       {[0, 1, 2].map((i) => (
-                        <div key={i} className="relative w-2.5 md:w-3 h-full flex items-end justify-center">
-                          <motion.span
-                            className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full relative z-10"
-                            style={{ background: 'linear-gradient(180deg, #fde047, #f59e0b)', boxShadow: '0 0 12px rgba(250,204,21,0.8)' }}
-                            animate={{ y: [0, -14, 0], scale: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
-                            transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: [0.45, 0.05, 0.55, 0.95] }}
-                          />
-                          <motion.span
-                            className="absolute bottom-0 w-3.5 h-1 rounded-[50%] bg-slate-950/15"
-                            animate={{ scaleX: [1, 0.4, 1], opacity: [0.4, 0.1, 0.4] }}
-                            transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: 'easeInOut' }}
-                          />
-                        </div>
+                        <motion.span
+                          key={i}
+                          className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"
+                          style={{ boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
+                          animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
+                          transition={{ repeat: Infinity, duration: 1.0, delay: i * 0.15, ease: 'easeInOut' }}
+                        />
                       ))}
                     </div>
-                    <span className="text-xs font-black text-slate-900">{t('chat.thinking')}</span>
+                    <span className="text-xs font-bold text-slate-300">{t('chat.thinking')}</span>
                   </div>
                   {thinkContent && (
-                    <div className="relative text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap px-1 max-h-48 overflow-y-auto">
+                    <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {thinkContent}
                     </div>
                   )}
@@ -1350,42 +1347,40 @@ const fetchLatestRulebook = async () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className={`flex gap-2.5 md:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex gap-2.5 md:gap-3.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              {/* Referee or User Avatar Badge */}
-              <div className={`w-7 h-7 md:w-11 md:h-11 ${msg.role === 'user' ? 'rounded-full' : 'rounded-xl'} flex items-center justify-center shrink-0 border-2 border-slate-950 shadow-[1px_1px_0px_#000] relative overflow-hidden ${
-                msg.role === 'user' 
-                  ? 'bg-slate-100 text-slate-800' 
-                  : 'bg-[repeating-linear-gradient(45deg,#000000,#000000_5px,#ffffff_5px,#ffffff_10px)]'
-              }`}>
+              {/* Referee or User Avatar */}
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
                 {msg.role === 'user' ? (
                   (user?.picture || localStorage.getItem('user_picture')) ? (
-                    <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full" />
+                    <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
                   ) : (
-                    <User className="w-4 h-4 md:w-5 md:h-5 text-slate-850" />
+                    <div className="w-full h-full rounded-full bg-white/10 border border-white/15 flex items-center justify-center">
+                      <User className="w-4 h-4 md:w-4.5 md:h-4.5 text-slate-300" />
+                    </div>
                   )
                 ) : (
-                  <div className="absolute inset-0.5 rounded-lg overflow-hidden bg-white">
+                  <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden">
                     <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
 
-              <div className={`flex flex-col gap-1.5 md:gap-2 max-w-[88%] md:max-w-[75%]`}>
-                <div className={`rounded-2xl p-3 md:p-5 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-2 border-slate-950 relative overflow-hidden ${
-                  msg.role === 'user' 
-                    ? 'bg-slate-900 text-white rounded-tr-none' 
-                    : 'bg-white text-slate-900 rounded-tl-none before:absolute before:top-0 before:right-0 before:left-0 before:h-2 before:bg-[repeating-linear-gradient(-45deg,#000000,#000000_8px,#ffffff_8px,#ffffff_16px)] pt-6'
+              <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'flex-1'}`}>
+                <div className={`relative overflow-hidden ${
+                  msg.role === 'user'
+                    ? 'bg-white/[0.09] border border-white/10 text-slate-100 rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
+                    : 'text-slate-100 px-0.5 py-1'
                 }`}>
-                  
+
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
-                    <div className="flex items-center gap-1 mb-1.5 md:mb-2">
-                      <span className="text-[8px] md:text-[10px] font-black tracking-tight text-slate-905 bg-yellow-400 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000] flex items-center gap-1 uppercase">
+                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
+                      <span className="text-[9px] md:text-[10px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
-                        <span className="text-[8px] md:text-[10px] font-black text-white bg-red-600 border border-slate-950 px-1.5 md:px-2 py-[1px] md:py-0.5 rounded shadow-[1px_1px_0px_#000]">
+                        <span className="text-[9px] md:text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
                             {t('chat.foulTag')}
                         </span>
                       )}
@@ -1393,26 +1388,26 @@ const fetchLatestRulebook = async () => {
                   )}
 
                   {msg.files && msg.files.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4 bg-black/5 p-2 rounded-2xl">
+                    <div className="flex flex-wrap gap-2 mb-3">
                       {msg.files.map((file, fIdx) => (
-                        <div key={fIdx} className="relative w-16 h-16 md:w-32 md:h-32 group">
+                        <div key={fIdx} className="relative w-16 h-16 md:w-28 md:h-28 group">
                       {(file.key.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.url.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.base64?.startsWith('data:image')) ? (
-                         <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl shadow-md border-2 border-slate-950" />
-                      ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-white rounded-xl border-2 border-slate-950 shadow-md">
-                                <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
-                             </div>
-                          )}
+                          <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl border border-white/15" />
+                       ) : (
+                           <div className="w-full h-full flex items-center justify-center bg-white/[0.06] rounded-xl border border-white/10">
+                                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
+                              </div>
+                           )}
                         </div>
                       ))}
                     </div>
                   )}
-                  
-                  <div className={`text-[13px] md:text-[17px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
+
+                  <div className={`text-[14px] md:text-[16px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
-                      <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-headings:font-black prose-a:text-blue-600 prose-strong:text-slate-900 prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 rtl:text-right">
+                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:text-slate-100 prose-headings:font-black prose-headings:text-white prose-a:text-yellow-300 prose-strong:text-white prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -1430,17 +1425,17 @@ const fetchLatestRulebook = async () => {
                   </div>
                 </div>
                 {msg.role === 'model' && idx > 0 && (
-                  <div className="flex items-center gap-2 md:gap-4 px-1 md:px-2">
-                    <button 
+                  <div className="flex items-center gap-1.5 px-0.5">
+                    <button
                       onClick={() => {
                         navigator.clipboard.writeText(finalRenderText);
                         alert(t('chat.copied'));
                       }}
-                      className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-red-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                      className="text-[10px] md:text-[11px] font-bold text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer"
                     >
                       {t('chat.copy')}
                     </button>
-                    <button className="text-[9px] md:text-[10px] font-black text-slate-600 hover:text-green-600 transition-colors bg-white px-1.5 md:px-2 py-0.5 rounded border border-slate-300 shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                    <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer">
                       👍
                     </button>
                   </div>
@@ -1451,55 +1446,48 @@ const fetchLatestRulebook = async () => {
         })}
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-4">
-            <div className="w-7 h-7 md:w-11 md:h-11 shrink-0 rounded-xl bg-white border-2 border-slate-950 shadow-[1px_1px_0px_#000] overflow-hidden flex items-center justify-center">
-              <img src="/logoref.png" alt="" className="w-5 h-5 md:w-9 md:h-9 object-contain" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
+            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+              <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="relative bg-white border-2 border-slate-950 p-2.5 md:p-4 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center gap-2 md:gap-3 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-100/40 to-transparent -translate-x-full animate-shine pointer-events-none" />
-              <div className="relative flex items-center gap-2">
-                <div className="flex items-end gap-1.5 h-6 md:h-8">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="relative w-2 md:w-3 h-full flex items-end justify-center">
-                      <motion.span
-                        className="w-2 h-2 md:w-3 md:h-3 rounded-full relative z-10"
-                        style={{ background: 'linear-gradient(180deg, #fde047, #f59e0b)', boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
-                        animate={{ y: [0, -12, 0], scale: [0.85, 1, 0.85], opacity: [0.7, 1, 0.7] }}
-                        transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: [0.45, 0.05, 0.55, 0.95] }}
-                      />
-                      <motion.span
-                        className="absolute bottom-0 w-3 h-1 rounded-[50%] bg-slate-950/15"
-                        animate={{ scaleX: [1, 0.4, 1], opacity: [0.4, 0.1, 0.4] }}
-                        transition={{ repeat: Infinity, duration: 1.1, delay: i * 0.18, ease: 'easeInOut' }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <span className="relative text-[10px] md:text-xs font-black text-slate-900">{t('chat.thinking2')}</span>
+            <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"
+                    style={{ boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
+                    animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
+                    transition={{ repeat: Infinity, duration: 1.0, delay: i * 0.15, ease: 'easeInOut' }}
+                  />
+                ))}
               </div>
+              <span className="text-xs md:text-sm font-bold text-slate-300">{t('chat.thinking2')}</span>
             </div>
           </motion.div>
         )}
+        </div>
       </div>
 
-      {/* Quick Actions - Styled as tactical yellow strategy cards */}
-      <div className="px-2 md:px-4 py-1.5 md:py-3 bg-amber-50/50 border-t-2 border-slate-950 overflow-x-auto flex gap-1.5 md:gap-2 no-scrollbar shrink-0">
-        {quickQuestions.map((q, i) => (
-          <button
-            key={i}
-            onClick={() => handleSend(q)}
-            disabled={loading || isLearning || isTypewriterActive}
-            className="whitespace-nowrap px-3 md:px-4 py-1.5 md:py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 border-2 border-slate-950 rounded-xl text-[10px] md:text-xs font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ⚠️ {q}
-          </button>
-        ))}
+      {/* Quick Actions - soft AI suggestion pills */}
+      <div className="relative z-10 shrink-0">
+        <div className="w-full max-w-3xl mx-auto px-3 md:px-6 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+          {quickQuestions.map((q, i) => (
+            <button
+              key={i}
+              onClick={() => handleSend(q)}
+              disabled={loading || isLearning || isTypewriterActive}
+              className="shrink-0 whitespace-nowrap px-3.5 md:px-4 py-2 bg-white/[0.06] hover:bg-yellow-400/15 text-slate-200 hover:text-yellow-200 border border-white/10 hover:border-yellow-400/30 rounded-full text-[11px] md:text-xs font-bold backdrop-blur-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Input Area */}
-      <div className="px-2.5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:px-4 md:p-4 bg-white border-t-2 border-slate-950 shrink-0">
-        
-        <div className="flex items-center gap-2 md:gap-3">
+      {/* Input Area - floating AI pill */}
+      <div className="px-3 md:px-6 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
+        <div className="w-full max-w-3xl mx-auto flex items-center gap-2 bg-slate-900/80 backdrop-blur-2xl border border-white/12 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-yellow-400/40 focus-within:shadow-[0_12px_40px_rgba(250,204,21,0.12)] transition-all">
           <input
             type="text"
             value={input}
@@ -1508,19 +1496,22 @@ const fetchLatestRulebook = async () => {
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
             disabled={loading || isLearning || isTypewriterActive}
             style={{ flex: 1, minWidth: 0 }}
-            className="bg-slate-50 border-2 border-slate-950 rounded-xl px-3 md:px-4 py-2 md:py-3 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-650/15 text-[13px] md:text-base text-slate-800 placeholder-slate-500 font-bold transition-all disabled:opacity-50"
+            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-[14px] md:text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
-          
+
           <button
             onClick={() => handleSend()}
             disabled={loading || isLearning || isTypewriterActive || !input.trim()}
             style={{ flexShrink: 0 }}
-            className="relative overflow-hidden rounded-xl transition-all flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] border-2 border-slate-950 active:scale-95 active:translate-x-0.5 active:translate-y-0.5 bg-red-600 hover:bg-red-700 text-white p-2 md:p-3 disabled:opacity-50"
+            aria-label={t('chat.send')}
+            className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine pointer-events-none" />
-            <Send className="w-4 h-4 md:w-6 md:h-6" />
+            <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
           </button>
         </div>
+        <p className="text-center text-[10px] text-slate-600 font-medium mt-1.5">
+          {t('intro.notOfficial')}
+        </p>
       </div>
 
       {/* Upload Modal */}
