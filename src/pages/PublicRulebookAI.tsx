@@ -222,7 +222,7 @@ export default function PublicRulebookAI() {
       setShowIntro(false);
       setChatStarted(true);
     }, 120);
-    setTimeout(() => setShowEnterAnimation(false), 800);
+    setTimeout(() => setShowEnterAnimation(false), 1500);
   };
 
   const handleIntroContinue = () => {
@@ -1090,9 +1090,9 @@ const fetchLatestRulebook = async () => {
 
   return (
     <motion.div
-      initial={showEnterAnimation ? { opacity: 0, scale: 0.98, filter: 'blur(6px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      initial={showEnterAnimation ? { opacity: 0, scale: 0.96, filter: 'blur(10px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
       <AnimatePresence>
