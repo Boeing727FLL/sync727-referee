@@ -213,8 +213,9 @@ export default function PublicRulebookAI() {
   const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
 
   const handleDisclaimerConfirm = () => {
-    // Everything goes at the exact same moment: modal and intro fade out
-    // together while the chat fades in underneath. No sequencing, no stuck frames.
+    // Everything in a single tick: modal and intro fade out together while
+    // the chat fades in and the typewriter starts at once. No staged timers,
+    // so nothing ever sits stuck or flashes before animating.
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setPendingEnterChat(false);
@@ -223,8 +224,8 @@ export default function PublicRulebookAI() {
     setShowDisclaimer(false);
     setShowIntro(false);
     setChatStarted(true);
-    setTimeout(() => setTypewriterReady(true), 700);
-    setTimeout(() => setShowEnterAnimation(false), 1300);
+    setTypewriterReady(true);
+    setTimeout(() => setShowEnterAnimation(false), 1100);
   };
 
   const handleIntroContinue = () => {
