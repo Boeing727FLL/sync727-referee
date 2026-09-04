@@ -1142,14 +1142,6 @@ const fetchLatestRulebook = async () => {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
-            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0 cursor-pointer select-none">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
-              <div className="h-3 md:h-6 w-px bg-slate-300" />
-              <div className="flex flex-col leading-tight">
-                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
-                <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
-              </div>
-            </div>
             {hasGoogleToken && displayUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -1244,6 +1236,14 @@ const fetchLatestRulebook = async () => {
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
+            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/80 rounded-lg border-2 border-slate-950 group hover:bg-white hover:border-red-600 transition-all duration-300 shadow-[2px_2px_0px_#000] whitespace-nowrap shrink-0 cursor-pointer select-none">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
+              <div className="h-3 md:h-6 w-px bg-slate-300" />
+              <div className="flex flex-col leading-tight">
+                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
+                <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
+              </div>
+            </div>
             {showAdmin && isCurrentUserOwner() && (
               <button
                 onClick={openUploadModal}
