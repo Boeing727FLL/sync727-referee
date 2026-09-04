@@ -1287,6 +1287,11 @@ const fetchLatestRulebook = async () => {
           if (isTypewriting) {
             finalRenderText = finalRenderText.substring(0, typewriterCount);
           }
+          // Before the gate opens, hide the last model message entirely so the
+          // greeting never flashes fully before typing from the start.
+          if (idx === messages.length - 1 && msg.role === 'model' && !typewriterReady && chatStarted) {
+            finalRenderText = '';
+          }
 
           if (isThinking) {
             return (
