@@ -1146,11 +1146,11 @@ const fetchLatestRulebook = async () => {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:border-white/60 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all cursor-pointer"
                 >
                   <div className="hidden sm:flex flex-col items-end text-right">
                     <span className="text-xs font-black text-slate-900 max-w-[120px] truncate leading-none">{displayUser.name}</span>
-                    <span className="text-[10px] text-slate-500 font-medium truncate max-w-[120px]" dir="ltr">
+                    <span className="text-[10px] text-slate-600 font-medium truncate max-w-[120px]" dir="ltr">
                       {displayUser.email}
                     </span>
                   </div>
@@ -1176,9 +1176,9 @@ const fetchLatestRulebook = async () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border-2 border-slate-950 overflow-hidden z-50"
+                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden z-50"
                     >
-                      <div className="p-3 bg-slate-50 border-b-2 border-slate-950 flex items-center gap-3">
+                      <div className="p-3 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center gap-3">
                         {displayUser.picture ? (
                           <img src={displayUser.picture} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
                         ) : (
@@ -1199,7 +1199,7 @@ const fetchLatestRulebook = async () => {
                             setShowUserMenu(false);
                             setShowLogoutConfirm(true);
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <LogOut className="w-4 h-4 text-slate-500" />
                           התנתק
@@ -1209,16 +1209,16 @@ const fetchLatestRulebook = async () => {
                             setShowUserMenu(false);
                             setShowDeleteConfirm(true);
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
                           מחיקת חשבון
                         </button>
-                        <div className="h-px bg-slate-100 my-1" />
+                        <div className="h-px bg-white/60 my-1" />
                         <a
                           href="/privacy"
                           onClick={() => setShowUserMenu(false)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
                           פרטיות
