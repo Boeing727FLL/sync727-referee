@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Loader2, FileText, Scale, Upload as UploadIcon } from 'lucide-react';
@@ -64,6 +64,37 @@ export default function PublicRulebookAI() {
     });
     return () => unsub();
   }, []);
+
+  const displayUser = useMemo(() => {
+    if (user) return user;
+    try {
+      const fb = auth.currentUser as any;
+      if (fb?.email || fb?.displayName) {
+        return {
+          name: fb.displayName || fb.email?.split('@')[0] || 'משתמש',
+          picture: fb.photoURL || '',
+          email: fb.email || '',
+        } as any;
+      }
+      const raw = localStorage.getItem('auth_user');
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p?.email || p?.name) {
+          return {
+            name: p.name || p.email?.split('@')[0] || 'משתמש',
+            picture: p.picture || '',
+            email: p.email || '',
+          } as any;
+        }
+      }
+      const pic = localStorage.getItem('user_picture');
+      const nm = localStorage.getItem('user_name');
+      if (pic || nm) {
+        return { name: nm || 'משתמש', picture: pic || '', email: '' } as any;
+      }
+    } catch {}
+    return null;
+  }, [user, hasGoogleToken]);
   // Force reload when a new version is deployed so cached outdated clients get App Check
   useEffect(() => {
     // @ts-ignore
@@ -1082,10 +1113,10 @@ const fetchLatestRulebook = async () => {
                 <span className="text-[7px] md:text-sm font-black text-slate-950 italic leading-tight">Boeing <span className="text-red-600">727</span><span className="text-red-400 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-600 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
-            {hasGoogleToken && user ? (
+            {hasGoogleToken && displayUser ? (
               <div className="flex items-center gap-1 md:gap-3">
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{user.name}</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{displayUser.name}</span>
                   <button
                     onClick={() => setShowLogoutConfirm(true)}
                     className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
@@ -1099,16 +1130,16 @@ const fetchLatestRulebook = async () => {
                     מחיקת חשבון
                    </button>
                 </div>
-                {user.picture ? (
+                {displayUser.picture ? (
                   <img
-                    src={user.picture}
+                    src={displayUser.picture}
                     alt=""
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
                   />
                 ) : (
                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
                     <span className="text-xs md:text-sm font-black text-slate-950">
-                      {(user.name || 'U').trim().charAt(0)}
+                      {(displayUser.name || 'U').trim().charAt(0)}
                     </span>
                   </div>
                 )}
