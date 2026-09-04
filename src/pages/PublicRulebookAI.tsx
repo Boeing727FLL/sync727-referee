@@ -771,7 +771,12 @@ const fetchLatestRulebook = async () => {
             Bucket: R2_BUCKET_NAME,
             Prefix: prefix,
           }));
-          const staleObjects = (listResp.Contents || []).map((o: any) => ({ Key: o.Key }));
+          // Never delete the file that was just uploaded in this same flow.
+          // The prefix `fll-rules/<name>` also matches the new object itself,
+          // and without this filter every upload ended with its own PDF deleted.
+          const staleObjects = (listResp.Contents || [])
+            .map((o: any) => ({ Key: o.Key }))
+            .filter((o: any) => o.Key && o.Key !== fileName);
           if (staleObjects.length > 0) {
             await s3Client.send(new DeleteObjectsCommand({
               Bucket: R2_BUCKET_NAME,
@@ -834,18 +839,25 @@ const fetchLatestRulebook = async () => {
       const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "חדש";
       setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות...`, isProgress: true }]);
 
+      let uploadedPageCount = -1;
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         try {
           const images = await convertPdfToImages(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
+          let okCount = 0;
           for (let i = 0; i < images.length; i++) {
             const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
-            await s3Client.send(new PutObjectCommand({
-              Bucket: R2_BUCKET_NAME,
-              Key: imgKey,
-              Body: new Uint8Array(await images[i].data.arrayBuffer()),
-              ContentType: 'image/jpeg',
-            }));
-            const pct = Math.round(((i + 1) / images.length) * 100);
+            try {
+              await s3Client.send(new PutObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: imgKey,
+                Body: new Uint8Array(await images[i].data.arrayBuffer()),
+                ContentType: 'image/jpeg',
+              }));
+              okCount++;
+            } catch (putErr) {
+              console.error(`Failed to upload page image ${imgKey}:`, putErr);
+            }
+            const pct = images.length > 0 ? Math.round(((i + 1) / images.length) * 100) : 100;
             setMessages(prev => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
@@ -855,7 +867,19 @@ const fetchLatestRulebook = async () => {
               return newMsgs;
             });
           }
-          console.log(`Uploaded ${images.length} page images for ${file.name}`);
+          uploadedPageCount = okCount;
+          if (images.length === 0) {
+            setMessages(prev => {
+              const newMsgs = [...prev];
+              const last = newMsgs[newMsgs.length - 1];
+              if (last?.role === 'model' && (last as any).isProgress) {
+                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ החוקים (${file.name}) הועלה, אבל המרת העמודים לתמונות נכשלה. נסו להעלות שוב.` };
+              }
+              return newMsgs;
+            });
+          } else if (okCount < images.length) {
+            setMessages(prev => [...prev, { role: 'model', text: `שימו לב: הועלו ${okCount} מתוך ${images.length} עמודים. כדאי להעלות שוב כדי להשלים.` }]);
+          }
         } catch (imgErr) {
           console.error("Failed to convert/upload PDF pages:", imgErr);
         }
@@ -890,6 +914,18 @@ const fetchLatestRulebook = async () => {
     const textToSend = textOverride || input;
 
     if (!textToSend.trim() || loading) return;
+
+    // Never answer blind: with no rulebook files loaded at all, the model
+    // would fabricate. Tell the user instead of guessing.
+    if (activeRulebookFiles.length === 0 && !isLearning) {
+      setInput('');
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', text: textToSend.trim() },
+        { role: 'model', text: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.' },
+      ]);
+      return;
+    }
 
     // Client-side rate limit: at most one question every 4 seconds
     // and 120 questions per hour per device.

@@ -438,6 +438,8 @@ ${correctionsText.trim()}
       };
 
       // Extract and append text or base64 components from allFiles
+      // Counts rulebook images actually attached, so we never answer blind.
+      let attachedRulebookImages = 0;
       if (allFiles.length > 0) {
         currentParts.push({ text: `Below are all the rulebook pages and user photos loaded into your context.
 They are structured in sequence:
@@ -521,19 +523,20 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                   if (pdfBlob) {
                     const pageImages = await convertPdfToImages(pdfBlob);
                     console.log(`Converted ${pageImages.length} pages on the fly for ${fileName}`);
-                    let pageIndex = 1;
-                    for (const pageImg of pageImages) {
-                      if (signal?.aborted) return '';
-                      try {
-                        const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
-                        currentParts.push({ text: prefixText });
-                        currentParts.push({
-                          inlineData: {
-                            data: await fileToBase64(pageImg.data),
-                            mimeType: 'image/jpeg'
-                          }
-                        });
-                        pageIndex++;
+                      let pageIndex = 1;
+                      for (const pageImg of pageImages) {
+                        if (signal?.aborted) return '';
+                        try {
+                          const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
+                          currentParts.push({ text: prefixText });
+                          currentParts.push({
+                            inlineData: {
+                              data: await fileToBase64(pageImg.data),
+                              mimeType: 'image/jpeg'
+                            }
+                          });
+                          attachedRulebookImages++;
+                          pageIndex++;
                       } catch (err: any) {
                         console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
                       }
@@ -550,6 +553,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                   const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', res.pageIndex);
                   currentParts.push({ text: prefixText });
                   currentParts.push({ inlineData: res.inlineData });
+                  attachedRulebookImages++;
                 });
             } else {
               // Fetch the PDF blob to convert pages to visual images for Gemma
@@ -639,6 +643,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
                   mimeType
                 }
               });
+              if (file.isRulebook) attachedRulebookImages++;
             }
           }
         }
@@ -649,6 +654,13 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       let modifiedQuestion = question;
 
       const hasUserFiles = userFiles && userFiles.length > 0;
+
+      // Never answer blind: rulebook files were expected but zero pages
+      // actually made it into context (deleted or missing images).
+      const expectedRulebook = (rulebookFiles || []).length;
+      if (expectedRulebook > 0 && attachedRulebookImages === 0 && !hasUserFiles) {
+        return 'שגיאה בטעינת חוברת החוקים. לא הצלחתי לטעון אף עמוד, ולכן אני לא עונה כדי לא להמציא. נסו שוב, ואם זה חוזר, העלו מחדש את קובץ החוקים דרך מסך ההעלאה.';
+      }
       if (hasUserFiles) {
         modifiedQuestion = `⚠️⚠️⚠️ [הנחיית שיפוט קריטית - ניתוח עצמאי נקי ללא הטיה] ⚠️⚠️⚠️
 עליך לנתח את התמונה/קבצים שהועלו כעת במנותק ובנפרד לחלוטין מכל משימה, חוק או תמונה קודמת שדוברה בצ'אט (כמו משימה 5 או כל נושא קודם). אל תניח בשום אופן שהתמונה הזו קשורה אליהם!
