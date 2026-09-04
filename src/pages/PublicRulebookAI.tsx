@@ -1,7 +1,7 @@
 ﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, FileText, Scale, Upload as UploadIcon } from 'lucide-react';
+import { Send, Bot, User, Loader2, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService, invalidateCorrectionsCache } from '../services/geminiService';
@@ -123,6 +123,20 @@ export default function PublicRulebookAI() {
       document.removeEventListener('visibilitychange', onVis);
     };
   }, []);
+
+  const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserMenu]);
 
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
@@ -1114,39 +1128,94 @@ const fetchLatestRulebook = async () => {
               </div>
             </div>
             {hasGoogleToken && displayUser ? (
-              <div className="flex items-center gap-1 md:gap-3">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-black text-slate-900 max-w-[120px] truncate">{displayUser.name}</span>
-                  <button
-                    onClick={() => setShowLogoutConfirm(true)}
-                    className="text-[10px] text-red-600 font-black hover:text-red-800 hover:underline cursor-pointer transition-colors"
-                  >
-                    {t('auth.logout')}
-                   </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-[10px] text-slate-400 font-bold hover:text-red-800 hover:underline cursor-pointer transition-colors"
-                  >
-                    מחיקת חשבון
-                   </button>
-                </div>
-                {displayUser.picture ? (
-                  <img
-                    src={displayUser.picture}
-                    alt=""
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
-                  />
-                ) : (
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
-                    <span className="text-xs md:text-sm font-black text-slate-950">
-                      {(displayUser.name || 'U').trim().charAt(0)}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu((v) => !v)}
+                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                >
+                  <div className="hidden sm:flex flex-col items-end text-right">
+                    <span className="text-xs font-black text-slate-900 max-w-[120px] truncate leading-none">{displayUser.name}</span>
+                    <span className="text-[10px] text-slate-500 font-medium truncate max-w-[120px]" dir="ltr">
+                      {displayUser.email}
                     </span>
                   </div>
-                )}
+                  {displayUser.picture ? (
+                    <img
+                      src={displayUser.picture}
+                      alt=""
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                      <span className="text-xs md:text-sm font-black text-slate-950">
+                        {(displayUser.name || 'U').trim().charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border-2 border-slate-950 overflow-hidden z-50"
+                    >
+                      <div className="p-3 bg-slate-50 border-b-2 border-slate-950 flex items-center gap-3">
+                        {displayUser.picture ? (
+                          <img src={displayUser.picture} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center">
+                            <span className="text-sm font-black text-slate-950">{(displayUser.name || 'U').trim().charAt(0)}</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0 text-right">
+                          <p className="text-sm font-black text-slate-900 truncate">{displayUser.name}</p>
+                          <p className="text-xs text-slate-500 truncate" dir="ltr">
+                            {displayUser.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-2 space-y-1">
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowLogoutConfirm(true);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 text-slate-500" />
+                          התנתק
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                          מחיקת חשבון
+                        </button>
+                        <div className="h-px bg-slate-100 my-1" />
+                        <a
+                          href="/privacy"
+                          onClick={() => setShowUserMenu(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4 text-slate-500" />
+                          פרטיות
+                        </a>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
-              <button 
-                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')} 
+              <button
+                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
                 className="text-[10px] md:text-xs bg-yellow-400 hover:bg-yellow-300 text-slate-950 border-2 border-slate-950 font-black px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg transition-all shadow-[1px_1px_0px_rgba(0,0,0,1)] active:scale-95 cursor-pointer flex items-center gap-1"
               >
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
