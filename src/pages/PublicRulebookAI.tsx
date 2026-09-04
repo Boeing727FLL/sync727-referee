@@ -409,9 +409,7 @@ export default function PublicRulebookAI() {
     setSessionKicked(true);
   };
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
-  const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([
-    { role: 'model', text: t('chat.greeting').replace('{season}', seasonName) }
-  ]);
+  const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
@@ -525,28 +523,11 @@ export default function PublicRulebookAI() {
   const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
 
   useEffect(() => {
-    setMessages(prev => {
-      const newMessages = [...prev];
-      if (newMessages.length > 0 && newMessages[0].role === 'model') {
-        newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', seasonName) };
-      }
-      return newMessages;
-    });
-  }, [language]);
-
-  useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'app_config', 'rulebook'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.current_season && data.current_season !== seasonName) {
           setSeasonName(data.current_season);
-          setMessages(prev => {
-            const newMessages = [...prev];
-            if (newMessages.length > 0 && newMessages[0].role === 'model') {
-              newMessages[0].text = t('chat.greeting').replace('{season}', data.current_season);
-            }
-            return newMessages;
-          });
         }
         fetchLatestRulebook();
       } else {
@@ -607,13 +588,6 @@ const fetchLatestRulebook = async () => {
                 last_updated: Date.now()
               });
             } catch (e) {}
-            setMessages(prev => {
-              const newMessages = [...prev];
-              if (newMessages.length > 0 && newMessages[0].role === 'model') {
-                newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', detectedSeason) };
-              }
-              return newMessages;
-            });
           }
         } else if (seasonName !== 'UNKNOWN') {
           setSeasonName('UNKNOWN');
@@ -623,13 +597,6 @@ const fetchLatestRulebook = async () => {
               last_updated: Date.now()
             });
           } catch (e) {}
-          setMessages(prev => {
-            const newMessages = [...prev];
-            if (newMessages.length > 0 && newMessages[0].role === 'model') {
-              newMessages[0] = { ...newMessages[0], text: t('chat.greeting').replace('{season}', 'UNKNOWN') };
-            }
-            return newMessages;
-          });
         }
       } else {
         setIsLearning(false);
@@ -933,10 +900,8 @@ const fetchLatestRulebook = async () => {
 
     setInput('');
 
-    // Drop the lone greeting bubble when the hero stands in for it,
-    // so it never pops in fully typed above the first real exchange.
     setMessages(prev => [
-      ...(prev.length <= 1 ? [] : prev),
+      ...prev,
       {
         role: 'user',
         text: userMessage
@@ -1040,7 +1005,7 @@ const fetchLatestRulebook = async () => {
     t('chat.suggestion3'),
     t('chat.suggestion4')
   ];
-  const heroActive = chatStarted && messages.length <= 1 && !loading;
+  const heroActive = chatStarted && messages.length === 0 && !loading;
   const heroIcons = [Sparkles, Scale, BookOpen, History];
 
   const playWhistleSound = () => {
@@ -1330,7 +1295,7 @@ const fetchLatestRulebook = async () => {
             </div>
           </motion.div>
         )}
-        {messages.filter((msg, idx) => !(idx === 0 && msg.role === 'model' && (!chatStarted || messages.length <= 1))).map((msg, idx) => {
+        {messages.map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
           const isThinking = isOpenThink && loading && idx === messages.length - 1;
           const thinkContent = msg.text.includes('<think>') ? msg.text.split('<think>')[1]?.split('</think>')[0]?.trim() || '' : '';
@@ -1565,7 +1530,7 @@ const fetchLatestRulebook = async () => {
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
           <p className="text-[10px] text-slate-500 font-medium">
-            נבנה בהתנדבות ע״י קבוצת Boeing 727 לקהילת ה-FLL · {t('intro.notOfficial')}
+            נבנה בהתנדבות על ידי קבוצת Boeing 727 לקהילת ה-FLL · {t('intro.notOfficial')}
           </p>
         </div>
       </div>
