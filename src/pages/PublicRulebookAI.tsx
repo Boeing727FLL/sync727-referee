@@ -213,9 +213,10 @@ export default function PublicRulebookAI() {
   const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
 
   const handleDisclaimerConfirm = () => {
-    setShowDisclaimer(false);
-    // Chat starts fading in almost immediately so its entrance overlaps
-    // the modal exit instead of popping after it. Typewriter follows shortly.
+    // Order matters: hide the intro FIRST (its exit plays invisibly behind
+    // the modal), start the chat entrance, and only then melt the modal away.
+    // This way the modal dissolves straight onto the chat, never flashing
+    // the intro page in the middle.
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setPendingEnterChat(false);
@@ -225,8 +226,9 @@ export default function PublicRulebookAI() {
       setShowIntro(false);
       setChatStarted(true);
     }, 60);
-    setTimeout(() => setTypewriterReady(true), 550);
-    setTimeout(() => setShowEnterAnimation(false), 1200);
+    setTimeout(() => setShowDisclaimer(false), 300);
+    setTimeout(() => setTypewriterReady(true), 750);
+    setTimeout(() => setShowEnterAnimation(false), 1500);
   };
 
   const handleIntroContinue = () => {
@@ -1098,11 +1100,11 @@ const fetchLatestRulebook = async () => {
 
   return (
     <motion.div
-      initial={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
       animate={showEnterAnimation
-        ? { opacity: [0, 1], y: [14, 0] }
-        : { opacity: 1, y: 0 }}
-      transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
+        ? { opacity: [0, 1], scale: [0.97, 1], filter: ['blur(8px)', 'blur(0px)'] }
+        : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
       <AnimatePresence>
