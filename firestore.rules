@@ -23,7 +23,7 @@ service cloud.firestore {
       allow list: if isOwner();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow update: if isOwner() || isSelf(userId);
-      allow delete: if isOwner();
+      allow delete: if isOwner() || isSelf(userId);
     }
 
     // App config (rulebook, corrections, whitelists): public read for the app to work,

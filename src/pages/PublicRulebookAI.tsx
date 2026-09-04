@@ -23,7 +23,7 @@ import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
-import { signOut, deleteUser, onAuthStateChanged } from 'firebase/auth';
+import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const stripThinkBlocks = (text: string): string =>
@@ -344,37 +344,56 @@ export default function PublicRulebookAI() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
+  const [deletePassword, setDeletePassword] = useState<string>('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDeleteAccount = async () => {
+    setDeleteError(null);
+    const current = auth.currentUser;
+    if (!current || !current.email) {
+      setDeleteError('אין משתמש מחובר. התחברו ונסו שוב.');
+      return;
+    }
+    if (!deletePassword) {
+      setDeleteError('יש להזין סיסמה כדי לאשר מחיקה.');
+      return;
+    }
     setDeletingAccount(true);
     try {
-      const current = auth.currentUser;
-      const stored: { uid?: string } = (() => {
-        try { return JSON.parse(localStorage.getItem('auth_user') || '{}'); } catch { return {}; }
-      })();
-      const uid = current?.uid || stored.uid;
-      if (uid) {
-        try {
-          await deleteDoc(doc(db, 'users', uid));
-        } catch { /* doc may not exist, continue */ }
-      }
-      if (current) {
-        try {
-          await deleteUser(current);
-        } catch { /* needs recent login, user can re-login and retry */ }
-      }
-    } finally {
-      try { await logout(); } catch { /* ignore */ }
-      localStorage.removeItem('google_access_token');
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('user_picture');
-      localStorage.removeItem('user_name');
-      setHasGoogleToken(false);
-      setShowDeleteConfirm(false);
+      const cred = EmailAuthProvider.credential(current.email, deletePassword);
+      await reauthenticateWithCredential(current, cred);
+    } catch {
       setDeletingAccount(false);
-      setShowIntro(true);
-      setChatStarted(false);
+      setDeleteError('סיסמה שגויה. המחיקה לא בוצעה.');
+      return;
     }
+    const uid = current.uid;
+    try {
+      await deleteDoc(doc(db, 'users', uid));
+    } catch (e) {
+      setDeletingAccount(false);
+      setDeleteError('מחיקת מסמך המשתמש נכשלה. נסו שוב.');
+      return;
+    }
+    try {
+      await deleteUser(current);
+    } catch {
+      setDeletingAccount(false);
+      setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
+      return;
+    }
+    try { await logout(); } catch { /* ignore */ }
+    localStorage.removeItem('google_access_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('user_picture');
+    localStorage.removeItem('user_name');
+    setHasGoogleToken(false);
+    setShowDeleteConfirm(false);
+    setDeletingAccount(false);
+    setDeletePassword('');
+    setDeleteError(null);
+    setShowIntro(true);
+    setChatStarted(false);
   };
 
   const [sessionKicked, setSessionKicked] = useState(false);
@@ -1657,16 +1676,63 @@ const fetchLatestRulebook = async () => {
         variant="warning"
       />
 
-      <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        onClose={() => { if (!deletingAccount) setShowDeleteConfirm(false); }}
-        onConfirm={handleDeleteAccount}
-        title="מחיקת החשבון לצמיתות"
-        message="החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. להמשיך?"
-        confirmText={deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
-        cancelText="ביטול"
-        variant="danger"
-      />
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+            dir="rtl"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-red-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 text-center space-y-4">
+                <h3 className="text-xl font-bold text-white">מחיקת החשבון לצמיתות</h3>
+                <p className="text-slate-400 text-sm">
+                  החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. לאישור, הזינו את הסיסמה.
+                </p>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(null); }}
+                  onKeyDown={(e) => e.key === 'Enter' && !deletingAccount && handleDeleteAccount()}
+                  placeholder="סיסמה"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
+                />
+                {deleteError && (
+                  <p className="text-red-400 text-xs font-bold">{deleteError}</p>
+                )}
+              </div>
+              <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    if (deletingAccount) return;
+                    setShowDeleteConfirm(false);
+                    setDeletePassword('');
+                    setDeleteError(null);
+                  }}
+                  className="px-4 py-2 rounded-lg text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount || !deletePassword}
+                  className="px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AdminAnalyticsModal
         isOpen={showAdminAnalytics}
