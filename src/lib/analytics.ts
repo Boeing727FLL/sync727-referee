@@ -175,6 +175,17 @@ export async function getAnalytics(): Promise<{
   return { totalQuestions, registeredUsers, activeUsers, avgPerUser };
 }
 
+export async function removeRefereeUser(uid: string) {
+  try {
+    await updateDoc(STATS_REF, {
+      [`refereeUsers.${uid}`]: deleteField(),
+      [`perUser.${uid}`]: deleteField(),
+    });
+  } catch (e) {
+    console.warn("removeRefereeUser failed:", e);
+  }
+}
+
 export async function resetQuestions() {
   try {
     await setDoc(STATS_REF, { totalQuestions: 0, perUser: {} }, { merge: true });

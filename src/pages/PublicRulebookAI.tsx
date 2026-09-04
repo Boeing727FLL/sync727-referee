@@ -22,7 +22,7 @@ import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { isCurrentUserOwner } from '../lib/owner';
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -382,6 +382,10 @@ export default function PublicRulebookAI() {
       setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
       return;
     }
+    try {
+      await deleteDoc(doc(db, 'sessions', uid));
+    } catch { /* session doc may not exist */ }
+    await removeRefereeUser(uid);
     try { await logout(); } catch { /* ignore */ }
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('auth_user');
