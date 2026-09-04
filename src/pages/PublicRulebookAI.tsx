@@ -210,9 +210,12 @@ export default function PublicRulebookAI() {
     }
   }, [user, hasGoogleToken]);
 
+  const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
+
   const handleDisclaimerConfirm = () => {
     setShowDisclaimer(false);
-    // Smooth quick crossfade straight into the referee, no middle screen
+    // Chat starts fading in almost immediately so its entrance overlaps
+    // the modal exit instead of popping after it. Typewriter follows shortly.
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setPendingEnterChat(false);
@@ -221,8 +224,9 @@ export default function PublicRulebookAI() {
     setTimeout(() => {
       setShowIntro(false);
       setChatStarted(true);
-    }, 120);
-    setTimeout(() => setShowEnterAnimation(false), 1500);
+    }, 60);
+    setTimeout(() => setTypewriterReady(true), 650);
+    setTimeout(() => setShowEnterAnimation(false), 1600);
   };
 
   const handleIntroContinue = () => {
@@ -509,14 +513,14 @@ export default function PublicRulebookAI() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (showEnterAnimation) return;
+      if (!typewriterReady) return;
       setTypewriterCount(prev => {
         if (prev >= typewriterTargetRef.current) return prev;
         return prev + 1;
       });
     }, 35);
     return () => clearInterval(interval);
-  }, [showEnterAnimation]);
+  }, [typewriterReady]);
 
   useEffect(() => {
     if (loading) {
@@ -526,18 +530,22 @@ export default function PublicRulebookAI() {
   }, [loading]);
 
   useEffect(() => {
-    if (chatStarted && !showEnterAnimation) {
+    if (chatStarted && typewriterReady) {
       setTypewriterCount(0);
       typewriterTargetRef.current = 0;
     }
-  }, [chatStarted, showEnterAnimation]);
+  }, [chatStarted, typewriterReady]);
 
   useEffect(() => {
-    if (!showEnterAnimation && chatStarted) {
+    if (typewriterReady && chatStarted) {
       setTypewriterCount(0);
       typewriterTargetRef.current = 0;
     }
-  }, [showEnterAnimation]);
+  }, [typewriterReady]);
+
+  useEffect(() => {
+    if (!chatStarted) setTypewriterReady(false);
+  }, [chatStarted]);
 
   const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
 
@@ -1090,8 +1098,10 @@ const fetchLatestRulebook = async () => {
 
   return (
     <motion.div
-      initial={showEnterAnimation ? { opacity: 0, scale: 0.96, filter: 'blur(10px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      initial={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      animate={showEnterAnimation
+        ? { opacity: [0, 1], scale: [0.96, 1], filter: ['blur(10px)', 'blur(0px)'] }
+        : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
       transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative font-sans" dir="rtl"
     >
@@ -1272,10 +1282,10 @@ const fetchLatestRulebook = async () => {
             }
           }
 
-          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0 && !showEnterAnimation) {
+          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0 && typewriterReady) {
             typewriterTargetRef.current = finalRenderText.length;
           }
-          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && !showEnterAnimation && typewriterCount < typewriterTargetRef.current;
+          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterReady && typewriterCount < typewriterTargetRef.current;
           if (isTypewriting) {
             finalRenderText = finalRenderText.substring(0, typewriterCount);
           }
