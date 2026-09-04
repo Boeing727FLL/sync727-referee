@@ -12,6 +12,21 @@ if (import.meta.env.PROD) {
   console.warn = () => {};
 }
 
+// Kill any stale service worker (e.g. old workbox builds) that intercepts
+// fetches for this origin and breaks the page with "Failed to fetch".
+// This app needs no offline worker, so every registration is removed
+// along with its caches.
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((r) => r.unregister().catch(() => {}));
+  }).catch(() => {});
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((k) => caches.delete(k).catch(() => {}));
+    }).catch(() => {});
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
