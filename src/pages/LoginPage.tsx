@@ -116,11 +116,12 @@ export default function LoginPage() {
         trackRefereeUser(fbUid);
         setWelcomeName(pending.name || pending.email.split('@')[0]);
         setAuthOverlay('success');
-        // Navigate the moment leaving starts: the opaque overlay covers the
-        // swap, so there is never a login-screen flash nor a bare background.
+        // Divine departure (~2.4s of light): slow bloom + blur + gold flash
+        // building to peak brightness, navigate inside the peak, and the
+        // chat-side reveal flash continues the same light seamlessly.
         later(() => {
           setAuthLeaving(true);
-          navigate('/?enter=chat');
+          later(() => navigate('/?enter=chat'), 1300);
         }, 1600);
       } else {
         setAuthOverlay(null);
@@ -494,12 +495,25 @@ export default function LoginPage() {
           <motion.div
             key="auth-overlay"
             initial={{ opacity: 0 }}
-            animate={authLeaving ? { opacity: 0, scale: 0.94, filter: 'blur(12px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            animate={authLeaving
+              ? { opacity: [1, 1, 1], scale: [1, 1.07, 1.14], filter: ['blur(0px)', 'blur(8px)', 'blur(20px)'] }
+              : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0 }}
-            transition={{ duration: authLeaving ? 0.6 : 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950"
+            transition={authLeaving
+              ? { duration: 1.3, times: [0, 0.6, 1], ease: [0.22, 1, 0.36, 1] }
+              : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950 overflow-hidden"
             dir="rtl"
           >
+            {authLeaving && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0, 1] }}
+                transition={{ duration: 1.3, times: [0, 0.7, 1], ease: 'easeIn' }}
+                className="absolute inset-0 bg-[radial-gradient(circle_at_center,#fffbe8_0%,rgba(250,204,21,0.85)_45%,rgba(250,204,21,0.25)_75%,transparent_100%)]"
+                aria-hidden
+              />
+            )}
             <div className="absolute inset-0 pointer-events-none" aria-hidden>
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-yellow-400/[0.08] rounded-full blur-3xl" />

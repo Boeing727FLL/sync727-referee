@@ -168,6 +168,14 @@ export default function PublicRulebookAI() {
   const [chatStarted, setChatStarted] = useState<boolean>(() => autoEnter);
   const [showDisclaimer, setShowDisclaimer] = useState<boolean>(() => autoEnter);
   const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(() => autoEnter);
+  // Golden reveal flash: completes the divine login transition. Fades out
+  // over the freshly mounted chat while the disclaimer descends above it.
+  const [enterFlash, setEnterFlash] = useState<boolean>(() => autoEnter);
+  useEffect(() => {
+    if (!enterFlash) return;
+    const t = setTimeout(() => setEnterFlash(false), 1200);
+    return () => clearTimeout(t);
+  }, [enterFlash]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
   const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
@@ -1290,6 +1298,17 @@ const fetchLatestRulebook = async () => {
       <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center" aria-hidden>
         <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="" className="w-[70vw] max-w-[560px] opacity-[0.05]" />
       </div>
+
+      {/* Golden reveal flash after login transition */}
+      {enterFlash && (
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none fixed inset-0 z-[9000] bg-[radial-gradient(circle_at_center,#fffbe8_0%,rgba(250,204,21,0.55)_50%,rgba(250,204,21,0.12)_78%,transparent_100%)]"
+          aria-hidden
+        />
+      )}
 
       {/* Chat Area - premium AI console, full screen */}
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
