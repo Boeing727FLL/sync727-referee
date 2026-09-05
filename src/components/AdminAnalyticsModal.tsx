@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck, MessageSquareHeart } from 'lucide-react';
-import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
+import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck, MessageSquareHeart, Database } from 'lucide-react';
+import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, migrateFirestoreToRtdb, type AnalyticsStats } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
+import FeedbackAdminModal from './FeedbackAdminModal';
 
 interface AdminAnalyticsModalProps {
   isOpen: boolean;
@@ -11,17 +11,21 @@ interface AdminAnalyticsModalProps {
 }
 
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
-  const navigate = useNavigate();
   const [unlocked, setUnlocked] = useState(false);
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showFeedbackAdmin, setShowFeedbackAdmin] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateMsg, setMigrateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setUnlocked(false);
       setConfirmReset(false);
+      setShowFeedbackAdmin(false);
+      setMigrateMsg(null);
       return;
     }
     setUnlocked(isCurrentUserOwner());
@@ -46,10 +50,21 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     setConfirmReset(false);
   };
 
-  const openFeedbackPage = () => {
-    sessionStorage.setItem('referee_feedback_unlocked', '1');
-    onClose();
-    navigate('/feedback-view');
+  const openFeedbackAdmin = () => {
+    setShowFeedbackAdmin(true);
+  };
+
+  const handleMigrate = async () => {
+    if (migrating) return;
+    setMigrating(true);
+    setMigrateMsg('מתחיל מיגרציה מ-Firestore...');
+    try {
+      const res = await migrateFirestoreToRtdb(setMigrateMsg);
+      setMigrateMsg(`הושלם: ${res.logs} רשומות יומן, ${res.feedback} פידבקים${res.skippedFeedback ? ` (${res.skippedFeedback} דולגו)` : ''}, סטטיסטיקות מוזגו.`);
+    } catch (e: any) {
+      setMigrateMsg(`המיגרציה נכשלה: ${e?.message || e}`);
+    }
+    setMigrating(false);
   };
 
   const statCard = (icon: React.ReactNode, label: string, value: string | number, sub?: string) => (
@@ -66,6 +81,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
   );
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -119,7 +135,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                   </div>
                   <div className="flex gap-2 pt-2">
                     <button
-                      onClick={openFeedbackPage}
+                      onClick={openFeedbackAdmin}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold hover:bg-emerald-500/30 transition-colors"
                     >
                       <MessageSquareHeart className="w-4 h-4" />
@@ -134,6 +150,19 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                       {confirmReset ? 'לחצו שוב לאישור האיפוס' : 'אפס את ספירת השאלות'}
                     </button>
                   </div>
+                  <div className="pt-1">
+                    <button
+                      onClick={handleMigrate}
+                      disabled={migrating}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-500/15 border border-blue-500/40 text-blue-300 font-bold hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+                    >
+                      <Database className={`w-4 h-4 ${migrating ? 'animate-pulse' : ''}`} />
+                      {migrating ? 'מעביר נתונים...' : 'העבר נתונים מ-Firestore ל-Realtime'}
+                    </button>
+                    {migrateMsg && (
+                      <p className="text-[11px] text-slate-400 font-bold mt-1.5 text-center">{migrateMsg}</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -141,5 +170,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
         </motion.div>
       )}
     </AnimatePresence>
+    <FeedbackAdminModal isOpen={showFeedbackAdmin} onClose={() => setShowFeedbackAdmin(false)} />
+    </>
   );
 }

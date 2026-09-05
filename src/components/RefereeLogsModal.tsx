@@ -18,8 +18,9 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { onValue, remove, ref, update } from 'firebase/database';
+import { rtdb } from '../lib/firebase';
+import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 
 interface RefereeLogsModalProps {
@@ -121,15 +122,15 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     if (!unlocked) return;
     setLoading(true);
     setLoadError(false);
-    const q = query(collection(db, 'referee_logs'), orderBy('createdAt', 'desc'), limit(200));
-    const unsub = onSnapshot(
-      q,
+    // RTDB returns ascending; reverse client-side to keep newest-first.
+    const unsub = onValue(
+      logsQuery(200),
       (snap) => {
         const entries: LogEntry[] = [];
-        snap.docs.forEach((d) => {
-          const data = d.data();
+        const val = snap.val() || {};
+        Object.entries(val).forEach(([id, data]: [string, any]) => {
           entries.push({
-            id: d.id,
+            id,
             question: data.question,
             answer: data.answer,
             season: data.season,
@@ -140,7 +141,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
             createdAt: data.createdAt,
           });
         });
-        setLogs(entries);
+        setLogs(entries.reverse());
         setLoading(false);
       },
       (err) => {
@@ -174,7 +175,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     setDeleteError(null);
     setDeletingId(id);
     try {
-      await deleteDoc(doc(db, 'referee_logs', id));
+      await remove(ref(rtdb, `referee/logs/${id}`));
       setExpanded((prev) => {
         const next = new Set(prev);
         next.delete(id);
@@ -198,16 +199,16 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     setCleaning(true);
     try {
       const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-      const batch = writeBatch(db);
-      let n = 0;
+      const ids: string[] = [];
       for (const l of logs) {
         const d = toDate(l.createdAt);
-        if (d && d.getTime() < cutoff && n < 400) {
-          batch.delete(doc(db, 'referee_logs', l.id));
-          n++;
-        }
+        if (d && d.getTime() < cutoff && ids.length < 400) ids.push(l.id);
       }
-      if (n > 0) await batch.commit();
+      for (let i = 0; i < ids.length; i += 100) {
+        const updates: Record<string, null> = {};
+        ids.slice(i, i + 100).forEach(id => { updates[`referee/logs/${id}`] = null; });
+        await update(ref(rtdb), updates);
+      }
     } catch (err: any) {
       console.error('referee log bulk clean failed:', err);
       const code = err?.code ? ` (${String(err.code)})` : '';

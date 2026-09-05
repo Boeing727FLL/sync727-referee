@@ -1,16 +1,53 @@
-import { doc, setDoc, increment, getDocsFromServer, getDocFromServer, collection, deleteDoc, deleteField, serverTimestamp, onSnapshot, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import {
+  ref,
+  child,
+  get,
+  set,
+  update,
+  remove,
+  push,
+  query as rtdbQuery,
+  orderByChild,
+  limitToLast,
+  onValue,
+  increment,
+  serverTimestamp as rtdbTimestamp,
+  onDisconnect,
+  type DataSnapshot,
+} from 'firebase/database';
+import { rtdb, db } from './firebase';
+// Firestore is kept only for the one-time migration below and for counting
+// legacy user docs (shared team-app collection, not analytics data).
+import {
+  doc,
+  collection,
+  query as fsQuery,
+  orderBy as fsOrderBy,
+  limit as fsLimit,
+  getDoc as fsGetDoc,
+  getDocs as fsGetDocs,
+  onSnapshot as fsOnSnapshot,
+} from 'firebase/firestore';
 
-const STATS_REF = doc(db, 'analytics', 'stats');
+const STATS_PATH = 'referee/stats';
+const LOGS_PATH = 'referee/logs';
+const FEEDBACK_PATH = 'referee/feedback';
+const PRESENCE_PATH = 'referee/presence';
+const SESSIONS_PATH = 'referee/sessions';
+
+const statsRef = () => ref(rtdb, STATS_PATH);
+const logsRef = () => ref(rtdb, LOGS_PATH);
+const feedbackRef = () => ref(rtdb, FEEDBACK_PATH);
+const presenceRef = () => ref(rtdb, PRESENCE_PATH);
+const sessionsRef = () => ref(rtdb, SESSIONS_PATH);
 
 export async function trackQuestion(uid: string) {
   try {
-    await setDoc(STATS_REF, {
+    // Server-side atomic increments: no read needed, safe under owner-only reads.
+    await update(statsRef(), {
       totalQuestions: increment(1),
-      perUser: {
-        [uid]: increment(1)
-      }
-    }, { merge: true });
+      [`perUser/${uid}`]: increment(1),
+    });
   } catch (e) {
     console.warn("trackQuestion failed:", e);
   }
@@ -20,18 +57,16 @@ export async function trackQuestion(uid: string) {
 // NOT the shared `users` collection of the main team app.
 export async function trackRefereeUser(uid: string) {
   try {
-    await setDoc(STATS_REF, {
-      refereeUsers: {
-        [uid]: Date.now()
-      }
-    }, { merge: true });
+    await update(statsRef(), {
+      [`refereeUsers/${uid}`]: rtdbTimestamp(),
+    });
   } catch (e) {
     console.warn("trackRefereeUser failed:", e);
   }
 }
 
 // Log every question + answer pair so the head referees can review them
-// from the hidden logs screen (5 quick taps on "Developed By", code "FLL").
+// from the hidden logs screen (tools menu, code "fLl").
 export async function logRefereeQA(payload: {
   question: string;
   answer: string;
@@ -42,10 +77,15 @@ export async function logRefereeQA(payload: {
   ok?: boolean;
 }) {
   try {
-    await addDoc(collection(db, 'referee_logs'), {
-      ...payload,
+    await push(logsRef(), {
+      question: payload.question,
+      answer: payload.answer || '',
+      season: payload.season || '',
+      language: payload.language || '',
       uid: payload.uid || 'anon',
-      createdAt: serverTimestamp(),
+      model: payload.model || '',
+      ok: payload.ok !== false,
+      createdAt: rtdbTimestamp(),
     });
   } catch (e) {
     console.warn("logRefereeQA failed:", e);
@@ -53,7 +93,7 @@ export async function logRefereeQA(payload: {
 }
 
 // Save user feedback on the virtual referee so the head referees can review it
-// from the hidden feedback page (opened via a link in the analytics panel).
+// from the feedback viewer (opened from the analytics panel).
 export async function logRefereeFeedback(payload: {
   rating: number;
   improvements?: string;
@@ -62,11 +102,18 @@ export async function logRefereeFeedback(payload: {
   language?: string;
 }) {
   try {
-    await addDoc(collection(db, 'referee_feedback'), {
-      ...payload,
+    const entry: Record<string, any> = {
+      rating: payload.rating,
       uid: payload.uid || 'anon',
-      createdAt: serverTimestamp(),
-    });
+      season: payload.season || '',
+      language: payload.language || '',
+      createdAt: rtdbTimestamp(),
+    };
+    // RTDB rejects undefined values, so only include improvements when set.
+    if (typeof payload.improvements === 'string' && payload.improvements.trim()) {
+      entry.improvements = payload.improvements;
+    }
+    await push(feedbackRef(), entry);
   } catch (e) {
     console.warn("logRefereeFeedback failed:", e);
   }
@@ -75,17 +122,20 @@ export async function logRefereeFeedback(payload: {
 export function startPresence(uid: string, deviceId?: string): () => void {
   const devId = deviceId || getDeviceId();
   const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const presenceRef = doc(db, 'presence', sessionId);
-  const touch = () => setDoc(presenceRef, {
+  const pRef = child(presenceRef(), sessionId);
+  const touch = () => set(pRef, {
     uid,
     deviceId: devId,
-    onlineAt: serverTimestamp()
-  }, { merge: true }).catch((e) => console.warn("startPresence failed:", e));
+    onlineAt: rtdbTimestamp()
+  }).catch((e) => console.warn("startPresence failed:", e));
   touch();
+  // RTDB superpower: the server removes our presence automatically when we
+  // disconnect, so no stale docs linger after crashes or closed tabs.
+  onDisconnect(pRef).remove().catch(() => {});
   const heartbeat = setInterval(touch, 30000);
   return () => {
     clearInterval(heartbeat);
-    deleteDoc(presenceRef).catch(() => {});
+    remove(pRef).catch(() => {});
   };
 }
 
@@ -93,40 +143,34 @@ export function startPresence(uid: string, deviceId?: string): () => void {
 // that currently owns the active session for that user (see registerSession).
 // This filters out stale/leftover docs from old tabs, other devices and 'anon'.
 export function onOnlineUsersChange(callback: (count: number) => void): () => void {
-  const freshPresence: { uid: string; deviceId?: string }[] = [];
-  const activeByUid: Record<string, string> = {};
+  let presence: { uid: string; deviceId?: string; onlineAt?: number }[] = [];
+  let activeByUid: Record<string, string> = {};
 
-  const push = () => {
+  const pushCount = () => {
+    const cutoff = Date.now() - 120000;
     const counted = new Set<string>();
-    for (const p of freshPresence) {
+    for (const p of presence) {
+      if (!p.uid) continue;
+      if (p.onlineAt && p.onlineAt < cutoff) continue;
       const active = activeByUid[p.uid];
       if (active && p.deviceId === active) counted.add(p.uid);
     }
     callback(counted.size);
   };
 
-  const unsubPresence = onSnapshot(collection(db, 'presence'), (snap) => {
-    const now = Timestamp.now();
-    const cutoff = new Timestamp(now.seconds - 120, now.nanoseconds);
-    freshPresence.length = 0;
-    snap.docs.forEach(d => {
-      const data = d.data();
-      const uid = data?.uid;
-      if (!uid) return;
-      // Ignore stale docs left behind by tabs/sessions that closed uncleanly
-      if (!data.onlineAt || data.onlineAt.seconds < cutoff.seconds) return;
-      freshPresence.push({ uid, deviceId: data.deviceId });
-    });
-    push();
+  const unsubPresence = onValue(presenceRef(), (snap: DataSnapshot) => {
+    const val = snap.val() || {};
+    presence = Object.values(val) as { uid: string; deviceId?: string; onlineAt?: number }[];
+    pushCount();
   }, (err) => console.warn("presence snapshot failed:", err));
 
-  const unsubSessions = onSnapshot(collection(db, 'sessions'), (snap) => {
-    for (const k of Object.keys(activeByUid)) delete activeByUid[k];
-    snap.docs.forEach(d => {
-      const data = d.data();
-      if (data?.deviceId) activeByUid[d.id] = data.deviceId;
-    });
-    push();
+  const unsubSessions = onValue(sessionsRef(), (snap: DataSnapshot) => {
+    const val = snap.val() || {};
+    activeByUid = {};
+    for (const [uid, data] of Object.entries(val) as [string, any][]) {
+      if (data?.deviceId) activeByUid[uid] = data.deviceId;
+    }
+    pushCount();
   }, (err) => console.warn("sessions snapshot failed:", err));
 
   return () => { unsubPresence(); unsubSessions(); };
@@ -138,29 +182,16 @@ export async function getAnalytics(): Promise<{
   activeUsers: number;
   avgPerUser: number;
 }> {
-  const statsSnap = await getDocFromServer(STATS_REF);
-  const stats = statsSnap.exists() ? statsSnap.data() : {};
-  const totalQuestions = stats.totalQuestions || 0;
+  const snap = await get(statsRef());
+  const stats = snap.exists() ? (snap.val() as any) : {};
+  const totalQuestions = Number(stats.totalQuestions) || 0;
   const perUser = stats.perUser || {};
   const activeUsers = Object.keys(perUser).length;
-
-  // Clean up any legacy dotted fields (e.g. "refereeUsers.abc") that were
-  // written before we switched to a properly nested map.
-  try {
-    const legacy = Object.keys(stats).filter(k => k.startsWith('refereeUsers.'));
-    if (legacy.length > 0) {
-      const deletes: Record<string, any> = {};
-      legacy.forEach(k => { deletes[k] = deleteField(); });
-      await updateDoc(STATS_REF, deletes);
-    }
-  } catch (e) {
-    console.warn("legacy cleanup failed:", e);
-  }
 
   // Count the virtual referee's OWN users (its own login), not the main team app's users.
   const refereeUserIds = new Set<string>(Object.keys(stats.refereeUsers || {}));
   try {
-    const usersSnap = await getDocsFromServer(collection(db, 'users'));
+    const usersSnap = await fsGetDocs(collection(db, 'users'));
     for (const d of usersSnap.docs) {
       const id = d.id;
       if (/^(member|parent|mentor|admin)_/.test(id)) continue;
@@ -177,9 +208,9 @@ export async function getAnalytics(): Promise<{
 
 export async function removeRefereeUser(uid: string) {
   try {
-    await updateDoc(STATS_REF, {
-      [`refereeUsers.${uid}`]: deleteField(),
-      [`perUser.${uid}`]: deleteField(),
+    await update(statsRef(), {
+      [`refereeUsers/${uid}`]: null,
+      [`perUser/${uid}`]: null,
     });
   } catch (e) {
     console.warn("removeRefereeUser failed:", e);
@@ -188,7 +219,8 @@ export async function removeRefereeUser(uid: string) {
 
 export async function resetQuestions() {
   try {
-    await setDoc(STATS_REF, { totalQuestions: 0, perUser: {} }, { merge: true });
+    await remove(child(statsRef(), 'perUser'));
+    await set(child(statsRef(), 'totalQuestions'), 0);
   } catch (e) {
     console.warn("resetQuestions failed:", e);
   }
@@ -201,26 +233,27 @@ export type AnalyticsStats = {
   avgPerUser: number;
 };
 
-// Real-time analytics via Firestore listeners (no polling).
+// Real-time analytics via RTDB listeners (no polling).
 export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): () => void {
   let lastStats: any = null;
   let lastRefereeIds = new Set<string>();
 
-  const push = () => {
+  const pushStats = () => {
     if (!lastStats) return;
-    const totalQuestions = lastStats.totalQuestions || 0;
+    const totalQuestions = Number(lastStats.totalQuestions) || 0;
     const perUser = lastStats.perUser || {};
     const activeUsers = Object.keys(perUser).length;
     const avgPerUser = activeUsers > 0 ? totalQuestions / activeUsers : 0;
     callback({ totalQuestions, registeredUsers: lastRefereeIds.size, activeUsers, avgPerUser });
   };
 
-  const unsubStats = onSnapshot(STATS_REF, (snap) => {
-    lastStats = snap.data() || {};
-    push();
+  const unsubStats = onValue(statsRef(), (snap: DataSnapshot) => {
+    lastStats = snap.val() || {};
+    pushStats();
   }, (err) => console.warn("analytics stats snapshot failed:", err));
 
-  const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+  // Legacy user docs live in the shared Firestore `users` collection.
+  const unsubUsers = fsOnSnapshot(collection(db, 'users'), (snap) => {
     const ids = new Set<string>(Object.keys(lastStats?.refereeUsers || {}));
     snap.docs.forEach(d => {
       const id = d.id;
@@ -228,7 +261,7 @@ export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): (
       ids.add(id);
     });
     lastRefereeIds = ids;
-    push();
+    pushStats();
   }, (err) => console.warn("analytics users snapshot failed:", err));
 
   return () => { unsubStats(); unsubUsers(); };
@@ -246,15 +279,15 @@ export function getDeviceId(): string {
   return id;
 }
 
-const SESSION_REF = (uid: string) => doc(db, 'sessions', uid);
+const sessionRef = (uid: string) => child(sessionsRef(), uid);
 
 // Claim the session for this device. Called on login.
 export async function registerSession(uid: string, deviceId: string) {
   try {
-    await setDoc(SESSION_REF(uid), {
+    await set(sessionRef(uid), {
       deviceId,
-      claimedAt: serverTimestamp()
-    }, { merge: true });
+      claimedAt: rtdbTimestamp()
+    });
   } catch (e) {
     console.warn("registerSession failed:", e);
   }
@@ -263,13 +296,148 @@ export async function registerSession(uid: string, deviceId: string) {
 // Listen for another device claiming the same user. Calls onKicked exactly once.
 export function watchSession(uid: string, myDeviceId: string, onKicked: () => void): () => void {
   let kicked = false;
-  return onSnapshot(SESSION_REF(uid), (snap) => {
+  return onValue(sessionRef(uid), (snap: DataSnapshot) => {
     if (kicked) return;
-    const data = snap.data();
+    const data = snap.val();
     if (!data || !data.deviceId) return;
     if (data.deviceId !== myDeviceId) {
       kicked = true;
       onKicked();
     }
   }, (err) => console.warn("session watch failed:", err));
+}
+
+// ===== One-time migration: Firestore -> RTDB (owner only, idempotent) =====
+
+function fsTimestampToMs(v: any): number | null {
+  if (v == null) return null;
+  try {
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.toDate === 'function') {
+      const t = v.toDate().getTime();
+      return isNaN(t) ? null : t;
+    }
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+    if (typeof v === 'number') return v < 1e11 ? v * 1000 : v;
+    if (typeof v === 'string') {
+      const t = new Date(v).getTime();
+      return isNaN(t) ? null : t;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+const numOr = (v: any, fallback: number): number => {
+  const n = Number(v);
+  return isNaN(n) ? fallback : n;
+};
+
+function chunkEntries(entries: [string, any][], size: number): [string, any][][] {
+  const out: [string, any][][] = [];
+  for (let i = 0; i < entries.length; i += size) out.push(entries.slice(i, i + size));
+  return out;
+}
+
+export async function migrateFirestoreToRtdb(onProgress?: (msg: string) => void): Promise<{
+  logs: number;
+  feedback: number;
+  skippedFeedback: number;
+  statsMerged: boolean;
+}> {
+  const say = (m: string) => { try { onProgress?.(m); } catch { /* noop */ } };
+  let logs = 0;
+  let feedback = 0;
+  let skippedFeedback = 0;
+  let statsMerged = false;
+
+  // 1. Merge stats (max wins, union of maps) so re-runs are safe.
+  say('קורא סטטיסטיקות מ-Firestore...');
+  const fsStatsSnap = await fsGetDoc(doc(db, 'analytics', 'stats'));
+  const fsStats: any = fsStatsSnap.exists() ? fsStatsSnap.data() : {};
+  const rtStatsSnap = await get(statsRef());
+  const rtStats: any = rtStatsSnap.exists() ? rtStatsSnap.val() : {};
+  const merged: Record<string, any> = {
+    [`${STATS_PATH}/totalQuestions`]: Math.max(numOr(fsStats.totalQuestions, 0), numOr(rtStats.totalQuestions, 0)),
+  };
+  const perUser: Record<string, number> = { ...((rtStats.perUser || {}) as Record<string, number>) };
+  for (const [k, v] of Object.entries((fsStats.perUser || {}) as Record<string, any>)) {
+    perUser[k] = Math.max(numOr(v, 0), numOr(perUser[k], 0));
+  }
+  merged[`${STATS_PATH}/perUser`] = perUser;
+  const refUsers: Record<string, number> = { ...((rtStats.refereeUsers || {}) as Record<string, number>) };
+  for (const [k, v] of Object.entries((fsStats.refereeUsers || {}) as Record<string, any>)) {
+    if (k.includes('.')) continue; // skip legacy dotted keys
+    refUsers[k] = Math.max(numOr(v, 0), numOr(refUsers[k], 0));
+  }
+  merged[`${STATS_PATH}/refereeUsers`] = refUsers;
+  say('כותב סטטיסטיקות ממוזגות ל-Realtime...');
+  await update(ref(rtdb), merged);
+  statsMerged = true;
+
+  // 2. Copy journal entries, keyed by Firestore doc ID (idempotent).
+  say('מעתיק יומן שאלות מ-Firestore...');
+  const logsSnap = await fsGetDocs(fsQuery(collection(db, 'referee_logs'), fsOrderBy('createdAt', 'desc'), fsLimit(500)));
+  const logEntries: [string, any][] = [];
+  logsSnap.docs.forEach(d => {
+    const v = d.data() as any;
+    if (!v.question) return;
+    logEntries.push([`${LOGS_PATH}/${d.id}`, {
+      question: String(v.question),
+      answer: typeof v.answer === 'string' ? v.answer : '',
+      season: v.season || '',
+      language: v.language || '',
+      uid: v.uid || 'anon',
+      model: v.model || '',
+      ok: v.ok !== false,
+      createdAt: fsTimestampToMs(v.createdAt) || Date.now(),
+    }]);
+  });
+  for (const chunk of chunkEntries(logEntries, 50)) {
+    await update(ref(rtdb), Object.fromEntries(chunk));
+    logs += chunk.length;
+    say(`הועתקו ${logs} רשומות יומן...`);
+  }
+
+  // 3. Copy feedback entries (skip invalid ratings so one bad doc can't fail a chunk).
+  say('מעתיק פידבקים מ-Firestore...');
+  const fbSnap = await fsGetDocs(fsQuery(collection(db, 'referee_feedback'), fsOrderBy('createdAt', 'desc'), fsLimit(500)));
+  const fbEntries: [string, any][] = [];
+  fbSnap.docs.forEach(d => {
+    const v = d.data() as any;
+    const rating = Number(v.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      skippedFeedback++;
+      return;
+    }
+    const entry: Record<string, any> = {
+      rating,
+      uid: v.uid || 'anon',
+      season: v.season || '',
+      language: v.language || '',
+      createdAt: fsTimestampToMs(v.createdAt) || Date.now(),
+    };
+    if (typeof v.improvements === 'string' && v.improvements.trim()) {
+      entry.improvements = v.improvements;
+    }
+    fbEntries.push([`${FEEDBACK_PATH}/${d.id}`, entry]);
+  });
+  for (const chunk of chunkEntries(fbEntries, 50)) {
+    await update(ref(rtdb), Object.fromEntries(chunk));
+    feedback += chunk.length;
+    say(`הועתקו ${feedback} פידבקים...`);
+  }
+
+  say('המיגרציה הסתיימה.');
+  return { logs, feedback, skippedFeedback, statsMerged };
+}
+
+// Realtime ordered queries shared by the journal and feedback viewers.
+export function logsQuery(limit = 200) {
+  return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));
+}
+
+export function feedbackQuery(limit = 300) {
+  return rtdbQuery(feedbackRef(), orderByChild('createdAt'), limitToLast(limit));
 }

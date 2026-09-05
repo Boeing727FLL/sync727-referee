@@ -1,0 +1,54 @@
+{
+  "rules": {
+    "referee": {
+      "stats": {
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        "totalQuestions": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "perUser": {
+          "$uid": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        },
+        "refereeUsers": {
+          "$uid": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          }
+        }
+      },
+      "logs": {
+        ".read": "auth != null",
+        ".indexOn": ["createdAt"],
+        "$logId": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+          ".validate": "newData.hasChildren(['question', 'uid', 'createdAt']) && newData.child('question').isString() && newData.child('question').val().length > 0 && newData.child('question').val().length < 2000 && (!newData.hasChild('answer') || (newData.child('answer').isString() && newData.child('answer').val().length < 20000))"
+        }
+      },
+      "feedback": {
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        ".indexOn": ["createdAt"],
+        "$fbId": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+          ".validate": "newData.hasChildren(['rating', 'uid', 'createdAt']) && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5"
+        }
+      },
+      "presence": {
+        ".read": "auth != null",
+        "$sessionId": {
+          ".write": "auth != null"
+        }
+      },
+      "sessions": {
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+          ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')"
+        }
+      }
+    }
+  }
+}

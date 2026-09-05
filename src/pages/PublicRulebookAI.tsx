@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square, Check } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, rtdb } from '../lib/firebase';
+import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
 import { GeminiService } from '../services/geminiService';
 import { s3Client, R2_BUCKET_NAME, getPublicUrl } from '../lib/r2';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -430,8 +431,8 @@ export default function PublicRulebookAI() {
       return;
     }
     try {
-      await deleteDoc(doc(db, 'sessions', uid));
-    } catch { /* session doc may not exist */ }
+      await rtdbRemove(rtdbRef(rtdb, `referee/sessions/${uid}`));
+    } catch { /* session may not exist */ }
     await removeRefereeUser(uid);
     try { await logout(); } catch { /* ignore */ }
     localStorage.removeItem('google_access_token');
