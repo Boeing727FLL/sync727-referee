@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -1393,23 +1393,26 @@ const fetchLatestRulebook = async () => {
           if (isThinking) {
             return (
               <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-                <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
-                  <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
+                <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0">
+                  <motion.span
+                    className="absolute inset-0 rounded-full border-2 border-yellow-400/60"
+                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.6, ease: 'easeOut' }}
+                    aria-hidden
+                  />
+                  <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+                    <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
+                  </div>
                 </div>
                 <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      {[0, 1, 2].map((i) => (
-                        <motion.span
-                          key={i}
-                          className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"
-                          style={{ boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
-                          animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
-                          transition={{ repeat: Infinity, duration: 1.0, delay: i * 0.15, ease: 'easeInOut' }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs font-bold text-slate-300">{t('chat.thinking')}</span>
+                    <motion.span
+                      className="text-xs font-bold bg-gradient-to-l from-slate-400 via-white to-slate-400 bg-[length:200%_100%] bg-clip-text text-transparent"
+                      animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                      transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+                    >
+                      {t('chat.thinking')}
+                    </motion.span>
                   </div>
                   {thinkContent && (
                     <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">
@@ -1435,8 +1438,10 @@ const fetchLatestRulebook = async () => {
                   (user?.picture || localStorage.getItem('user_picture')) ? (
                     <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-white/10 border border-white/15 flex items-center justify-center">
-                      <User className="w-4 h-4 md:w-4.5 md:h-4.5 text-slate-300" />
+                    <div className="w-full h-full rounded-full bg-yellow-400 border-2 border-slate-950 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                      <span className="text-xs md:text-sm font-black text-slate-950">
+                        {(displayUser?.name || 'U').trim().charAt(0)}
+                      </span>
                     </div>
                   )
                 ) : (
@@ -1527,46 +1532,30 @@ const fetchLatestRulebook = async () => {
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
-              <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
+            <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0">
+              <motion.span
+                className="absolute inset-0 rounded-full border-2 border-yellow-400/60"
+                animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: 'easeOut' }}
+                aria-hidden
+              />
+              <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+                <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
+              </div>
             </div>
             <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <motion.span
-                    key={i}
-                    className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400"
-                    style={{ boxShadow: '0 0 10px rgba(250,204,21,0.8)' }}
-                    animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 1.0, delay: i * 0.15, ease: 'easeInOut' }}
-                  />
-                ))}
-              </div>
-              <span className="text-xs md:text-sm font-bold text-slate-300">{t('chat.thinking2')}</span>
+              <motion.span
+                className="text-xs md:text-sm font-bold bg-gradient-to-l from-slate-400 via-white to-slate-400 bg-[length:200%_100%] bg-clip-text text-transparent"
+                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+              >
+                {t('chat.thinking2')}
+              </motion.span>
             </div>
           </motion.div>
         )}
         </div>
       </div>
-
-      {/* Quick Actions - soft AI suggestion pills (hidden while hero shows them) */}
-      {!heroActive && (
-      <div className="relative z-10 shrink-0">
-        <div className="w-full px-3 md:px-10 pb-2.5 flex gap-2 md:gap-2.5 overflow-x-auto no-scrollbar">
-          {quickQuestions.map((q, i) => (
-            <button
-              key={i}
-              onClick={() => handleSend(q)}
-              disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
-              className="shrink-0 inline-flex items-center gap-2 whitespace-nowrap px-4 md:px-5 py-2.5 bg-white/[0.06] hover:bg-yellow-400/15 text-slate-200 hover:text-yellow-100 border border-white/10 hover:border-yellow-400/40 rounded-full text-xs md:text-[13px] font-bold backdrop-blur-xl transition-all duration-300 hover:shadow-[0_4px_16px_rgba(250,204,21,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 shrink-0" aria-hidden />
-              {q}
-            </button>
-          ))}
-        </div>
-      </div>
-      )}
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
