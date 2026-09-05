@@ -1040,8 +1040,11 @@ const fetchLatestRulebook = async () => {
           return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
         });
       } else {
+        // Owner questions are invisible to analytics: not counted and not
+        // logged to the journal.
         // Count only questions that actually got an answer: stopped or
         // failed requests never reach here, so they are not counted.
+        if (!isCurrentUserOwner()) {
         trackQuestion(resolveRefereeUid() || 'anon');
         logRefereeQA({
           question: userMessage,
@@ -1052,6 +1055,7 @@ const fetchLatestRulebook = async () => {
           model: 'gemini-3.6-flash',
           ok: true,
         });
+        }
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model') return prev;
