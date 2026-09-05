@@ -45,23 +45,7 @@ function parsePcmRate(mimeType: string, fallback: number): number {
   return fallback;
 }
 
-const MIC_WORKLET = `
-class MicProc extends AudioWorkletProcessor {
-  process(inputs) {
-    const ch = inputs && inputs[0] && inputs[0][0];
-    if (ch && ch.length > 0) {
-      const pcm = new Int16Array(ch.length);
-      for (let i = 0; i < ch.length; i++) {
-        const s = Math.max(-1, Math.min(1, ch[i]));
-        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      this.port.postMessage(pcm.buffer, [pcm.buffer]);
-    }
-    return true;
-  }
-}
-registerProcessor('live-mic-proc', MicProc);
-`;
+
 
 // ---------- Hebrew live-judge system prompt ----------
 
@@ -91,6 +75,9 @@ ${corrections ? `\nתיקוני שופט רשמיים שחובה לציית לה
 
 // ---------- rulebook pages from R2 ----------
 
+// Rulebook reference for the live judge: pre-rendered R2 image sets, same
+// flow as the text judge. 404s while probing are expected: they are how we
+// detect the last page (3 consecutive misses stop the scan).
 async function fetchRulebookPages(
   files: { name: string; url: string }[],
   onProgress: (loaded: number) => void,
@@ -363,10 +350,11 @@ export class LiveRefereeSession {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     this.micCtx = new AC({ sampleRate: 16000 });
     try {
-      const blob = new Blob([MIC_WORKLET], { type: 'application/javascript' });
-      await this.micCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+      // Same-origin static file: allowed by the CSP (blob: workers are not).
+      const base = (import.meta.env?.BASE_URL as string) || '/';
+      await this.micCtx.audioWorklet.addModule(`${base}live-mic-worklet.js`);
     } catch (e) {
-      throw new Error('הדפדפן לא תומך בעיבוד שמע חי. נסה כרום מעודכן.');
+      throw new Error('טעינת מעבד השמע נכשלה. נסה כרום מעודכן.');
     }
     const src = this.micCtx.createMediaStreamSource(this.micStream);
     this.micNode = new AudioWorkletNode(this.micCtx, 'live-mic-proc');
