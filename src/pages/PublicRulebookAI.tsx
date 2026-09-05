@@ -1201,7 +1201,7 @@ const fetchLatestRulebook = async () => {
                         </a>
                         <div className="h-px bg-white/60 my-1" />
                         <button
-                          onClick={() => { setShowUserMenu(false); setShowLangMenu(true); }}
+                          onClick={() => setShowLangMenu(true)}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Globe className="w-4 h-4 text-slate-500" />
