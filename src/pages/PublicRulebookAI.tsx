@@ -136,7 +136,6 @@ export default function PublicRulebookAI() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [chatStarted, setChatStarted] = useState<boolean>(false);
-  const [showEnterAnimation, setShowEnterAnimation] = useState<boolean>(false);
   const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
   const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
@@ -213,19 +212,16 @@ export default function PublicRulebookAI() {
   const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
 
   const handleDisclaimerConfirm = () => {
-    // Everything in a single tick: modal and intro fade out together while
-    // the chat fades in and the typewriter starts at once. No staged timers,
-    // so nothing ever sits stuck or flashes before animating.
+    // No animation on the chat itself. The disclaimer modal slides down
+    // beautifully and the chat is simply already there underneath it.
     if (pendingEnterChat) {
       window.history.replaceState({}, '', '/');
       setPendingEnterChat(false);
     }
-    setShowEnterAnimation(true);
     setShowDisclaimer(false);
     setShowIntro(false);
     setChatStarted(true);
     setTypewriterReady(true);
-    setTimeout(() => setShowEnterAnimation(false), 1100);
   };
 
   const handleIntroContinue = () => {
@@ -1078,11 +1074,7 @@ const fetchLatestRulebook = async () => {
 
   return (
     <motion.div
-      initial={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      animate={showEnterAnimation
-        ? { opacity: [0, 1], scale: [0.98, 1], filter: ['blur(6px)', 'blur(0px)'] }
-        : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 1.0, ease: 'easeOut' }}
+      initial={false}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
       {/* FLL field backdrop: faint game mat + grid + FIRST color glows */}
