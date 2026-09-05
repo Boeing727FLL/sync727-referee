@@ -201,10 +201,15 @@ export default function PublicRulebookAI() {
       .catch(() => {});
   }, []);
 
-  // Auto-enter chat after login — always show mandatory disclaimer before entering
+  // Auto-enter chat after login — always show mandatory disclaimer before entering.
+  // The intro is hidden right away so the disclaimer sits over the referee
+  // itself, never over the intro screen.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
+      window.history.replaceState({}, '', '/');
+      setShowIntro(false);
+      setChatStarted(true);
       setPendingEnterChat(true);
       setShowDisclaimer(true);
     }
