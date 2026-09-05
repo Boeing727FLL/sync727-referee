@@ -16,9 +16,11 @@ import {
   CalendarDays,
   ArrowDownWideNarrow,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { isCurrentUserOwner } from '../lib/owner';
 
 interface RefereeLogsModalProps {
   isOpen: boolean;
@@ -94,6 +96,13 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmOld, setConfirmOld] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  // Deletes require a live owner Firebase session. The journal can render
+  // stale local-cache entries without one, so gate the buttons explicitly
+  // instead of failing silently on the server.
+  const canDelete = isCurrentUserOwner();
 
   useEffect(() => {
     if (!isOpen) {
@@ -111,6 +120,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   useEffect(() => {
     if (!unlocked) return;
     setLoading(true);
+    setLoadError(false);
     const q = query(collection(db, 'referee_logs'), orderBy('createdAt', 'desc'), limit(200));
     const unsub = onSnapshot(
       q,
@@ -133,7 +143,11 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         setLogs(entries);
         setLoading(false);
       },
-      () => setLoading(false)
+      (err) => {
+        console.error('referee logs snapshot failed:', err);
+        setLoadError(true);
+        setLoading(false);
+      }
     );
     return () => unsub();
   }, [unlocked]);
@@ -157,6 +171,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   };
 
   const handleDelete = async (id: string) => {
+    setDeleteError(null);
+    setDeletingId(id);
     try {
       await deleteDoc(doc(db, 'referee_logs', id));
       setExpanded((prev) => {
@@ -164,8 +180,12 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         next.delete(id);
         return next;
       });
-    } catch {
-      return;
+    } catch (err) {
+      console.error('referee log delete failed:', err);
+      setDeleteError('המחיקה נכשלה. בדוק חיבור לאינטרנט וודא שאתה מחובר עם חשבון הבעלים, ונסה שוב.');
+      setTimeout(() => setDeleteError(null), 6000);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -187,7 +207,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         }
       }
       if (n > 0) await batch.commit();
-    } catch {
+    } catch (err) {
+      console.error('referee log bulk clean failed:', err);
+      setDeleteError('ניקוי הרשומות הישנות נכשל. ודא חיבור כבעלים ונסה שוב.');
+      setTimeout(() => setDeleteError(null), 6000);
       return;
     } finally {
       setCleaning(false);
@@ -389,7 +412,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                       )}
                       <button
                         onClick={cleanOldLogs}
-                        disabled={cleaning || logs.length === 0}
+                        disabled={cleaning || logs.length === 0 || !canDelete}
+                        title={canDelete ? undefined : 'ניקוי לבעלים בלבד'}
                         className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-red-300 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
                       >
                         {cleaning ? 'מנקה' : confirmOld ? 'לחצו שוב למחיקת ישנות מ90 יום' : 'נקה ישנות מ90 יום'}
@@ -399,6 +423,22 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                       </span>
                     </div>
                   </div>
+
+                  {!canDelete && (
+                    <div className="mx-4 md:mx-5 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-bold text-amber-200 shrink-0">
+                      צפייה בלבד — מחיקה דורשת חיבור עם חשבון הבעלים. הרשומות עשויות להיות ממטמון מקומי.
+                    </div>
+                  )}
+                  {loadError && (
+                    <div className="mx-4 md:mx-5 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs font-bold text-red-200 shrink-0">
+                      טעינת היומן מהשרת נכשלה — בדוק חיבור לאינטרנט והרשאות.
+                    </div>
+                  )}
+                  {deleteError && (
+                    <div className="mx-4 md:mx-5 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs font-bold text-red-200 shrink-0">
+                      {deleteError}
+                    </div>
+                  )}
 
                   <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4 space-y-3">
                     {loading ? (
@@ -463,10 +503,15 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                                     e.stopPropagation();
                                     handleDelete(entry.id);
                                   }}
-                                  className="p-2 rounded-xl text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
-                                  title="מחיקת רשומה"
+                                  disabled={deletingId === entry.id || !canDelete}
+                                  className="p-2 rounded-xl text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-500 disabled:hover:bg-transparent"
+                                  title={canDelete ? 'מחיקת רשומה' : 'מחיקה לבעלים בלבד'}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  {deletingId === entry.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
                                 </button>
                                 <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                                   {isExpanded ? (
