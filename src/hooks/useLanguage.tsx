@@ -72,7 +72,7 @@ const translations: TranslationsDict = {
     'auth.logout': 'התנתק',
     'auth.login': 'התחברות',
     'auth.logoutConfirmTitle': 'התנתקות מהמערכת',
-    'auth.logoutConfirmMsg': 'האם אתה בטוח שברצונך להתנתק מהמ system?',
+    'auth.logoutConfirmMsg': 'האם אתה בטוח שברצונך להתנתק מהמערכת?',
     'auth.logoutConfirmYes': 'כן, התנתק',
     'auth.logoutConfirmNo': 'ביטול',
     'auth.loginTitle': 'התחברות',

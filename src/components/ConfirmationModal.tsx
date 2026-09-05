@@ -25,22 +25,25 @@ export default function ConfirmationModal({
 }: ConfirmationModalProps) {
   const colors = {
     danger: {
-      bg: 'bg-red-500/20',
-      icon: 'text-red-500',
-      button: 'bg-red-500 hover:bg-red-600 shadow-red-500/20',
-      border: 'border-red-500/50'
+      bg: 'bg-red-500/15',
+      icon: 'text-red-400',
+      button: 'bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white shadow-[0_8px_24px_rgba(239,68,68,0.35)]',
+      border: 'border-red-500/30',
+      glow: 'bg-red-500/20'
     },
     warning: {
-      bg: 'bg-orange-500/20',
-      icon: 'text-orange-500',
-      button: 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20',
-      border: 'border-orange-500/50'
+      bg: 'bg-gradient-to-br from-yellow-300 to-amber-500',
+      icon: 'text-slate-950',
+      button: 'bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_8px_24px_rgba(250,204,21,0.3)]',
+      border: 'border-yellow-400/30',
+      glow: 'bg-yellow-400/20'
     },
     info: {
-      bg: 'bg-blue-500/20',
-      icon: 'text-blue-500',
-      button: 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/20',
-      border: 'border-blue-500/50'
+      bg: 'bg-blue-500/15',
+      icon: 'text-blue-400',
+      button: 'bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white shadow-[0_8px_24px_rgba(59,130,246,0.35)]',
+      border: 'border-blue-500/30',
+      glow: 'bg-blue-500/20'
     }
   };
 
@@ -57,35 +60,39 @@ export default function ConfirmationModal({
           dir="rtl"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{ scale: 0.92, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 26 }}
             onClick={e => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.6)] w-full max-w-sm overflow-hidden"
           >
-            <div className="p-6 text-center space-y-4">
-              <div className={`w-16 h-16 ${color.bg} rounded-full flex items-center justify-center mx-auto`}>
-                <AlertTriangle className={`w-8 h-8 ${color.icon}`} />
+            <div className="p-6 md:p-7 text-center">
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className={`absolute -inset-3 ${color.glow} blur-xl rounded-full pointer-events-none`} aria-hidden />
+                <div className={`relative w-full h-full ${color.bg} rounded-full flex items-center justify-center border ${color.border}`}>
+                  <AlertTriangle className={`w-7 h-7 ${color.icon}`} />
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white">{title}</h3>
-              <p className="text-slate-400">{message}</p>
-            </div>
-            <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex gap-3 justify-center">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg text-slate-400 hover:text-white font-bold transition-colors"
-              >
-                {cancelText}
-              </button>
-              <button
-                onClick={() => {
-                  onConfirm();
-                  onClose();
-                }}
-                className={`px-6 py-2 rounded-lg ${color.button} text-white font-bold transition-colors shadow-lg`}
-              >
-                {confirmText}
-              </button>
+              <h3 className="text-xl font-black text-white tracking-tight">{title}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed mt-2">{message}</p>
+              <div className="flex gap-2.5 mt-6">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-bold text-sm transition-all cursor-pointer"
+                >
+                  {cancelText}
+                </button>
+                <button
+                  onClick={() => {
+                    onConfirm();
+                    onClose();
+                  }}
+                  className={`flex-1 px-4 py-3 rounded-xl ${color.button} font-black text-sm transition-all active:scale-[0.98] cursor-pointer`}
+                >
+                  {confirmText}
+                </button>
+              </div>
             </div>
           </motion.div>
         </motion.div>
