@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { PrivacyContent } from '../components/PrivacyModal';
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
@@ -19,24 +20,8 @@ export default function PrivacyPage() {
           </div>
           <h1 className="text-2xl font-black text-white">מדיניות פרטיות</h1>
         </div>
-        <div className="space-y-4 text-sm leading-relaxed">
-          <p>
-            שופט הזירה הווירטואלי שומר את המידע הדרוש להפעלת השירות בלבד.
-            בעת הרשמה נשמרים כתובת האימייל והשם שהזנתם.
-            שאלות ותשובות נשמרות ביומן פנימי כדי שהשופטים הראשיים יוכלו לבדוק איכות,
-            ומשובים נשמרים כדי לשפר את השירות.
-          </p>
-          <p>
-            רשומות יומן ישנות מ90 יום נמחקות מעת לעת.
-            איננו מוכרים מידע ואיננו משתפים אותו עם גורמים חיצוניים.
-          </p>
-          <p>
-            בכל עת ניתן למחוק את החשבון מתוך האפליקציה, כפתור מחיקת חשבון ליד פרטי המשתמש.
-            המחיקה מסירה את החשבון ואת מסמך המשתמש לצמיתות.
-          </p>
-          <p>
-            לשאלות בנושא פרטיות ניתן לפנות לכתובת boeing727.il@gmail.com.
-          </p>
+        <div className="text-sm leading-relaxed">
+          <PrivacyContent />
         </div>
       </div>
     </div>

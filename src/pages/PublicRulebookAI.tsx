@@ -20,6 +20,7 @@ import JudgeCorrectionsModal from '../components/JudgeCorrectionsModal';
 import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
+import PrivacyModal from '../components/PrivacyModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -120,6 +121,7 @@ export default function PublicRulebookAI() {
 
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
+  const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
   const langBtnRef = useRef<HTMLButtonElement>(null);
@@ -1206,14 +1208,16 @@ const fetchLatestRulebook = async () => {
                           מחיקת חשבון
                         </button>
                         <div className="h-px bg-white/60 my-1" />
-                        <a
-                          href="/privacy"
-                          onClick={() => setShowUserMenu(false)}
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowPrivacy(true);
+                          }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
                           פרטיות
-                        </a>
+                        </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
                           ref={langBtnRef}
@@ -1689,6 +1693,7 @@ const fetchLatestRulebook = async () => {
       </AnimatePresence>
 
       <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
+      <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
 
       <ConfirmationModal
         isOpen={showLogoutConfirm}
