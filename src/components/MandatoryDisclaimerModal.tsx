@@ -16,14 +16,14 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[10001] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
           dir="rtl"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: -160 }}
             animate={{ scale: [0.9, 1.02, 1], opacity: [0, 1, 1], y: [-160, 12, 0] }}
-            exit={{ scale: 0.96, opacity: 0, y: 120 }}
+            exit={{ scale: [1, 0.99, 0.96], opacity: [1, 1, 0], y: [0, 30, 120] }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] }}
             className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             role="dialog"
