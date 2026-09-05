@@ -29,6 +29,10 @@ import { auth } from '../lib/firebase';
 const stripThinkBlocks = (text: string): string =>
   (text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
 
+// System notice shown when the user stops a request. No action buttons
+// (copy/like) are rendered under it.
+const STOPPED_TEXT = 'הפעולה הופסקה על ידי המשתמש.';
+
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -985,7 +989,7 @@ const fetchLatestRulebook = async () => {
           const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
             ? prev.slice(0, -1)
             : prev;
-          return [...trimmed, { role: 'model', text: 'הפעולה הופסקה על ידי המשתמש.' }];
+          return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
         });
       } else {
         logRefereeQA({
@@ -1013,7 +1017,7 @@ const fetchLatestRulebook = async () => {
           const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
             ? prev.slice(0, -1)
             : prev;
-          return [...trimmed, { role: 'model', text: 'הפעולה הופסקה על ידי המשתמש.' }];
+          return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
         });
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
@@ -1545,18 +1549,18 @@ const fetchLatestRulebook = async () => {
                     )}
                   </div>
                 </div>
-                {msg.role === 'model' && idx > 0 && (
+                {msg.role === 'model' && idx > 0 && msg.text !== STOPPED_TEXT && (
                   <div className="flex items-center gap-1.5 px-0.5">
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(finalRenderText);
                         alert(t('chat.copied'));
                       }}
-                      className="text-[10px] md:text-[11px] font-bold text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer"
+                      className="text-[10px] md:text-[11px] font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer"
                     >
                       {t('chat.copy')}
                     </button>
-                    <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer">
+                    <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer">
                       👍
                     </button>
                   </div>
