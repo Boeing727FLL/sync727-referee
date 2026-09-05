@@ -750,6 +750,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
       const collectStreamedText = async (stream: any, onText?: (text: string) => void): Promise<string> => {
         let text = '';
         for await (const event of stream) {
+          if (signal?.aborted) break;
           if (!event || typeof event !== 'object') continue;
           if (event.event_type === 'step.delta' || event.event_type === 'content.delta') {
             const d = event.delta;
@@ -834,15 +835,19 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             system_instruction: activeSystemPrompt,
             stream: isStream,
           };
+          // Wire the abort signal into the real HTTP request so Stop
+          // cancels it in-flight instead of only silencing the UI.
+          const reqOptions: any = signal ? { signal } : undefined;
           if (isStream) {
-            const stream = await client.interactions.create(params);
+            const stream = await client.interactions.create(params, reqOptions);
             return collectStreamedText(stream, onText);
           }
-          return interactionText(await client.interactions.create(params));
+          return interactionText(await client.interactions.create(params, reqOptions));
         }
         // Standard generateContent fallback (gemini-3.5-flash-lite)
         const gcContents = stepsToContents(stepInput);
         const gcConfig: any = { thinkingConfig: { thinkingLevel: 'HIGH' } };
+        if (signal) gcConfig.abortSignal = signal;
         if (stepInput.some((s: any) => (s.content || []).some((c: any) => c.type === 'image'))) {
           gcConfig.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
         }
@@ -855,6 +860,7 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
           });
           let text = '';
           for await (const chunk of stream) {
+            if (signal?.aborted) break;
             if (chunk && chunk.text) {
               text += chunk.text;
               if (onText) onText(chunk.text);
@@ -935,6 +941,9 @@ console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
             success = true;
             break;
           } catch (err: any) {
+            // User pressed Stop: never rotate to the next key/model,
+            // that would fire new requests after the abort.
+            if (signal?.aborted) return '';
             const errMsg = err?.message || JSON.stringify(err);
             if (isKeyInvalidErr(errMsg)) {
               markKeyUnhealthy(key);

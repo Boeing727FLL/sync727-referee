@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -439,6 +439,13 @@ export default function PublicRulebookAI() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Tracks whether the in-flight request already created a partial model
+  // message, so Stop can remove it and no answer ever remains.
+  const requestCreatedModelMsgRef = useRef<boolean>(false);
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+  };
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -853,6 +860,23 @@ const fetchLatestRulebook = async () => {
     }
   };
 
+  // Refund the client-side rate limit when a request is stopped: a
+  // cancelled question should not eat the hourly quota or the 4s gap.
+  // (Google still bills input tokens + whatever was generated — that part
+  // cannot be refunded, abort only stops further output.)
+  const refundRateLimit = () => {
+    try {
+      localStorage.removeItem('referee_last_send');
+      const hour = new Date().toISOString().slice(0, 13);
+      const bucketRaw = localStorage.getItem('referee_hour_bucket');
+      if (!bucketRaw) return;
+      const bucket = JSON.parse(bucketRaw);
+      if (bucket.hour !== hour) return;
+      const count = Math.max(0, (Number(bucket.count) || 0) - 1);
+      localStorage.setItem('referee_hour_bucket', JSON.stringify({ hour, count }));
+    } catch { /* storage unavailable, nothing to refund */ }
+  };
+
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
 
@@ -911,6 +935,7 @@ const fetchLatestRulebook = async () => {
     setLoading(true);
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    requestCreatedModelMsgRef.current = false;
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
@@ -939,6 +964,7 @@ const fetchLatestRulebook = async () => {
               };
             } else {
               newMessages.push({ role: 'model', text: chunkText });
+              requestCreatedModelMsgRef.current = true;
             }
             return newMessages;
           });
@@ -950,10 +976,16 @@ const fetchLatestRulebook = async () => {
       );
       
       if (controller.signal.aborted) {
+        // Stop means stop: drop any partial answer this request streamed
+        // so no answer ever remains, then leave a short stopped notice.
+        const dropPartial = requestCreatedModelMsgRef.current;
+        requestCreatedModelMsgRef.current = false;
+        refundRateLimit();
         setMessages(prev => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+          const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
+            ? prev.slice(0, -1)
+            : prev;
+          return [...trimmed, { role: 'model', text: 'הפעולה הופסקה על ידי המשתמש.' }];
         });
       } else {
         logRefereeQA({
@@ -974,10 +1006,14 @@ const fetchLatestRulebook = async () => {
       }
     } catch (error: any) {
       if (controller.signal.aborted) {
+        const dropPartial = requestCreatedModelMsgRef.current;
+        requestCreatedModelMsgRef.current = false;
+        refundRateLimit();
         setMessages(prev => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
+          const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
+            ? prev.slice(0, -1)
+            : prev;
+          return [...trimmed, { role: 'model', text: 'הפעולה הופסקה על ידי המשתמש.' }];
         });
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
@@ -1571,15 +1607,27 @@ const fetchLatestRulebook = async () => {
             className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-[14px] md:text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
-          <button
-            onClick={() => handleSend()}
-            disabled={loading || isLearning || (isTypewriterActive && !heroActive) || !input.trim()}
-            style={{ flexShrink: 0 }}
-            aria-label={t('chat.send')}
-            className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
-          >
-            <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
-          </button>
+          {loading ? (
+            <button
+              onClick={handleStop}
+              style={{ flexShrink: 0 }}
+              aria-label="עצור"
+              title="עצור"
+              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white shadow-[0_4px_16px_rgba(239,68,68,0.4)] active:scale-95 transition-all cursor-pointer"
+            >
+              <Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleSend()}
+              disabled={loading || isLearning || (isTypewriterActive && !heroActive) || !input.trim()}
+              style={{ flexShrink: 0 }}
+              aria-label={t('chat.send')}
+              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+            >
+              <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
+            </button>
+          )}
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
