@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, Sparkles, BookOpen, History } from 'lucide-react';
+import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ListOrdered, Hand, Cog, Users } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -1002,7 +1002,7 @@ const fetchLatestRulebook = async () => {
     t('chat.suggestion4')
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
-  const heroIcons = [Sparkles, Scale, BookOpen, History];
+  const heroIcons = [ListOrdered, Hand, Cog, Users];
 
   const playWhistleSound = () => {
     try {
@@ -1262,7 +1262,7 @@ const fetchLatestRulebook = async () => {
                 נבנה בהתנדבות על ידי קבוצת Boeing 727
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mt-6 md:mt-8 w-full max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3.5 mt-6 md:mt-8 w-full max-w-2xl">
               {quickQuestions.map((q, i) => {
                 const Icon = heroIcons[i % heroIcons.length];
                 return (
@@ -1270,12 +1270,12 @@ const fetchLatestRulebook = async () => {
                     key={i}
                     onClick={() => handleSend(q)}
                     disabled={loading || isLearning}
-                    className="flex items-center gap-3 text-right px-4 py-3.5 rounded-2xl bg-white/[0.05] hover:bg-yellow-400/10 border border-white/10 hover:border-yellow-400/30 transition-all cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="relative flex items-center gap-3.5 text-right px-4 md:px-5 py-4 rounded-2xl bg-white/[0.05] hover:bg-gradient-to-l hover:from-yellow-400/15 hover:to-white/[0.03] border border-white/10 hover:border-yellow-400/40 border-r-2 border-r-yellow-400/50 hover:border-r-yellow-300 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(250,204,21,0.10)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   >
-                    <span className="shrink-0 w-9 h-9 rounded-xl bg-yellow-400/15 border border-yellow-400/20 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform">
-                      <Icon className="w-4 h-4 md:w-5 md:h-5" />
+                    <span className="shrink-0 w-11 h-11 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300 group-hover:scale-110 group-hover:bg-yellow-400/25 group-hover:shadow-[0_0_18px_rgba(250,204,21,0.35)] transition-all duration-300">
+                      <Icon className="w-5 h-5 md:w-6 md:h-6" />
                     </span>
-                    <span className="text-[13px] md:text-sm font-bold text-slate-200 group-hover:text-white transition-colors">
+                    <span className="text-sm md:text-[15px] font-bold text-slate-200 group-hover:text-white transition-colors duration-300">
                       {q}
                     </span>
                   </button>
@@ -1477,14 +1477,15 @@ const fetchLatestRulebook = async () => {
       {/* Quick Actions - soft AI suggestion pills (hidden while hero shows them) */}
       {!heroActive && (
       <div className="relative z-10 shrink-0">
-        <div className="w-full px-3 md:px-10 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="w-full px-3 md:px-10 pb-2.5 flex gap-2 md:gap-2.5 overflow-x-auto no-scrollbar">
           {quickQuestions.map((q, i) => (
             <button
               key={i}
               onClick={() => handleSend(q)}
               disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
-              className="shrink-0 whitespace-nowrap px-3.5 md:px-4 py-2 bg-white/[0.06] hover:bg-yellow-400/15 text-slate-200 hover:text-yellow-200 border border-white/10 hover:border-yellow-400/30 rounded-full text-[11px] md:text-xs font-bold backdrop-blur-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="shrink-0 inline-flex items-center gap-2 whitespace-nowrap px-4 md:px-5 py-2.5 bg-white/[0.06] hover:bg-yellow-400/15 text-slate-200 hover:text-yellow-100 border border-white/10 hover:border-yellow-400/40 rounded-full text-xs md:text-[13px] font-bold backdrop-blur-xl transition-all duration-300 hover:shadow-[0_4px_16px_rgba(250,204,21,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 shrink-0" aria-hidden />
               {q}
             </button>
           ))}
