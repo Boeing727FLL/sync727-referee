@@ -241,7 +241,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         onChange={(e) => setNewLine(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && addLine()}
                         placeholder="הוספת תיקון חדש"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 text-sm transition-all"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                         dir="auto"
                       />
                       <button
@@ -263,7 +263,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="חיפוש בתיקונים"
-                        className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 text-sm transition-all"
+                           className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                       />
                       {search && (
                         <button
@@ -301,7 +301,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                             onChange={(e) => editLine(o.index, e.target.value)}
                             rows={2}
                             placeholder="כתבו תיקון"
-                            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
+                            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-base md:text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
                             dir="auto"
                           />
                           <button

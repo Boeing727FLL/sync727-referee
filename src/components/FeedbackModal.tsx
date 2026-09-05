@@ -145,7 +145,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
                       onChange={e => setImprovements(e.target.value)}
                       placeholder={labels.improvementsPlaceholder}
                       rows={2}
-                      className="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-500/40 focus:border-yellow-500 resize-none"
+                       className="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-yellow-500/40 focus:border-yellow-500 resize-none"
                     />
                     <p className="text-[11px] text-slate-500 mt-1">{labels.improvementsHint}</p>
                   </div>

@@ -1200,12 +1200,12 @@ const fetchLatestRulebook = async () => {
               <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
             </div>
             <div className="min-w-0">
-                <h1 className="text-[11px] md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
+                <h1 className="text-sm md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
                   {t('app.title')}
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
                 <span className={`w-[6px] h-[6px] md:w-2 md:h-2 rounded-full shrink-0 ${isLearning ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`} />
-                <span className="text-[9px] md:text-xs font-black text-yellow-200 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-2 py-px shadow-[0_0_12px_rgba(250,204,21,0.15)] tracking-wide">
+                <span className="text-[10px] md:text-xs font-black text-yellow-200 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-2 py-px shadow-[0_0_12px_rgba(250,204,21,0.15)] tracking-wide whitespace-nowrap">
                   {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
@@ -1355,15 +1355,15 @@ const fetchLatestRulebook = async () => {
             ) : (
               <button
                 onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
-                className="text-[10px] md:text-xs bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl transition-all shadow-[0_4px_16px_rgba(250,204,21,0.3)] active:scale-95 cursor-pointer flex items-center gap-1"
+                className="text-xs bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black px-3 py-2 md:px-3.5 rounded-xl transition-all shadow-[0_4px_16px_rgba(250,204,21,0.3)] active:scale-95 cursor-pointer flex items-center gap-1 whitespace-nowrap"
               >
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
             <div className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 select-none">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-5 md:h-10 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform" />
-              <div className="h-4 md:h-8 w-px bg-yellow-400/25" />
-              <div className="flex flex-col leading-tight">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-10 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform" />
+              <div className="hidden sm:block h-4 md:h-8 w-px bg-yellow-400/25" />
+              <div className="hidden sm:flex flex-col leading-tight">
                 <span className="text-[6px] md:text-[10px] font-black text-yellow-400/80 uppercase tracking-[0.15em] select-none">Developed By</span>
                 <span className="text-[9px] md:text-base font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[7px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[7px] md:text-xs">Yuval Margalit</span></span>
               </div>
@@ -1405,7 +1405,7 @@ const fetchLatestRulebook = async () => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center text-center py-6 md:py-10"
+            className="flex flex-col items-center text-center py-8 md:py-10"
           >
             <div className="relative mb-4 md:mb-5">
               <div className="absolute -inset-8 bg-yellow-400/20 blur-3xl rounded-full pointer-events-none" aria-hidden />
@@ -1416,7 +1416,7 @@ const fetchLatestRulebook = async () => {
             <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
               {t('intro.subtitle')}
             </h2>
-            <p className="text-sm md:text-base text-slate-400 font-medium mt-2 max-w-xl">
+            <p className="text-sm md:text-base text-slate-400 font-medium mt-3 max-w-xl leading-relaxed px-2">
               {t('intro.descFull')}
             </p>
             <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2.5 rounded-full bg-gradient-to-l from-yellow-400/15 to-white/[0.04] border border-yellow-400/30 backdrop-blur-xl shadow-[0_0_24px_rgba(250,204,21,0.15)]">
@@ -1428,7 +1428,7 @@ const fetchLatestRulebook = async () => {
             <p className="text-[11px] md:text-xs text-yellow-400/70 font-bold mt-2">
               פותח באהבה על ידי קבוצת Boeing 727
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3.5 mt-6 md:mt-8 w-full max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
               {quickQuestions.map((q, i) => {
                 const Icon = heroIcons[i % heroIcons.length];
                 return (
@@ -1436,12 +1436,12 @@ const fetchLatestRulebook = async () => {
                     key={i}
                     onClick={() => handleSend(q)}
                     disabled={loading || isLearning}
-                    className="relative flex items-center gap-3.5 text-right px-4 md:px-5 py-4 rounded-2xl bg-white/[0.05] hover:bg-gradient-to-l hover:from-yellow-400/15 hover:to-white/[0.03] border border-white/10 hover:border-yellow-400/40 border-r-2 border-r-yellow-400/50 hover:border-r-yellow-300 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(250,204,21,0.10)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                    className="relative flex items-center gap-4 text-right px-5 py-5 md:gap-3.5 md:px-5 md:py-4 rounded-3xl md:rounded-2xl bg-gradient-to-l from-white/[0.07] to-white/[0.03] hover:from-yellow-400/15 hover:to-white/[0.03] border border-white/10 hover:border-yellow-400/40 border-r-2 border-r-yellow-400/50 hover:border-r-yellow-300 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:shadow-[0_10px_28px_rgba(250,204,21,0.10)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   >
-                    <span className="shrink-0 w-11 h-11 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300 group-hover:scale-110 group-hover:bg-yellow-400/25 group-hover:shadow-[0_0_18px_rgba(250,204,21,0.35)] transition-all duration-300">
-                      <Icon className="w-5 h-5 md:w-6 md:h-6" />
+                    <span className="shrink-0 w-12 h-12 md:w-11 md:h-11 rounded-2xl md:rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300 group-hover:scale-110 group-hover:bg-yellow-400/25 group-hover:shadow-[0_0_18px_rgba(250,204,21,0.35)] transition-all duration-300">
+                      <Icon className="w-6 h-6 md:w-6 md:h-6" />
                     </span>
-                    <span className="text-sm md:text-[15px] font-bold text-slate-200 group-hover:text-white transition-colors duration-300">
+                    <span className="text-[15px] md:text-[15px] font-bold text-slate-200 group-hover:text-white transition-colors duration-300 leading-relaxed">
                       {q}
                     </span>
                   </button>
@@ -1544,11 +1544,11 @@ const fetchLatestRulebook = async () => {
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
-                      <span className="text-[9px] md:text-[10px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-[10px] md:text-[11px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
-                        <span className="text-[9px] md:text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] md:text-[11px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
                             {t('chat.foulTag')}
                         </span>
                       )}
@@ -1571,7 +1571,7 @@ const fetchLatestRulebook = async () => {
                     </div>
                   )}
 
-                  <div className={`text-[14px] md:text-[16px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
+                  <div className={`text-[15px] md:text-[16px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
@@ -1600,7 +1600,7 @@ const fetchLatestRulebook = async () => {
                           showToast(t('chat.copied'));
                         }
                       }}
-                      className="text-[10px] md:text-[11px] font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer"
+                      className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer"
                     >
                       {t('chat.copy')}
                     </button>
@@ -1642,7 +1642,7 @@ const fetchLatestRulebook = async () => {
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
             disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
             style={{ flex: 1, minWidth: 0 }}
-            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-[14px] md:text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
+            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
           {loading ? (
@@ -1669,7 +1669,7 @@ const fetchLatestRulebook = async () => {
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
-          <p className="text-[10px] text-slate-500 font-medium">
+           <p className="text-[11px] text-slate-500 font-medium">
             נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}
           </p>
         </div>
@@ -1768,7 +1768,7 @@ const fetchLatestRulebook = async () => {
                 value={wipeTyped}
                 onChange={(e) => setWipeTyped(e.target.value)}
                 placeholder={wipePending.season}
-                className="w-full px-4 py-3 rounded-xl border-2 border-red-300 bg-red-50 text-slate-900 font-black text-center tracking-widest outline-none focus:border-red-500 transition-all"
+                className="w-full px-4 py-3 rounded-xl border-2 border-red-300 bg-red-50 text-slate-900 font-black text-base md:text-sm text-center tracking-widest outline-none focus:border-red-500 transition-all"
                 dir="ltr"
               />
               <div className="flex gap-2">
@@ -1820,7 +1820,7 @@ const fetchLatestRulebook = async () => {
               <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
                 <Check className="w-3 h-3 text-emerald-600" strokeWidth={3.5} />
               </span>
-              <span className="text-sm font-black text-white whitespace-nowrap">{toast}</span>
+              <span className="text-sm font-black text-white whitespace-nowrap max-w-[80vw] overflow-hidden text-ellipsis">{toast}</span>
             </motion.div>
           </div>
         )}
@@ -1864,7 +1864,7 @@ const fetchLatestRulebook = async () => {
                   onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(null); }}
                   onKeyDown={(e) => e.key === 'Enter' && !deletingAccount && handleDeleteAccount()}
                   placeholder="סיסמה"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
                 />
                 {deleteError && (
                   <p className="text-red-400 text-xs font-bold">{deleteError}</p>

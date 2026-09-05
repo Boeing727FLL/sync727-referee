@@ -305,7 +305,7 @@ export default function LoginPage() {
                             onChange={(e) => setResetEmail(e.target.value)}
                             placeholder="your@email.com"
                             required
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
                             dir="ltr"
                           />
                         </div>
@@ -386,7 +386,7 @@ export default function LoginPage() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="השם שלך"
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all text-right"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all text-right"
                             dir="auto"
                           />
                         </motion.div>
@@ -403,7 +403,7 @@ export default function LoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
                             required
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
                             dir="ltr"
                           />
                         </div>
@@ -420,7 +420,7 @@ export default function LoginPage() {
                             placeholder="********"
                             required
                             minLength={6}
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
                             dir="ltr"
                           />
                         <button

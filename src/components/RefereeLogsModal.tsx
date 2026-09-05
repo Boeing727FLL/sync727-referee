@@ -335,7 +335,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
                     placeholder="קוד גישה"
-                    className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
+                    className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
                       error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-blue-500/30 focus:border-blue-500/50'
                     }`}
                   />
@@ -358,7 +358,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           placeholder="חיפוש בשאלה, בתשובה או בעונה"
-                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 text-sm transition-all"
+                           className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                         />
                         {search && (
                           <button
