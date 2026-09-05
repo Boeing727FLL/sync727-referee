@@ -1451,11 +1451,11 @@ const fetchLatestRulebook = async () => {
                 )}
               </div>
 
-              <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'flex-1'}`}>
+              <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
                 <div className={`relative overflow-hidden ${
                   msg.role === 'user'
                     ? 'bg-white/[0.09] border border-white/10 text-slate-100 rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
-                    : 'text-slate-100 px-0.5 py-1'
+                    : 'bg-white/[0.05] backdrop-blur-xl border border-white/10 text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-[0_8px_28px_rgba(0,0,0,0.3)]'
                 }`}>
 
                   {/* Referee Tag */}
@@ -1492,7 +1492,7 @@ const fetchLatestRulebook = async () => {
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
-                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:text-slate-100 prose-headings:font-black prose-headings:text-white prose-a:text-yellow-300 prose-strong:text-white prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
+                      <div className="prose prose-invert max-w-none prose-p:leading-loose prose-p:my-2.5 prose-p:text-slate-100 prose-headings:font-black prose-headings:text-white prose-headings:mt-4 prose-headings:mb-2 prose-a:text-yellow-300 prose-strong:text-white prose-ul:list-disc prose-ol:list-decimal prose-li:my-1.5 prose-li:text-slate-200 rtl:text-right">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
