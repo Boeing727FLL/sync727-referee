@@ -71,7 +71,7 @@ export default function PublicRulebookAI() {
       const fb = auth.currentUser as any;
       if (fb?.email || fb?.displayName) {
         return {
-          name: fb.displayName || fb.email?.split('@')[0] || '�����',
+          name: fb.displayName || fb.email?.split('@')[0] || 'משתמש',
           picture: fb.photoURL || '',
           email: fb.email || '',
         } as any;
@@ -81,7 +81,7 @@ export default function PublicRulebookAI() {
         const p = JSON.parse(raw);
         if (p?.email || p?.name) {
           return {
-            name: p.name || p.email?.split('@')[0] || '�����',
+            name: p.name || p.email?.split('@')[0] || 'משתמש',
             picture: p.picture || '',
             email: p.email || '',
           } as any;
@@ -90,7 +90,7 @@ export default function PublicRulebookAI() {
       const pic = localStorage.getItem('user_picture');
       const nm = localStorage.getItem('user_name');
       if (pic || nm) {
-        return { name: nm || '�����', picture: pic || '', email: '' } as any;
+        return { name: nm || 'משתמש', picture: pic || '', email: '' } as any;
       }
     } catch {}
     return null;
@@ -201,7 +201,7 @@ export default function PublicRulebookAI() {
       .catch(() => {});
   }, []);
 
-  // Auto-enter chat after login � always show mandatory disclaimer before entering
+  // Auto-enter chat after login — always show mandatory disclaimer before entering
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
@@ -347,11 +347,11 @@ export default function PublicRulebookAI() {
     setDeleteError(null);
     const current = auth.currentUser;
     if (!current || !current.email) {
-      setDeleteError('��� ����� �����. ������ ���� ���.');
+      setDeleteError('אין משתמש מחובר. התחברו ונסו שוב.');
       return;
     }
     if (!deletePassword) {
-      setDeleteError('�� ����� ����� ��� ���� �����.');
+      setDeleteError('יש להזין סיסמה כדי לאשר מחיקה.');
       return;
     }
     setDeletingAccount(true);
@@ -360,7 +360,7 @@ export default function PublicRulebookAI() {
       await reauthenticateWithCredential(current, cred);
     } catch {
       setDeletingAccount(false);
-      setDeleteError('����� �����. ������ �� �����.');
+      setDeleteError('סיסמה שגויה. המחיקה לא בוצעה.');
       return;
     }
     const uid = current.uid;
@@ -368,14 +368,14 @@ export default function PublicRulebookAI() {
       await deleteDoc(doc(db, 'users', uid));
     } catch (e) {
       setDeletingAccount(false);
-      setDeleteError('����� ���� ������ �����. ��� ���.');
+      setDeleteError('מחיקת מסמך המשתמש נכשלה. נסו שוב.');
       return;
     }
     try {
       await deleteUser(current);
     } catch {
       setDeletingAccount(false);
-      setDeleteError('����� ������ �����. ������ ���� ���� ���.');
+      setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
       return;
     }
     try {
@@ -438,7 +438,7 @@ export default function PublicRulebookAI() {
       faviconElement.href = "/favicon-192.png?v=3";
     }
     
-    document.title = '���� �������� | Boeing727';
+    document.title = 'שופט וירטואלי | Boeing727';
 
     return () => {
       document.title = originalTitle;
@@ -779,8 +779,8 @@ const fetchLatestRulebook = async () => {
         }
       }
 
-      const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "���";
-      setMessages(prev => [...prev, { role: 'model', text: `���� ����� ��� (${file.name}) �����. ���� ${seasonLabel}. ���� ������...`, isProgress: true }]);
+      const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "חדש";
+      setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות...`, isProgress: true }]);
 
       let uploadedPageCount = -1;
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -805,7 +805,7 @@ const fetchLatestRulebook = async () => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
               if (last?.role === 'model' && (last as any).isProgress) {
-                newMsgs[newMsgs.length - 1] = { ...last, text: `���� ����� ��� (${file.name}) �����. ���� ${seasonLabel}. ���� ������... ${pct}% (${i + 1}/${images.length})` };
+                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות... ${pct}% (${i + 1}/${images.length})` };
               }
               return newMsgs;
             });
@@ -816,12 +816,12 @@ const fetchLatestRulebook = async () => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
               if (last?.role === 'model' && (last as any).isProgress) {
-                newMsgs[newMsgs.length - 1] = { ...last, text: `���� ������ (${file.name}) �����, ��� ���� ������� ������� �����. ��� ������ ���.` };
+                newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ החוקים (${file.name}) הועלה, אבל המרת העמודים לתמונות נכשלה. נסו להעלות שוב.` };
               }
               return newMsgs;
             });
           } else if (okCount < images.length) {
-            setMessages(prev => [...prev, { role: 'model', text: `���� ��: ����� ${okCount} ���� ${images.length} ������. ���� ������ ��� ��� ������.` }]);
+            setMessages(prev => [...prev, { role: 'model', text: `שימו לב: הועלו ${okCount} מתוך ${images.length} עמודים. כדאי להעלות שוב כדי להשלים.` }]);
           }
         } catch (imgErr) {
           console.error("Failed to convert/upload PDF pages:", imgErr);
@@ -836,10 +836,10 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const newMsgs = [...prev];
           if (newMsgs.length > 0 && (newMsgs[newMsgs.length - 1] as any).isProgress) {
-            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: '����� �� �������� ����� ������! ����� ���� ���� ����� ������ ��� �����.' };
+            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' };
             delete (newMsgs[newMsgs.length - 1] as any).isProgress;
           } else {
-            newMsgs.push({ role: 'model', text: '����� �� �������� ����� ������! ����� ���� ���� ����� ������ ��� �����.' });
+            newMsgs.push({ role: 'model', text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' });
           }
           return newMsgs;
         });
@@ -847,7 +847,7 @@ const fetchLatestRulebook = async () => {
 
     } catch (error: any) {
       console.error('Upload error:', error);
-      alert('����� ������ �����: ' + error.message);
+      alert('שגיאה בהעלאת הקובץ: ' + error.message);
       setUploading(false);
       setUploadProgress(0);
     }
@@ -865,7 +865,7 @@ const fetchLatestRulebook = async () => {
       setMessages(prev => [
         ...prev,
         { role: 'user', text: textToSend.trim() },
-        { role: 'model', text: '��� ����� ����� ����� ����, ���� ��� �� ���� ��� �� ������. ���� ���� ����� ��� ��� ������ ���� ���.' },
+        { role: 'model', text: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.' },
       ]);
       return;
     }
@@ -876,7 +876,7 @@ const fetchLatestRulebook = async () => {
       const now = Date.now();
       const lastSend = Number(localStorage.getItem('referee_last_send') || 0);
       if (now - lastSend < 4000) {
-        setMessages(prev => [...prev, { role: 'model', text: '��� ��� ����� ��� ���� �����.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'חכו כמה שניות בין שאלה לשאלה.' }]);
         return;
       }
       const hour = new Date().toISOString().slice(0, 13);
@@ -889,7 +889,7 @@ const fetchLatestRulebook = async () => {
         } catch { count = 0; }
       }
       if (count >= 120) {
-        setMessages(prev => [...prev, { role: 'model', text: '����� ����� ������ ���� ������. ��� ��� ����� ����.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' }]);
         return;
       }
       localStorage.setItem('referee_last_send', String(now));
@@ -916,7 +916,7 @@ const fetchLatestRulebook = async () => {
     try {
       let relevantMessages = messages;
 
-      let finalPrompt = userMessage + "\n\n(����� �����: �� ����� ����� ������ ���� �� ��� ��� - ����� ������� ������ ���� ��� ��� ����� ��� ����� �� ������� �� ������ �����.)";
+      let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
       trackQuestion(resolveRefereeUid() || 'anon');
       
@@ -953,7 +953,7 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '?? ������ ������ �� ��� ������.' }];
+          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
         });
       } else {
         logRefereeQA({
@@ -977,7 +977,7 @@ const fetchLatestRulebook = async () => {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model' && lastMsg.text) return prev;
-          return [...prev, { role: 'model', text: '?? ������ ������ �� ��� ������.' }];
+          return [...prev, { role: 'model', text: '⏹️ הפעולה הופסקה על ידי המשתמש.' }];
         });
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
@@ -1059,18 +1059,18 @@ const fetchLatestRulebook = async () => {
   const handleWhistleBlow = () => {
     playWhistleSound();
     const refereeTips = [
-      "?? **������ ���� ��������:** ��� ��������� (Gracious Professionalism) ����� ��� ����! ���� �� ������ ��� ������ �����.",
-      "?? **���� �����:** ���� ������ ������, �� ��� ����� 2:30 ���� ������ �� �� ������� �������. ������!",
-      "?? **��� ������:** ����, �� ������ ���� ����� ���� �� ����� ����� ����� - ������ ���� ���� ���� ����� ����� ���� (���� ����� ���� ����� ������ �������).",
-      "?? **���� �����:** �� ����� ���� (���� �����, ������� ������� ����� �����) ���� ������ ������ ����� ���� ���� �� ���� ������ ���� ����� �����!",
-      "?? **���� ��:** ����� ���������� ����� �� ���� �������� ������ �� ��� ������ �����. ����� �� ���, ����� ����� ����� ���� �����."
+      "📋 **הנחיית שופט וירטואלי:** רוח ספורטיבית (Gracious Professionalism) קודמת לכל הישג! כבדו את חבריכם ואת קבוצות היריב.",
+      "⏱️ **חוקי הזירה:** ברגע שהגעתם לשולחן, יש לכם בדיוק 2:30 דקות להפעיל את כל המשימות שתרגלתם. בהצלחה!",
+      "⚙️ **טיפ מקצועי:** זכרו, אם הרובוט יוצא מאזור הבית או משתבש במרכז המגרש - החזרתו לבית באקט ידני תגרור סימון עונש (דיסק משימה פנוי שעובר למשבצת העונשים).",
+      "📏 **חוקי המבנה:** כל הציוד שלכם (כולל רובוט, אביזרים חלופיים וחלקי חילוף) חייב להיכנס במלואו לתחום אזור הבית או אזור השיגור קודם תחילת המקצה!",
+      "🎯 **שימו לב:** השופט הווירטואלי מבוסס על בינה מלאכותית ומסתמך על ספר החוקים הרשמי. במקרה של ספק, מומלץ לפנות לשופט זירה אנושי."
     ];
     const quote = refereeTips[Math.floor(Math.random() * refereeTips.length)];
     setMessages(prev => [
       ...prev,
       {
         role: 'model',
-        text: `?????? *����� ��� ������!* \n\n${quote}`
+        text: `😗💨🎵 *שריקה חדה מהזירה!* \n\n${quote}`
       }
     ]);
   };
@@ -1099,7 +1099,7 @@ const fetchLatestRulebook = async () => {
             exit={{ opacity: 0, y: -8 }}
             className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0 relative"
           >
-            ����� ����� � �� ������ ���� ��� ���
+            שדרוג אבטחה — יש להתחבר מחדש פעם אחת
           </motion.div>
         )}
       </AnimatePresence>
@@ -1113,7 +1113,7 @@ const fetchLatestRulebook = async () => {
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(250,204,21,0.35)] ring-2 ring-yellow-400/70 overflow-hidden">
-              <img src="/logoref.png" alt="���� ��������" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
+              <img src="/logoref.png" alt="שופט וירטואלי" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
             </div>
             <div className="min-w-0">
                 <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-white flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
@@ -1189,7 +1189,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <LogOut className="w-4 h-4 text-slate-500" />
-                          �����
+                          התנתק
                         </button>
                         <button
                           onClick={() => {
@@ -1199,7 +1199,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
-                          ����� �����
+                          מחיקת חשבון
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <a
@@ -1208,7 +1208,7 @@ const fetchLatestRulebook = async () => {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
-                          ������
+                          פרטיות
                         </a>
                       </div>
                     </motion.div>
@@ -1258,7 +1258,7 @@ const fetchLatestRulebook = async () => {
             <div className="relative mb-4 md:mb-5">
               <div className="absolute -inset-8 bg-yellow-400/20 blur-3xl rounded-full pointer-events-none" aria-hidden />
               <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.4)] overflow-hidden">
-                <img src="/logoref.png" alt="���� ��������" className="w-full h-full object-contain" />
+                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
               </div>
             </div>
             <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
@@ -1270,7 +1270,7 @@ const fetchLatestRulebook = async () => {
             <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-xl">
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain" />
               <span className="text-[11px] md:text-xs font-bold text-slate-300">
-                ���� �������� ��� ����� Boeing 727 ������ �-FLL
+                נבנה בהתנדבות על ידי קבוצת Boeing 727 לקהילת ה-FLL
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mt-6 md:mt-8 w-full max-w-2xl">
@@ -1377,7 +1377,7 @@ const fetchLatestRulebook = async () => {
                   )
                 ) : (
                   <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden">
-                    <img src="/logoref.png" alt="���� ��������" className="w-full h-full object-contain" />
+                    <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -1395,7 +1395,7 @@ const fetchLatestRulebook = async () => {
                       <span className="text-[9px] md:text-[10px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
-                      {finalRenderText.includes("�����") && (
+                      {finalRenderText.includes("שריקה") && (
                         <span className="text-[9px] md:text-[10px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
                             {t('chat.foulTag')}
                         </span>
@@ -1452,7 +1452,7 @@ const fetchLatestRulebook = async () => {
                       {t('chat.copy')}
                     </button>
                     <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.07] cursor-pointer">
-                      ??
+                      👍
                     </button>
                   </div>
                 )}
@@ -1617,10 +1617,10 @@ const fetchLatestRulebook = async () => {
             >
               <div className="text-center">
                 <div className="text-4xl mb-2">??</div>
-                <h3 className="text-xl font-black text-slate-800">����� ���� ����</h3>
+                <h3 className="text-xl font-black text-slate-800">מחיקת עונה שלמה</h3>
                 <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                  ����� {wipePending.fileName} ����� ����� ���� ({wipePending.season}).
-                  ������ ���� {wipePending.oldCount} ���� ����� �����. ��� ����, ������ �� �� �����.
+                  הקובץ {wipePending.fileName} מזוהה כעונה חדשה ({wipePending.season}).
+                  ההעלאה תמחק {wipePending.oldCount} קבצי חוקים ישנים. כדי לאשר, הקלידו את שם העונה.
                 </p>
               </div>
               <input
@@ -1636,14 +1636,14 @@ const fetchLatestRulebook = async () => {
                   onClick={() => { setWipePending(null); setWipeTyped(''); }}
                   className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
                 >
-                  �����
+                  ביטול
                 </button>
                 <button
                   onClick={confirmSeasonWipe}
                   disabled={wipeTyped.trim().toUpperCase() !== wipePending.season.toUpperCase()}
                   className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  ��� �����
+                  מחק והעלה
                 </button>
               </div>
             </motion.div>
@@ -1692,16 +1692,16 @@ const fetchLatestRulebook = async () => {
               className="bg-slate-900 border border-red-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             >
               <div className="p-6 text-center space-y-4">
-                <h3 className="text-xl font-bold text-white">����� ������ �������</h3>
+                <h3 className="text-xl font-bold text-white">מחיקת החשבון לצמיתות</h3>
                 <p className="text-slate-400 text-sm">
-                  ������ ����� ������ ������ ��� ���� ���� �����. ������, ����� �� ������.
+                  החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. לאישור, הזינו את הסיסמה.
                 </p>
                 <input
                   type="password"
                   value={deletePassword}
                   onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(null); }}
                   onKeyDown={(e) => e.key === 'Enter' && !deletingAccount && handleDeleteAccount()}
-                  placeholder="�����"
+                  placeholder="סיסמה"
                   className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
                 />
                 {deleteError && (
@@ -1718,14 +1718,14 @@ const fetchLatestRulebook = async () => {
                   }}
                   className="px-4 py-2 rounded-lg text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
                 >
-                  �����
+                  ביטול
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deletingAccount || !deletePassword}
                   className="px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {deletingAccount ? '����' : '��, ��� ���'}
+                  {deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
                 </button>
               </div>
             </motion.div>
@@ -1777,15 +1777,15 @@ const fetchLatestRulebook = async () => {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/15 flex items-center justify-center">
                   <Scale className="w-8 h-8 text-red-400" />
                 </div>
-                <h3 className="text-lg font-black text-white mb-2">������ ���� ����� ���</h3>
+                <h3 className="text-lg font-black text-white mb-2">החשבון נפתח במקום אחר</h3>
                 <p className="text-slate-400 text-sm mb-6">
-                  ������ ��� ���� ������ ���, ���� ������� �� ����� ��� ����� ���� ������ ������ ���������.
+                  המשתמש שלך נכנס ממכשיר אחר, ולכן התחברות זו נותקה כדי למנוע חוסר עקביות בנתוני האנליטיקס.
                 </p>
                 <button
                   onClick={() => { setSessionKicked(false); navigate('/login'); }}
                   className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
                 >
-                  ���� ������
+                  חזרה לכניסה
                 </button>
               </div>
             </motion.div>
@@ -1795,4 +1795,3 @@ const fetchLatestRulebook = async () => {
     </motion.div>
   );
 }
-
