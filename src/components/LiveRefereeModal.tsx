@@ -323,7 +323,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                 </button>
               </div>
               <p className="text-center text-[10px] text-slate-500 font-medium">
-                שופט לייב מדבר בעברית. לשיפוט מדויק הראו את המשימה למצלמה.
+                לשיפוט מדויק הראו את המשימה למצלמה.
               </p>
             </div>
           </motion.div>

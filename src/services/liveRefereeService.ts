@@ -270,9 +270,9 @@ export class LiveRefereeSession {
           config: {
             responseModalities: [Modality.AUDIO],
             mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Alnilam' } },
               languageCode: 'he',
             },
             inputAudioTranscription: {},
