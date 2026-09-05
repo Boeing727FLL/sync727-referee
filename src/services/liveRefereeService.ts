@@ -18,6 +18,9 @@ export interface LiveCallbacks {
   onUserText: (text: string) => void;
   onModelText: (text: string, done: boolean) => void;
   onInterrupted: () => void;
+  // Camera failed repeatedly: the service already switched it off, the
+  // voice session continues. UI should sync its toggle + explain.
+  onCameraLost?: () => void;
 }
 
 // ---------- small helpers ----------
@@ -157,6 +160,7 @@ export class LiveRefereeSession {
   private playCursor = 0;
   private playSources: AudioBufferSourceNode[] = [];
   private camTimer: ReturnType<typeof setInterval> | null = null;
+  private camFailures = 0;
   private camStream: MediaStream | null = null;
   private videoEl: HTMLVideoElement | null = null;
   private modelPending = '';
@@ -284,10 +288,12 @@ export class LiveRefereeSession {
               done(() => reject(new Error(e?.message || 'live error')));
             },
             onclose: (e: any) => {
+              console.warn('live socket closed:', e?.code, e?.reason);
               if (!settled) {
                 done(() => reject(new Error(e?.reason || 'live closed')));
               } else if (!this.cancelled) {
-                callbacks.onStatus('error', 'החיבור לשופט החי נותק. נסה שוב.');
+                const reason = e?.reason ? `: ${e.reason}` : '';
+                callbacks.onStatus('error', `החיבור לשופט החי נותק${reason}. נסה שוב.`);
                 void this.cleanup();
               }
             },
@@ -306,6 +312,9 @@ export class LiveRefereeSession {
   private handleMessage(message: any): void {
     const { callbacks } = this.opts;
     if (!message) return;
+    if (message?.goAway) {
+      console.warn('live server goAway (closing soon):', message.goAway);
+    }
 
     // Audio output -> playback queue.
     try {
@@ -523,8 +532,16 @@ export class LiveRefereeSession {
     if (!b64) return;
     try {
       this.session.sendRealtimeInput({ media: { data: b64, mimeType: 'image/jpeg' } });
+      this.camFailures = 0;
     } catch {
-      this.handleTransportDead();
+      // Camera is auxiliary: after 3 consecutive failures switch it off and
+      // keep the voice session alive instead of tearing everything down.
+      this.camFailures++;
+      if (this.camFailures >= 3) {
+        this.camFailures = 0;
+        void this.setCameraEnabled(false, null).catch(() => {});
+        try { this.opts.callbacks.onCameraLost?.(); } catch { /* noop */ }
+      }
     }
   }
 
