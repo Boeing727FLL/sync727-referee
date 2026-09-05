@@ -5,8 +5,11 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Wrench } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 import { subscribeMaintenance } from '../lib/analytics';
+import { isCurrentUserOwner } from '../lib/owner';
+import BootSplash from '../components/BootSplash';
+import MaintenanceScreen from '../components/MaintenanceScreen';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -25,10 +28,27 @@ export default function LoginPage() {
   const [welcomeName, setWelcomeName] = useState('');
   const pendingAuthRef = useRef<{ email: string; password: string; isSignUp: boolean; name: string } | null>(null);
   const authTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [maintenance, setMaintenanceState] = useState(false);
+  const [maintenance, setMaintenance] = useState<boolean | null>(null);
+  const [formUnlocked, setFormUnlocked] = useState(false);
+  const logoTapTimesRef = useRef<number[]>([]);
+  const ownerHere = isCurrentUserOwner();
   useEffect(() => {
-    return subscribeMaintenance(setMaintenanceState);
+    let resolved = false;
+    const timer = setTimeout(() => { if (!resolved) setMaintenance(false); }, 3500);
+    const unsub = subscribeMaintenance((v) => { resolved = true; setMaintenance(v); });
+    return () => { clearTimeout(timer); unsub(); };
   }, []);
+  // Hidden owner bypass: 5 rapid taps on the maintenance logo reveal the form.
+  const handleSecretTap = () => {
+    const now = Date.now();
+    logoTapTimesRef.current = logoTapTimesRef.current.filter(t => now - t < 2000);
+    logoTapTimesRef.current.push(now);
+    if (logoTapTimesRef.current.length >= 5) {
+      logoTapTimesRef.current = [];
+      setFormUnlocked(true);
+    }
+  };
+  const gated = maintenance === true && !ownerHere && !formUnlocked;
 
   useEffect(() => {
     const timers = authTimersRef.current;
@@ -239,16 +259,8 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 flex flex-col items-center justify-center gap-3 p-4"
       >
-        {maintenance && !authOverlay && (
-          <div className="w-full max-w-md flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-amber-400/10 border border-amber-400/30 backdrop-blur-xl" dir="rtl">
-            <span className="shrink-0 w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/25 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-amber-300" />
-            </span>
-            <p className="text-xs font-bold text-amber-200 leading-relaxed">
-              האתר בעבודות כרגע. אפשר להתחבר, אבל רק חשבון הבעלים יכול להיכנס לאפליקציה עד שהעבודות מסתיימות.
-            </p>
-          </div>
-        )}
+        {maintenance === null && <BootSplash />}
+        {gated && <MaintenanceScreen onLogoTap={handleSecretTap} />}
         <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-3xl w-full max-w-md relative overflow-hidden">
           <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-l from-transparent via-yellow-400/80 to-transparent" />
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-40 bg-yellow-400/[0.08] rounded-full blur-3xl pointer-events-none" aria-hidden />

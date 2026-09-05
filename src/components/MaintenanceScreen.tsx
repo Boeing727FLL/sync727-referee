@@ -3,7 +3,8 @@ import { Wrench, Clock, Sparkles } from 'lucide-react';
 
 // Full-takeover screen shown to everyone except the owner while work mode
 // is on. Rendered above everything (z-11000), no buttons, nothing to do
-// but wait.
+// but wait. Optional onLogoTap powers the hidden owner bypass on the login
+// page (5 rapid taps reveal the form).
 const CARDS = [
   {
     icon: Wrench,
@@ -22,7 +23,7 @@ const CARDS = [
   },
 ];
 
-export default function MaintenanceScreen() {
+export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -75,7 +76,8 @@ export default function MaintenanceScreen() {
             initial={{ scale: 0.85, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-24 h-24 md:w-28 md:h-28 mb-5 md:mb-6"
+            className="relative w-24 h-24 md:w-28 md:h-28 mb-5 md:mb-6 select-none"
+            onClick={onLogoTap}
           >
             <motion.div
               animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
