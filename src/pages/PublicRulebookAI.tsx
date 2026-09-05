@@ -1118,7 +1118,7 @@ const fetchLatestRulebook = async () => {
       <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0 relative z-10" />
 
       {/* Header - dark glass, premium AI console */}
-      <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
+      <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
