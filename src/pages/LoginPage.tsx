@@ -220,7 +220,13 @@ export default function LoginPage() {
   }, [showFaceId]);
 
   return (
-    <div className="min-h-screen h-full bg-[#f5fbf7] bg-[radial-gradient(#bedec6_1.5px,transparent_1.5px)] bg-[size:32px_32px] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen h-full bg-slate-950 flex flex-col relative overflow-hidden">
+      {/* Ambient glows to match the chat theme */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.07] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.08] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.05] rounded-full blur-3xl" />
+      </div>
 
       {/* Card - fades out when success animation starts */}
       <motion.div
