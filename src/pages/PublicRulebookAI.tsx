@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square, Check } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -127,6 +127,38 @@ export default function PublicRulebookAI() {
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
+  // In-site toast (replaces blocking alert() popups)
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2600);
+  };
+
+  useEffect(() => {
+    return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
+  }, []);
+
+  const copyTextWithFallback = async (text: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch { return false; }
+    }
+  };
   const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
   const langBtnRef = useRef<HTMLButtonElement>(null);
@@ -1544,17 +1576,16 @@ const fetchLatestRulebook = async () => {
                 {msg.role === 'model' && idx > 0 && msg.text !== STOPPED_TEXT && (
                   <div className="flex items-center gap-1.5 px-0.5">
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(finalRenderText);
-                        alert(t('chat.copied'));
+                      onClick={async () => {
+                        if (await copyTextWithFallback(finalRenderText)) {
+                          showToast(t('chat.copied'));
+                        }
                       }}
                       className="text-[10px] md:text-[11px] font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer"
                     >
                       {t('chat.copy')}
                     </button>
-                    <button className="text-[11px] md:text-xs text-slate-500 hover:text-emerald-300 transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer">
-                      👍
-                    </button>
+
                   </div>
                 )}
               </div>
@@ -1754,6 +1785,27 @@ const fetchLatestRulebook = async () => {
 
       <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
       <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+
+      {/* In-site green toast (copy / like confirmations) */}
+      <AnimatePresence>
+        {toast && (
+          <div className="fixed inset-x-0 bottom-24 md:bottom-28 z-[80] flex justify-center pointer-events-none px-4" dir="rtl">
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/95 backdrop-blur-xl border border-emerald-300/40 shadow-[0_8px_28px_rgba(16,185,129,0.4)]"
+              role="status"
+            >
+              <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
+                <Check className="w-3 h-3 text-emerald-600" strokeWidth={3.5} />
+              </span>
+              <span className="text-sm font-black text-white whitespace-nowrap">{toast}</span>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <ConfirmationModal
         isOpen={showLogoutConfirm}
