@@ -1874,19 +1874,19 @@ const fetchLatestRulebook = async () => {
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               style={{ top: langPos.top, right: langPos.right }}
-              className="fixed z-[70] w-52 max-w-[70vw] bg-[#1b1b1d] border border-white/15 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden"
+              className="fixed z-[70] w-52 max-w-[70vw] bg-white/70 backdrop-blur-2xl border border-white/60 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] overflow-hidden"
               dir="rtl"
               role="dialog"
               aria-label="שפה"
             >
-              <div className="py-1 divide-y divide-white/10 max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent]">
+              <div className="py-1 divide-y divide-slate-900/10 max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(15,23,42,0.25)_transparent]">
                 {languages.map((lang) => {
                   const active = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       onClick={() => { setLanguage(lang.code); setShowLangMenu(false); }}
-                      className="relative w-full px-4 py-3 text-white font-bold text-sm text-center hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      className="relative w-full px-4 py-3 text-slate-700 hover:text-slate-900 font-bold text-sm text-center hover:bg-white/70 transition-colors cursor-pointer"
                     >
                       {lang.native}
                       {active && (
