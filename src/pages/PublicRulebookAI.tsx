@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ListOrdered, Hand, Cog, Users } from 'lucide-react';
+import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ListOrdered, Hand, Cog, Users, Globe } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -13,7 +13,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import ConfirmationModal from '../components/ConfirmationModal';
 import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
 import RefereeLogsModal from '../components/RefereeLogsModal';
@@ -32,7 +31,7 @@ const stripThinkBlocks = (text: string): string =>
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const { connectDrive, user, logout } = useAuth();
-  const { t, language, isRTL } = useLanguage();
+  const { t, language, isRTL, setLanguage, languages } = useLanguage();
   
   // Login state comes only from Firebase Auth (user) or the saved auth_user.
   // URL bypass params were removed for security, everyone must log in.
@@ -1199,6 +1198,27 @@ const fetchLatestRulebook = async () => {
                           <Shield className="w-4 h-4 text-slate-500" />
                           פרטיות
                         </a>
+                        <div className="h-px bg-white/60 my-1" />
+                        <div className="px-3 pt-1.5 pb-1 flex items-center gap-2 text-right">
+                          <Globe className="w-4 h-4 text-slate-500" />
+                          <span className="font-bold text-xs text-slate-500">שפה</span>
+                        </div>
+                        <div className="max-h-44 overflow-y-auto px-1 pb-1">
+                          {languages.map((lang) => (
+                            <button
+                              key={lang.code}
+                              onClick={() => { setLanguage(lang.code); setShowUserMenu(false); }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm transition-colors text-right cursor-pointer ${language === lang.code ? 'bg-yellow-400/25 text-slate-900' : 'hover:bg-white/70 text-slate-700 hover:text-slate-900'}`}
+                            >
+                              <span className={`text-xs font-black w-4 shrink-0 ${language === lang.code ? 'text-slate-900' : 'text-transparent'}`}>✓</span>
+                              <span>{lang.native}</span>
+                              <span className="text-[10px] text-slate-500 font-medium">({lang.english})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="px-3 py-2 bg-white/40 border-t border-white/50 text-center">
+                        <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
                       </div>
                     </motion.div>
                   )}
@@ -1212,12 +1232,12 @@ const fetchLatestRulebook = async () => {
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div onClick={handleBoeingTap} className="inline-flex items-center gap-1.5 md:gap-3 px-1.5 py-0.5 md:px-3 md:py-1.5 bg-white/[0.06] backdrop-blur-xl rounded-xl border border-white/10 group hover:bg-white/10 hover:border-white/20 transition-all duration-300 whitespace-nowrap shrink-0 cursor-pointer select-none">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 md:h-8 w-auto object-contain group-hover:scale-110 transition-transform" />
-              <div className="h-3 md:h-6 w-px bg-white/15" />
+            <div onClick={handleBoeingTap} className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 cursor-pointer select-none">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-5 md:h-10 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform" />
+              <div className="h-4 md:h-8 w-px bg-yellow-400/25" />
               <div className="flex flex-col leading-tight">
-                <span onClick={handleDevelopByTap} className="text-[5px] md:text-[9px] font-black text-slate-500 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
-                <span className="text-[7px] md:text-sm font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[6px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[6px] md:text-xs">Yuval Margalit</span></span>
+                <span onClick={handleDevelopByTap} className="text-[6px] md:text-[10px] font-black text-yellow-400/80 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
+                <span className="text-[9px] md:text-base font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[7px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[7px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
             {showAdmin && isCurrentUserOwner() && (
@@ -1229,9 +1249,13 @@ const fetchLatestRulebook = async () => {
                 <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </button>
             )}
-            <LanguageSwitcher />
           </div>
         </div>
+      </div>
+
+      {/* Boeing 727 watermark behind the chat */}
+      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center" aria-hidden>
+        <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="" className="w-[70vw] max-w-[560px] opacity-[0.05]" />
       </div>
 
       {/* Chat Area - premium AI console, full screen */}
@@ -1256,12 +1280,15 @@ const fetchLatestRulebook = async () => {
             <p className="text-sm md:text-base text-slate-400 font-medium mt-2 max-w-xl">
               {t('intro.descFull')}
             </p>
-            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-xl">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain" />
-              <span className="text-[11px] md:text-xs font-bold text-slate-300">
+            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2.5 rounded-full bg-gradient-to-l from-yellow-400/15 to-white/[0.04] border border-yellow-400/30 backdrop-blur-xl shadow-[0_0_24px_rgba(250,204,21,0.15)]">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-8 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)]" />
+              <span className="text-xs md:text-sm font-bold text-slate-200">
                 נבנה בהתנדבות על ידי קבוצת Boeing 727
               </span>
             </div>
+            <p className="text-[11px] md:text-xs text-yellow-400/70 font-bold mt-2">
+              פותח באהבה על ידי קבוצת Boeing 727
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3.5 mt-6 md:mt-8 w-full max-w-2xl">
               {quickQuestions.map((q, i) => {
                 const Icon = heroIcons[i % heroIcons.length];

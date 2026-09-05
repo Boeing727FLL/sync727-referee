@@ -61,6 +61,10 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               >
                 {t('disclaimerPopup.confirm')}
               </button>
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain opacity-70" />
+                <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+              </div>
             </div>
           </motion.div>
         </motion.div>

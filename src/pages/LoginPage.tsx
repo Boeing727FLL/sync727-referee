@@ -577,6 +577,12 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
+      {/* Boeing 727 credit */}
+      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none" aria-hidden>
+        <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain opacity-70" />
+        <span className="text-[11px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+      </div>
+
       {/* Face ID Animation Overlay */}
       <AnimatePresence>
         {showFaceId && (
