@@ -1305,7 +1305,7 @@ const fetchLatestRulebook = async () => {
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-none fixed inset-0 z-[9000] bg-[radial-gradient(circle_at_center,#fffbe8_0%,rgba(250,204,21,0.55)_50%,rgba(250,204,21,0.12)_78%,transparent_100%)]"
+          className="pointer-events-none fixed inset-0 z-[9000] bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.8)_0%,rgba(250,204,21,0.4)_50%,rgba(250,204,21,0.1)_78%,transparent_100%)]"
           aria-hidden
         />
       )}

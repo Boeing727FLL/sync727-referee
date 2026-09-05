@@ -116,12 +116,12 @@ export default function LoginPage() {
         trackRefereeUser(fbUid);
         setWelcomeName(pending.name || pending.email.split('@')[0]);
         setAuthOverlay('success');
-        // Divine departure (~2.4s of light): slow bloom + blur + gold flash
-        // building to peak brightness, navigate inside the peak, and the
-        // chat-side reveal flash continues the same light seamlessly.
+        // Golden veil departure (~2.2s of light): content softly recedes while
+        // a warm gold veil blooms from the center. Navigate inside the veil
+        // so the swap is invisible, and the chat-side reveal continues it.
         later(() => {
           setAuthLeaving(true);
-          later(() => navigate('/?enter=chat'), 1300);
+          later(() => navigate('/?enter=chat'), 1150);
         }, 1600);
       } else {
         setAuthOverlay(null);
@@ -495,22 +495,18 @@ export default function LoginPage() {
           <motion.div
             key="auth-overlay"
             initial={{ opacity: 0 }}
-            animate={authLeaving
-              ? { opacity: [1, 1, 1], scale: [1, 1.05, 1.1] }
-              : { opacity: 1, scale: 1 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={authLeaving
-              ? { duration: 1.3, times: [0, 0.6, 1], ease: [0.22, 1, 0.36, 1] }
-              : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950 overflow-hidden"
             dir="rtl"
           >
             {authLeaving && (
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.85, 1] }}
-                transition={{ duration: 1.3, times: [0, 0.5, 1], ease: 'easeOut' }}
-                className="absolute inset-0 bg-[radial-gradient(circle_at_center,#fffbe8_0%,rgba(250,204,21,0.85)_45%,rgba(250,204,21,0.25)_75%,transparent_100%)]"
+                animate={{ opacity: [0, 0.9] }}
+                transition={{ duration: 1.15, ease: 'easeInOut' }}
+                className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.9)_0%,rgba(250,204,21,0.45)_45%,rgba(250,204,21,0.12)_75%,transparent_100%)]"
                 aria-hidden
               />
             )}
@@ -518,7 +514,11 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-yellow-400/[0.08] rounded-full blur-3xl" />
             </div>
-            <div className="relative flex flex-col items-center px-6">
+            <motion.div
+              className="relative flex flex-col items-center px-6"
+              animate={authLeaving ? { opacity: [1, 1, 0], scale: [1, 1, 0.96] } : { opacity: 1, scale: 1 }}
+              transition={authLeaving ? { duration: 1.15, times: [0, 0.55, 1], ease: [0.22, 1, 0.36, 1] } : { duration: 0.4 }}
+            >
               <div className="relative w-36 h-36 flex items-center justify-center">
                 <motion.div
                   className="absolute inset-0 rounded-full border border-dashed border-yellow-400/40"
@@ -592,7 +592,7 @@ export default function LoginPage() {
                   </motion.div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
