@@ -120,18 +120,33 @@ export default function PublicRulebookAI() {
 
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
+  const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const langBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!showUserMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
+      // While the language dropdown is open, keep the user menu alive underneath it
+      if (showLangMenu) return;
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showUserMenu]);
+  }, [showUserMenu, showLangMenu]);
+
+  const openLangMenu = () => {
+    const rect = langBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setLangPos({
+        top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 340)),
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    }
+    setShowLangMenu(true);
+  };
 
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState<boolean>(true);
@@ -1201,7 +1216,8 @@ const fetchLatestRulebook = async () => {
                         </a>
                         <div className="h-px bg-white/60 my-1" />
                         <button
-                          onClick={() => setShowLangMenu(true)}
+                          ref={langBtnRef}
+                          onClick={openLangMenu}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <Globe className="w-4 h-4 text-slate-500" />
@@ -1817,7 +1833,8 @@ const fetchLatestRulebook = async () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed top-[76px] md:top-[104px] right-3 md:right-6 z-[70] w-56 max-w-[70vw] bg-[#1b1b1d]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden"
+              style={{ top: langPos.top, right: langPos.right }}
+              className="fixed z-[70] w-56 max-w-[70vw] bg-[#1b1b1d]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden"
               dir="rtl"
               role="dialog"
               aria-label="שפה"
