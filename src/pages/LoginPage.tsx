@@ -221,12 +221,34 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen h-full bg-slate-950 flex flex-col relative overflow-hidden">
-      {/* Ambient glows to match the chat theme */}
+      {/* FLL field backdrop: faint game mat + grid + FIRST color glows (same DNA as chat) */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.07] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.08] rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.05] rounded-full blur-3xl" />
+        <img
+          src="/bioglow-table.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.14]"
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.08] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.12] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.08] rounded-full blur-3xl" />
+        {/* Vignette for depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(2,6,23,0.7)_100%)]" />
       </div>
+      {/* Referee Ribbon - slim identity strip */}
+      <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0 relative z-10" />
+      {/* Breathing gold aura behind the card */}
+      <motion.div
+        className="absolute left-1/2 top-1/2 w-[560px] max-w-[92vw] h-[560px] rounded-full bg-yellow-400/[0.07] blur-3xl pointer-events-none"
+        style={{ x: '-50%', y: '-50%' }}
+        aria-hidden
+        animate={{ scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
       {/* Card - fades out when success animation starts */}
       <motion.div
