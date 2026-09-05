@@ -143,9 +143,16 @@ export default function PublicRulebookAI() {
   const openLangMenu = () => {
     const rect = langBtnRef.current?.getBoundingClientRect();
     if (rect) {
+      // Panel opens to the LEFT of the language button. Falls back to the
+      // left viewport edge when there is no room (small screens).
+      const panelW = 224;
+      const right = Math.min(
+        Math.max(12, window.innerWidth - rect.left + 8),
+        Math.max(12, window.innerWidth - panelW - 12)
+      );
       setLangPos({
-        top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 340)),
-        right: Math.max(12, window.innerWidth - rect.right),
+        top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - 340)),
+        right,
       });
     }
     setShowLangMenu(true);
@@ -1877,11 +1884,11 @@ const fetchLatestRulebook = async () => {
                     <button
                       key={lang.code}
                       onClick={() => { setLanguage(lang.code); setShowLangMenu(false); }}
-                      className="relative w-full px-4 pt-3 pb-4 text-white font-bold text-sm text-center hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      className="relative w-full px-4 py-4 text-white font-bold text-sm text-center hover:bg-white/[0.06] transition-colors cursor-pointer"
                     >
                       {lang.native}
                       {active && (
-                        <span className="absolute bottom-1.5 right-5 left-5 h-[2.5px] rounded-full bg-sky-500" aria-hidden />
+                        <span className="absolute bottom-2 right-4 left-4 h-[2.5px] rounded-full bg-sky-500" aria-hidden />
                       )}
                     </button>
                   );
