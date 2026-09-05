@@ -21,8 +21,8 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             dir="rtl"
           >
             <motion.div
-            initial={{ scale: 0.94, opacity: 0, y: -40 }}
-            animate={{ scale: [0.94, 1.015, 1], opacity: [0, 0, 1], y: [-40, 6, 0], transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1], times: [0, 0.65, 1] } }}
+            initial={{ scale: 0.95, opacity: 0, y: -120 }}
+            animate={{ scale: [0.95, 1.01, 1], opacity: [0, 1, 1], y: [-120, 8, 0], transition: { duration: 1.0, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
             exit={{ scale: [1, 0.99, 0.94], opacity: [1, 1, 0], y: [0, 45, 170], transition: { duration: 2.25, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
             className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             role="dialog"
