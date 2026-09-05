@@ -116,8 +116,12 @@ export default function LoginPage() {
         trackRefereeUser(fbUid);
         setWelcomeName(pending.name || pending.email.split('@')[0]);
         setAuthOverlay('success');
-        later(() => setAuthLeaving(true), 1600);
-        later(() => navigate('/?enter=chat'), 2250);
+        // Navigate the moment leaving starts: the opaque overlay covers the
+        // swap, so there is never a login-screen flash nor a bare background.
+        later(() => {
+          setAuthLeaving(true);
+          navigate('/?enter=chat');
+        }, 1600);
       } else {
         setAuthOverlay(null);
       }
@@ -223,8 +227,8 @@ export default function LoginPage() {
       {/* Card - fades out when success animation starts */}
       <motion.div
         animate={{
-          opacity: authOverlay && !authLeaving ? 0 : 1,
-          scale: authOverlay && !authLeaving ? 0.95 : 1,
+          opacity: authOverlay ? 0 : 1,
+          scale: authOverlay ? 0.95 : 1,
         }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 flex items-center justify-center p-4"
