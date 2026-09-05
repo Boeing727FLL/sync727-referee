@@ -180,10 +180,11 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         next.delete(id);
         return next;
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('referee log delete failed:', err);
-      setDeleteError('המחיקה נכשלה. בדוק חיבור לאינטרנט וודא שאתה מחובר עם חשבון הבעלים, ונסה שוב.');
-      setTimeout(() => setDeleteError(null), 6000);
+      const code = err?.code ? ` (${String(err.code)})` : '';
+      setDeleteError(`המחיקה נכשלה${code}. בדוק חיבור לאינטרנט וודא שאתה מחובר עם חשבון הבעלים, ונסה שוב.`);
+      setTimeout(() => setDeleteError(null), 10000);
     } finally {
       setDeletingId(null);
     }
@@ -207,10 +208,11 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         }
       }
       if (n > 0) await batch.commit();
-    } catch (err) {
+    } catch (err: any) {
       console.error('referee log bulk clean failed:', err);
-      setDeleteError('ניקוי הרשומות הישנות נכשל. ודא חיבור כבעלים ונסה שוב.');
-      setTimeout(() => setDeleteError(null), 6000);
+      const code = err?.code ? ` (${String(err.code)})` : '';
+      setDeleteError(`ניקוי הרשומות הישנות נכשל${code}. ודא חיבור כבעלים ונסה שוב.`);
+      setTimeout(() => setDeleteError(null), 10000);
       return;
     } finally {
       setCleaning(false);
