@@ -1103,13 +1103,24 @@ const fetchLatestRulebook = async () => {
                 <h1 className="text-[11px] md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
                   {t('app.title')}
                 </h1>
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex md:hidden items-center gap-1.5 mt-1">
                 <span className={`w-[6px] h-[6px] md:w-2 md:h-2 rounded-full shrink-0 ${isLearning ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`} />
                 <span className="text-[9px] md:text-xs font-black text-yellow-200 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-2 py-px shadow-[0_0_12px_rgba(250,204,21,0.15)] tracking-wide">
                   {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
             </div>
+          </div>
+
+          <div className="hidden md:flex flex-1 items-center justify-center gap-3 min-w-0 px-4">
+            <div className="h-px w-16 shrink-0 bg-gradient-to-l from-transparent to-yellow-400/30" aria-hidden />
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-400/[0.08] border border-yellow-400/30 shadow-[0_0_20px_rgba(250,204,21,0.15)] whitespace-nowrap">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`} />
+              <span className="text-sm font-black text-yellow-200 tracking-wide">
+                {isLearning ? t('chat.updating') : seasonName}
+              </span>
+            </div>
+            <div className="h-px w-16 shrink-0 bg-gradient-to-r from-transparent to-yellow-400/30" aria-hidden />
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
