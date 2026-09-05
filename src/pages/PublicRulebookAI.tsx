@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -31,6 +31,7 @@ const stripThinkBlocks = (text: string): string =>
 
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { connectDrive, user, logout } = useAuth();
   const { t, language, isRTL, setLanguage, languages } = useLanguage();
   
@@ -215,8 +216,10 @@ export default function PublicRulebookAI() {
   // Auto-enter chat after login — always show mandatory disclaimer before entering.
   // The intro is hidden right away so the disclaimer sits over the referee
   // itself, never over the intro screen.
+  // Listens to location.search too: the URL can change while mounted, and the
+  // auth state can arrive after navigation, so re-check on every change.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
       window.history.replaceState({}, '', '/');
       setShowIntro(false);
@@ -224,7 +227,7 @@ export default function PublicRulebookAI() {
       setPendingEnterChat(true);
       setShowDisclaimer(true);
     }
-  }, [user, hasGoogleToken]);
+  }, [user, hasGoogleToken, location.search]);
 
   const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
 
