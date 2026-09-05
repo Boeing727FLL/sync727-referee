@@ -1433,16 +1433,8 @@ const fetchLatestRulebook = async () => {
           if (isThinking) {
             return (
               <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-                <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0">
-                  <motion.span
-                    className="absolute inset-0 rounded-full border-2 border-yellow-400/60"
-                    animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
-                    transition={{ repeat: Infinity, duration: 1.6, ease: 'easeOut' }}
-                    aria-hidden
-                  />
-                  <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
-                    <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
-                  </div>
+                <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+                  <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
                 </div>
                 <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
                   <div className="flex items-center gap-3">
@@ -1572,16 +1564,8 @@ const fetchLatestRulebook = async () => {
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-            <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0">
-              <motion.span
-                className="absolute inset-0 rounded-full border-2 border-yellow-400/60"
-                animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
-                transition={{ repeat: Infinity, duration: 1.6, ease: 'easeOut' }}
-                aria-hidden
-              />
-              <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
-                <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
-              </div>
+            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
+              <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
             <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-3">
               <motion.span
