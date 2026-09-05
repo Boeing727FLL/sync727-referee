@@ -437,6 +437,13 @@ export default function PublicRulebookAI() {
       setDeleteError('מחיקת מסמך המשתמש נכשלה. נסו שוב.');
       return;
     }
+    // RTDB cleanup must happen BEFORE deleteUser signs us out: afterwards
+    // there is no auth left and the server denies these writes, leaving
+    // stale session/stats entries behind.
+    try {
+      await rtdbRemove(rtdbRef(rtdb, `referee/sessions/${uid}`));
+    } catch { /* session may not exist */ }
+    await removeRefereeUser(uid);
     try {
       await deleteUser(current);
     } catch {
@@ -444,10 +451,6 @@ export default function PublicRulebookAI() {
       setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
       return;
     }
-    try {
-      await rtdbRemove(rtdbRef(rtdb, `referee/sessions/${uid}`));
-    } catch { /* session may not exist */ }
-    await removeRefereeUser(uid);
     try { await logout(); } catch { /* ignore */ }
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('auth_user');

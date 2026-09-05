@@ -183,8 +183,11 @@ export async function getAnalytics(): Promise<{
   const perUser = stats.perUser || {};
   const activeUsers = Object.keys(perUser).length;
 
-  // Count the virtual referee's OWN users (its own login), not the main team app's users.
-  const refereeUserIds = new Set<string>(Object.keys(stats.refereeUsers || {}));
+  // Registered = has a users doc (the signup record) from the referee app's
+  // own login, not the main team app's users. The refereeUsers tracking map
+  // is deliberately NOT included: it also holds test/Google logins with no
+  // signup doc, which used to inflate the count with ghost entries.
+  const refereeUserIds = new Set<string>();
   try {
     const usersSnap = await fsGetDocs(collection(db, 'users'));
     for (const d of usersSnap.docs) {
@@ -248,8 +251,9 @@ export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): (
   }, (err) => console.warn("analytics stats snapshot failed:", err));
 
   // Legacy user docs live in the shared Firestore `users` collection.
+  // (Same definition as getAnalytics: signup docs only, no tracking-map ghosts.)
   const unsubUsers = fsOnSnapshot(collection(db, 'users'), (snap) => {
-    const ids = new Set<string>(Object.keys(lastStats?.refereeUsers || {}));
+    const ids = new Set<string>();
     snap.docs.forEach(d => {
       const id = d.id;
       if (/^(member|parent|mentor|admin)_/.test(id)) return;
