@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe } from 'lucide-react';
+import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -182,9 +182,6 @@ export default function PublicRulebookAI() {
   const [showJudgeCorrections, setShowJudgeCorrections] = useState<boolean>(false);
   const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const logoTapTimesRef = useRef<number[]>([]);
-  const developByTapTimesRef = useRef<number[]>([]);
-  const boeingTapTimesRef = useRef<number[]>([]);
   const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent;
@@ -311,38 +308,6 @@ export default function PublicRulebookAI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
-  // Secret: 5 rapid taps on the logo opens the analytics panel
-  const handleLogoTap = () => {
-    const now = Date.now();
-    logoTapTimesRef.current = logoTapTimesRef.current.filter(t => now - t < 2000);
-    logoTapTimesRef.current.push(now);
-    if (logoTapTimesRef.current.length >= 5) {
-      logoTapTimesRef.current = [];
-      setShowAdminAnalytics(true);
-    }
-  };
-
-  // Secret: 5 taps on the "Developed By" caption opens the head-referee logs screen
-  const handleDevelopByTap = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    developByTapTimesRef.current.push(Date.now());
-    if (developByTapTimesRef.current.length >= 5) {
-      developByTapTimesRef.current = [];
-      setShowRefereeLogs(true);
-    }
-  };
-
-  // Secret: 5 rapid taps on the Boeing badge opens the judge corrections editor (code 6767)
-  const handleBoeingTap = () => {
-    const now = Date.now();
-    boeingTapTimesRef.current = boeingTapTimesRef.current.filter(t => now - t < 2000);
-    boeingTapTimesRef.current.push(now);
-    if (boeingTapTimesRef.current.length >= 5) {
-      boeingTapTimesRef.current = [];
-      setShowJudgeCorrections(true);
-    }
-  };
-
   // Feedback popup frequency control - never too often:
   // at most once every 14 days per device, and no new prompt for 45 days after submitting.
   const maybePromptFeedback = () => {
@@ -458,8 +423,6 @@ export default function PublicRulebookAI() {
   const [tripleJudgeMode] = useState<boolean>(true);
   const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
-  const [adminClickCount, setAdminClickCount] = useState(0);
-  const [showAdmin, setShowAdmin] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -488,19 +451,6 @@ export default function PublicRulebookAI() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (adminClickCount >= 10) {
-      setShowAdmin(true);
-      setAdminClickCount(0); // Reset after unlocking
-    }
-  }, [adminClickCount]);
-
-  const handleTitleClick = () => {
-    if (!showAdmin) {
-      setAdminClickCount(prev => prev + 1);
-    }
-  };
 
   // Upload modal is for rulebook files only. Judge corrections live in
   // the dedicated JudgeCorrectionsModal (Boeing badge), not here.
@@ -1147,15 +1097,15 @@ const fetchLatestRulebook = async () => {
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(250,204,21,0.35)] ring-2 ring-yellow-400/70 overflow-hidden">
-              <img src="/logoref.png" alt="שופט וירטואלי" onClick={handleLogoTap} className="w-full h-full object-contain cursor-pointer select-none" />
+              <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
             </div>
             <div className="min-w-0">
-                <h1 onClick={handleTitleClick} className="text-[11px] md:text-xl font-black text-white flex items-center gap-1 md:gap-2 tracking-tight cursor-default select-none leading-tight">
-                  {t('app.title')} <span className="text-[7px] md:text-xs bg-yellow-400/10 text-yellow-300 px-1.5 py-[1px] rounded-full font-extrabold uppercase border border-yellow-400/30">{t('app.titleEn')}</span>
+                <h1 className="text-[11px] md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
+                  {t('app.title')}
                 </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex items-center gap-1.5 mt-1">
                 <span className={`w-[6px] h-[6px] md:w-2 md:h-2 rounded-full shrink-0 ${isLearning ? 'bg-yellow-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'}`} />
-                <span className="text-[7px] md:text-[10px] font-bold text-slate-300 tracking-wide">
+                <span className="text-[9px] md:text-xs font-black text-yellow-200 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-2 py-px shadow-[0_0_12px_rgba(250,204,21,0.15)] tracking-wide">
                   {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
@@ -1247,6 +1197,32 @@ const fetchLatestRulebook = async () => {
                           פרטיות
                         </button>
                         <div className="h-px bg-white/60 my-1" />
+                        <div className="px-3 pt-1.5 pb-1 flex items-center gap-2 text-right">
+                          <Wrench className="w-4 h-4 text-slate-500" />
+                          <span className="font-bold text-xs text-slate-500">כלי שיפוט</span>
+                        </div>
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowAdminAnalytics(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <BarChart3 className="w-4 h-4 text-slate-500" />
+                          סטטיסטיקות
+                        </button>
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <ScrollText className="w-4 h-4 text-slate-500" />
+                          יומן שופטים
+                        </button>
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowJudgeCorrections(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
+                          <Wrench className="w-4 h-4 text-slate-500" />
+                          תיקוני שופט
+                        </button>
+                        <div className="h-px bg-white/60 my-1" />
                         <button
                           ref={langBtnRef}
                           onClick={openLangMenu}
@@ -1273,15 +1249,15 @@ const fetchLatestRulebook = async () => {
                 <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div onClick={handleBoeingTap} className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 cursor-pointer select-none">
+            <div className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 select-none">
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-5 md:h-10 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform" />
               <div className="h-4 md:h-8 w-px bg-yellow-400/25" />
               <div className="flex flex-col leading-tight">
-                <span onClick={handleDevelopByTap} className="text-[6px] md:text-[10px] font-black text-yellow-400/80 uppercase tracking-[0.15em] cursor-pointer select-none">Developed By</span>
+                <span className="text-[6px] md:text-[10px] font-black text-yellow-400/80 uppercase tracking-[0.15em] select-none">Developed By</span>
                 <span className="text-[9px] md:text-base font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[7px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[7px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
-            {showAdmin && isCurrentUserOwner() && (
+            {isCurrentUserOwner() && (
               <button
                 onClick={openUploadModal}
                 className="p-1.5 md:p-2 bg-white/[0.06] text-slate-200 border border-white/10 hover:bg-yellow-400 hover:text-slate-950 hover:border-yellow-400 rounded-xl transition-all"
