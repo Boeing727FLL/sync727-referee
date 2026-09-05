@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ListOrdered, Hand, Cog, Users, Globe } from 'lucide-react';
+import { Send, Bot, User, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, X } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GeminiService } from '../services/geminiService';
@@ -119,6 +119,7 @@ export default function PublicRulebookAI() {
   }, []);
 
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
+  const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1199,23 +1200,15 @@ const fetchLatestRulebook = async () => {
                           פרטיות
                         </a>
                         <div className="h-px bg-white/60 my-1" />
-                        <div className="px-3 pt-1.5 pb-1 flex items-center gap-2 text-right">
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowLangMenu(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                        >
                           <Globe className="w-4 h-4 text-slate-500" />
-                          <span className="font-bold text-xs text-slate-500">שפה</span>
-                        </div>
-                        <div className="max-h-44 overflow-y-auto px-1 pb-1">
-                          {languages.map((lang) => (
-                            <button
-                              key={lang.code}
-                              onClick={() => { setLanguage(lang.code); setShowUserMenu(false); }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm transition-colors text-right cursor-pointer ${language === lang.code ? 'bg-yellow-400/25 text-slate-900' : 'hover:bg-white/70 text-slate-700 hover:text-slate-900'}`}
-                            >
-                              <span className={`text-xs font-black w-4 shrink-0 ${language === lang.code ? 'text-slate-900' : 'text-transparent'}`}>✓</span>
-                              <span>{lang.native}</span>
-                              <span className="text-[10px] text-slate-500 font-medium">({lang.english})</span>
-                            </button>
-                          ))}
-                        </div>
+                          <span className="flex-1">שפה</span>
+                          <span className="text-[11px] text-slate-500 font-bold">{languages.find(l => l.code === language)?.native}</span>
+                          <ChevronLeft className="w-4 h-4 text-slate-400" />
+                        </button>
                       </div>
                       <div className="px-3 py-2 bg-white/40 border-t border-white/50 text-center">
                         <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
@@ -1807,6 +1800,63 @@ const fetchLatestRulebook = async () => {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Language side drawer - slides in from the right */}
+      <AnimatePresence>
+        {showLangMenu && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowLangMenu(false)}
+              className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm"
+              aria-hidden
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+              className="fixed top-0 right-0 h-full w-72 max-w-[85vw] z-[70] bg-slate-900/95 backdrop-blur-2xl border-l border-white/10 shadow-[-12px_0_40px_rgba(0,0,0,0.5)] flex flex-col"
+              dir="rtl"
+              role="dialog"
+              aria-label="שפה"
+            >
+              <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10">
+                <div className="w-9 h-9 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center shrink-0">
+                  <Globe className="w-5 h-5 text-yellow-300" />
+                </div>
+                <span className="flex-1 text-base font-black text-white text-right">בחירת שפה</span>
+                <button
+                  onClick={() => setShowLangMenu(false)}
+                  aria-label="סגור"
+                  className="p-2 rounded-xl bg-white/[0.06] text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {languages.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => { setLanguage(lang.code); setShowLangMenu(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold text-sm transition-all text-right cursor-pointer ${language === lang.code ? 'bg-yellow-400/15 border border-yellow-400/30 text-white' : 'border border-transparent hover:bg-white/[0.06] text-slate-300 hover:text-white'}`}
+                  >
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${language === lang.code ? 'bg-yellow-400 text-slate-950' : 'bg-white/10 text-transparent'}`}>✓</span>
+                    <span className="flex-1">{lang.native}</span>
+                    <span className="text-[11px] text-slate-500 font-medium">({lang.english})</span>
+                  </button>
+                ))}
+              </div>
+              <div className="px-4 py-3 border-t border-white/10 text-center">
+                <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.div>
