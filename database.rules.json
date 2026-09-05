@@ -6,6 +6,10 @@
         "feedbackResetAt": {
           ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
           ".validate": "newData.isNumber()"
+        },
+        "maintenance": {
+          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+          ".validate": "newData.isBoolean()"
         }
       },
       "stats": {

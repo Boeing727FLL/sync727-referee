@@ -322,6 +322,18 @@ export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): (
   }, (err) => console.warn("feedback reset snapshot failed:", err));
 }
 
+// ===== Maintenance mode (owner freezes the app for everyone else) =====
+
+export async function setMaintenance(on: boolean): Promise<void> {
+  await set(ref(rtdb, 'referee/meta/maintenance'), on);
+}
+
+export function subscribeMaintenance(callback: (on: boolean) => void): () => void {
+  return onValue(ref(rtdb, 'referee/meta/maintenance'), (snap: DataSnapshot) => {
+    callback(snap.val() === true);
+  }, (err) => console.warn("maintenance snapshot failed:", err));
+}
+
 // Realtime ordered queries shared by the journal and feedback viewers.
 export function logsQuery(limit = 200) {
   return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));

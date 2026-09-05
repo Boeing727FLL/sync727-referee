@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square, Check } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -22,8 +22,11 @@ import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import PrivacyModal from '../components/PrivacyModal';
+import SettingsModal from '../components/SettingsModal';
+import MaintenanceScreen from '../components/MaintenanceScreen';
+import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import { isCurrentUserOwner } from '../lib/owner';
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset } from '../lib/analytics';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenance, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -128,6 +131,12 @@ export default function PublicRulebookAI() {
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
+  const [maintenance, setMaintenanceState] = useState<boolean>(false);
+  useEffect(() => {
+    return subscribeMaintenance(setMaintenanceState);
+  }, []);
   // In-site toast (replaces blocking alert() popups)
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1311,6 +1320,15 @@ const fetchLatestRulebook = async () => {
                           <Shield className="w-4 h-4 text-slate-500" />
                           פרטיות
                         </button>
+                        {isCurrentUserOwner() && (
+                          <button
+                            onClick={() => { setShowUserMenu(false); setShowSettings(true); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          >
+                            <Settings className="w-4 h-4 text-slate-500" />
+                            הגדרות
+                          </button>
+                        )}
                         <div className="h-px bg-white/60 my-1" />
                         <div className="px-3 pt-1.5 pb-1 flex items-center gap-2 text-right">
                           <Wrench className="w-4 h-4 text-slate-500" />
@@ -1808,6 +1826,34 @@ const fetchLatestRulebook = async () => {
 
       <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
       <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onOpenUpload={() => { setShowSettings(false); openUploadModal(); }}
+        onOpenAnalytics={() => setShowAdminAnalytics(true)}
+        onOpenLogs={() => setShowRefereeLogs(true)}
+        onOpenCorrections={() => setShowJudgeCorrections(true)}
+        onOpenFeedback={() => setShowSettingsFeedback(true)}
+        onOpenPrivacy={() => setShowPrivacy(true)}
+      />
+      <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+
+      {/* Owner banner while work mode is on */}
+      {maintenance && isCurrentUserOwner() && (
+        <div className="fixed top-12 md:top-16 left-1/2 -translate-x-1/2 z-[9500] flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full bg-amber-400 text-slate-950 shadow-[0_8px_28px_rgba(250,204,21,0.45)]" dir="rtl">
+          <Wrench className="w-4 h-4" />
+          <span className="text-xs font-black whitespace-nowrap">מצב עבודה פעיל</span>
+          <button
+            onClick={() => setMaintenance(false)}
+            className="text-[11px] font-black bg-slate-950 text-amber-300 px-2.5 py-1 rounded-full hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            כבה
+          </button>
+        </div>
+      )}
+
+      {/* Work mode gate: everyone except the owner sees the maintenance screen */}
+      {maintenance && !isCurrentUserOwner() && <MaintenanceScreen />}
 
       {/* In-site green toast (copy / like confirmations) */}
       <AnimatePresence>
