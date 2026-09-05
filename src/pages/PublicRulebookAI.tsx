@@ -1085,11 +1085,21 @@ const fetchLatestRulebook = async () => {
       transition={{ duration: 1.0, ease: 'easeOut' }}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
-      {/* Ambient premium glows */}
+      {/* FLL field backdrop: faint game mat + grid + FIRST color glows */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.07] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.08] rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.05] rounded-full blur-3xl" />
+        <img
+          src="/bioglow-table.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.12]"
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:44px_44px]" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.06] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.10] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.07] rounded-full blur-3xl" />
       </div>
       <AnimatePresence>
         {showMigrationBanner && (
@@ -1270,7 +1280,7 @@ const fetchLatestRulebook = async () => {
             <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-xl">
               <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain" />
               <span className="text-[11px] md:text-xs font-bold text-slate-300">
-                נבנה בהתנדבות על ידי קבוצת Boeing 727 לקהילת ה-FLL
+                נבנה בהתנדבות על ידי קבוצת Boeing 727
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mt-6 md:mt-8 w-full max-w-2xl">
@@ -1530,7 +1540,7 @@ const fetchLatestRulebook = async () => {
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
           <p className="text-[10px] text-slate-500 font-medium">
-            נבנה בהתנדבות על ידי קבוצת Boeing 727 לקהילת ה-FLL · {t('intro.notOfficial')}
+            נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}
           </p>
         </div>
       </div>
