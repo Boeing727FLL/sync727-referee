@@ -24,7 +24,6 @@ import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import PrivacyModal from '../components/PrivacyModal';
 import SettingsModal from '../components/SettingsModal';
 import MaintenanceScreen from '../components/MaintenanceScreen';
-import BootSplash from '../components/BootSplash';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenance, setMaintenance } from '../lib/analytics';
@@ -134,14 +133,9 @@ export default function PublicRulebookAI() {
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
-  // null = flag not known yet: paint an opaque splash instead of the app
-  // so the normal screen never flashes before the maintenance gate resolves.
-  const [maintenance, setMaintenanceState] = useState<boolean | null>(null);
+  const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
-    let resolved = false;
-    const timer = setTimeout(() => { if (!resolved) setMaintenanceState(false); }, 3500);
-    const unsub = subscribeMaintenance((v) => { resolved = true; setMaintenanceState(v); });
-    return () => { clearTimeout(timer); unsub(); };
+    return subscribeMaintenance(setMaintenanceState);
   }, []);
   // In-site toast (replaces blocking alert() popups)
   const [toast, setToast] = useState<string | null>(null);
@@ -1818,7 +1812,7 @@ const fetchLatestRulebook = async () => {
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
 
       {/* Owner banner while work mode is on */}
-      {maintenance === true && isCurrentUserOwner() && (
+      {maintenance && isCurrentUserOwner() && (
         <div className="fixed top-12 md:top-16 left-1/2 -translate-x-1/2 z-[9500] flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full bg-amber-400 text-slate-950 shadow-[0_8px_28px_rgba(250,204,21,0.45)]" dir="rtl">
           <Wrench className="w-4 h-4" />
           <span className="text-xs font-black whitespace-nowrap">מצב עבודה פעיל</span>
@@ -1831,10 +1825,8 @@ const fetchLatestRulebook = async () => {
         </div>
       )}
 
-      {/* Work mode gate: everyone except the owner sees the maintenance screen.
-          While the flag is unknown, an opaque splash covers first paint. */}
-      {maintenance === null && <BootSplash />}
-      {maintenance === true && !isCurrentUserOwner() && <MaintenanceScreen />}
+      {/* Work mode gate: everyone except the owner sees the maintenance screen */}
+      {maintenance && !isCurrentUserOwner() && <MaintenanceScreen />}
 
       {/* In-site green toast (copy / like confirmations) */}
       <AnimatePresence>

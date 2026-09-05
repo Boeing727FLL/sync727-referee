@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 import { subscribeMaintenance } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
-import BootSplash from '../components/BootSplash';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 
 export default function LoginPage() {
@@ -28,15 +27,12 @@ export default function LoginPage() {
   const [welcomeName, setWelcomeName] = useState('');
   const pendingAuthRef = useRef<{ email: string; password: string; isSignUp: boolean; name: string } | null>(null);
   const authTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [maintenance, setMaintenance] = useState<boolean | null>(null);
+  const [maintenance, setMaintenance] = useState(false);
   const [formUnlocked, setFormUnlocked] = useState(false);
   const logoTapTimesRef = useRef<number[]>([]);
   const ownerHere = isCurrentUserOwner();
   useEffect(() => {
-    let resolved = false;
-    const timer = setTimeout(() => { if (!resolved) setMaintenance(false); }, 3500);
-    const unsub = subscribeMaintenance((v) => { resolved = true; setMaintenance(v); });
-    return () => { clearTimeout(timer); unsub(); };
+    return subscribeMaintenance(setMaintenance);
   }, []);
   // Hidden owner bypass: 5 rapid taps on the maintenance logo reveal the form.
   const handleSecretTap = () => {
@@ -48,7 +44,7 @@ export default function LoginPage() {
       setFormUnlocked(true);
     }
   };
-  const gated = maintenance === true && !ownerHere && !formUnlocked;
+  const gated = maintenance && !ownerHere && !formUnlocked;
 
   useEffect(() => {
     const timers = authTimersRef.current;
@@ -259,7 +255,6 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 flex flex-col items-center justify-center gap-3 p-4"
       >
-        {maintenance === null && <BootSplash />}
         {gated && <MaintenanceScreen onLogoTap={handleSecretTap} />}
         <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-3xl w-full max-w-md relative overflow-hidden">
           <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-l from-transparent via-yellow-400/80 to-transparent" />
