@@ -238,7 +238,7 @@ async function getAllApiKeys(): Promise<string[]> {
 // Official referee corrections (admin overrides) loaded from Firestore.
 let REFEREE_CORRECTIONS: string | null = null;
 
-async function getRefereeCorrections(): Promise<string> {
+export async function getRefereeCorrections(): Promise<string> {
   if (REFEREE_CORRECTIONS !== null) return REFEREE_CORRECTIONS;
   try {
     const { doc, getDoc } = await import('firebase/firestore');
@@ -256,7 +256,7 @@ export function invalidateCorrectionsCache(): void {
   REFEREE_CORRECTIONS = null;
 }
 
-async function getNextApiKey(): Promise<string> {
+export async function getNextApiKey(): Promise<string> {
   await ensureKeysLoaded();
 
   const availableKeys = GEMINI_KEYS.filter(k => !unhealthyKeys.has(k));

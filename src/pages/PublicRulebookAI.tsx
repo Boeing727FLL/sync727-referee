@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, Mic } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -24,6 +24,7 @@ import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import PrivacyModal from '../components/PrivacyModal';
 import SettingsModal from '../components/SettingsModal';
 import MaintenanceScreen from '../components/MaintenanceScreen';
+import LiveRefereeModal from '../components/LiveRefereeModal';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenance, setMaintenance } from '../lib/analytics';
@@ -133,6 +134,7 @@ export default function PublicRulebookAI() {
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
+  const [showLive, setShowLive] = useState<boolean>(false);
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
     return subscribeMaintenance(setMaintenanceState);
@@ -1444,6 +1446,21 @@ const fetchLatestRulebook = async () => {
                 );
               })}
             </div>
+            <button
+              onClick={() => setShowLive(true)}
+              className="mt-3.5 w-full max-w-2xl relative overflow-hidden group bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 rounded-3xl md:rounded-2xl px-5 py-4 transition-all shadow-[0_10px_28px_rgba(250,204,21,0.3)] hover:shadow-[0_14px_36px_rgba(250,204,21,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer"
+            >
+              <span className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent opacity-60 pointer-events-none" aria-hidden />
+              <span className="relative flex items-center justify-center gap-2.5">
+                <span className="shrink-0 w-10 h-10 rounded-2xl bg-slate-950/90 flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-yellow-300" />
+                </span>
+                <span className="text-right">
+                  <span className="block text-[15px] md:text-base font-black leading-tight">שופט לייב, מדברים ומראים</span>
+                  <span className="block text-[11px] md:text-xs font-bold opacity-70 leading-tight">שיחה קולית עם מצלמה, בעברית</span>
+                </span>
+              </span>
+            </button>
           </motion.div>
         )}
         {messages.map((msg, idx) => {
@@ -1641,6 +1658,15 @@ const fetchLatestRulebook = async () => {
             className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
+          <button
+            onClick={() => setShowLive(true)}
+            style={{ flexShrink: 0 }}
+            aria-label="שופט לייב"
+            title="שופט לייב, שיחה קולית"
+            className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-white/[0.06] hover:bg-yellow-400/15 text-slate-300 hover:text-yellow-200 border border-white/10 hover:border-yellow-400/40 backdrop-blur-xl active:scale-95 transition-all cursor-pointer"
+          >
+            <Mic className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
           {loading ? (
             <button
               onClick={handleStop}
@@ -1810,6 +1836,12 @@ const fetchLatestRulebook = async () => {
         onOpenPrivacy={() => setShowPrivacy(true)}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+      <LiveRefereeModal
+        isOpen={showLive}
+        onClose={() => setShowLive(false)}
+        seasonName={seasonName}
+        rulebookFiles={activeRulebookFiles}
+      />
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
