@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, BarChart3, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -1330,30 +1330,12 @@ const fetchLatestRulebook = async () => {
                           </button>
                         )}
                         <div className="h-px bg-white/60 my-1" />
-                        <div className="px-3 pt-1.5 pb-1 flex items-center gap-2 text-right">
-                          <Wrench className="w-4 h-4 text-slate-500" />
-                          <span className="font-bold text-xs text-slate-500">כלי שיפוט</span>
-                        </div>
-                        <button
-                          onClick={() => { setShowUserMenu(false); setShowAdminAnalytics(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
-                        >
-                          <BarChart3 className="w-4 h-4 text-slate-500" />
-                          סטטיסטיקות
-                        </button>
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
                           <ScrollText className="w-4 h-4 text-slate-500" />
                           יומן שופטים
-                        </button>
-                        <button
-                          onClick={() => { setShowUserMenu(false); setShowJudgeCorrections(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
-                        >
-                          <Wrench className="w-4 h-4 text-slate-500" />
-                          תיקוני שופט
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
@@ -1390,15 +1372,7 @@ const fetchLatestRulebook = async () => {
                 <span className="text-[9px] md:text-base font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[7px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[7px] md:text-xs">Yuval Margalit</span></span>
               </div>
             </div>
-            {isCurrentUserOwner() && (
-              <button
-                onClick={openUploadModal}
-                className="p-1.5 md:p-2 bg-white/[0.06] text-slate-200 border border-white/10 hover:bg-yellow-400 hover:text-slate-950 hover:border-yellow-400 rounded-xl transition-all"
-                title={t('admin.upload')}
-              >
-                <UploadIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
-              </button>
-            )}
+
           </div>
         </div>
       </div>
@@ -1831,7 +1805,6 @@ const fetchLatestRulebook = async () => {
         onClose={() => setShowSettings(false)}
         onOpenUpload={() => { setShowSettings(false); openUploadModal(); }}
         onOpenAnalytics={() => setShowAdminAnalytics(true)}
-        onOpenLogs={() => setShowRefereeLogs(true)}
         onOpenCorrections={() => setShowJudgeCorrections(true)}
         onOpenFeedback={() => setShowSettingsFeedback(true)}
         onOpenPrivacy={() => setShowPrivacy(true)}

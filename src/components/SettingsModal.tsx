@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, ArrowRight, Settings, Wrench, Upload, BarChart3, ScrollText,
+  X, Settings, Wrench, Upload, BarChart3,
   MessageSquareHeart, RotateCcw, Shield, Lock, Check,
 } from 'lucide-react';
 import {
@@ -14,7 +14,6 @@ interface SettingsModalProps {
   onClose: () => void;
   onOpenUpload: () => void;
   onOpenAnalytics: () => void;
-  onOpenLogs: () => void;
   onOpenCorrections: () => void;
   onOpenFeedback: () => void;
   onOpenPrivacy: () => void;
@@ -51,7 +50,7 @@ function RowButton({ icon, label, sub, onClick, danger }: {
 }
 
 export default function SettingsModal({
-  isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenLogs, onOpenCorrections, onOpenFeedback, onOpenPrivacy,
+  isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenCorrections, onOpenFeedback, onOpenPrivacy,
 }: SettingsModalProps) {
   const [owner] = useState(() => isCurrentUserOwner());
   const [maintenance, setMaintenanceState] = useState(false);
@@ -145,14 +144,6 @@ export default function SettingsModal({
             aria-label="הגדרות"
           >
             <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/10 bg-white/[0.03] shrink-0 flex items-center gap-3">
-              <button
-                onClick={onClose}
-                aria-label="חזרה לצ׳אט"
-                title="חזרה לצ׳אט"
-                className="shrink-0 p-2 rounded-xl bg-white/[0.06] text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 cursor-pointer"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </button>
               <div className="w-9 h-9 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center shrink-0">
                 <Settings className="w-5 h-5 text-yellow-300" />
               </div>
@@ -223,7 +214,6 @@ export default function SettingsModal({
                   <SectionTitle>נתונים</SectionTitle>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-1">
                     <RowButton icon={<BarChart3 className="w-4 h-4 text-slate-500" />} label="אנליטיקס" sub="שאלות, משתמשים, מחוברים" onClick={onOpenAnalytics} />
-                    <RowButton icon={<ScrollText className="w-4 h-4 text-slate-500" />} label="יומן שופטים" sub="כל השאלות והתשובות" onClick={onOpenLogs} />
                     <RowButton icon={<MessageSquareHeart className="w-4 h-4 text-slate-500" />} label="צפייה בפידבקים" sub="דירוגים והצעות שיפור" onClick={onOpenFeedback} />
                   </div>
 

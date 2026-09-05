@@ -5,7 +5,8 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Wrench } from 'lucide-react';
+import { subscribeMaintenance } from '../lib/analytics';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,6 +25,10 @@ export default function LoginPage() {
   const [welcomeName, setWelcomeName] = useState('');
   const pendingAuthRef = useRef<{ email: string; password: string; isSignUp: boolean; name: string } | null>(null);
   const authTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [maintenance, setMaintenanceState] = useState(false);
+  useEffect(() => {
+    return subscribeMaintenance(setMaintenanceState);
+  }, []);
 
   useEffect(() => {
     const timers = authTimersRef.current;
@@ -232,8 +237,18 @@ export default function LoginPage() {
           scale: authOverlay ? 0.95 : 1,
         }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="flex-1 flex items-center justify-center p-4"
+        className="flex-1 flex flex-col items-center justify-center gap-3 p-4"
       >
+        {maintenance && !authOverlay && (
+          <div className="w-full max-w-md flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-amber-400/10 border border-amber-400/30 backdrop-blur-xl" dir="rtl">
+            <span className="shrink-0 w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/25 flex items-center justify-center">
+              <Wrench className="w-4 h-4 text-amber-300" />
+            </span>
+            <p className="text-xs font-bold text-amber-200 leading-relaxed">
+              האתר בעבודות כרגע. אפשר להתחבר, אבל רק חשבון הבעלים יכול להיכנס לאפליקציה עד שהעבודות מסתיימות.
+            </p>
+          </div>
+        )}
         <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-3xl w-full max-w-md relative overflow-hidden">
           <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-l from-transparent via-yellow-400/80 to-transparent" />
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-40 bg-yellow-400/[0.08] rounded-full blur-3xl pointer-events-none" aria-hidden />

@@ -8,6 +8,7 @@
           ".validate": "newData.isNumber()"
         },
         "maintenance": {
+          ".read": true,
           ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
           ".validate": "newData.isBoolean()"
         }
