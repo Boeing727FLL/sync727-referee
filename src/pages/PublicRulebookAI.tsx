@@ -37,11 +37,10 @@ export default function PublicRulebookAI() {
   // Login state comes only from Firebase Auth (user) or the saved auth_user.
   // URL bypass params were removed for security, everyone must log in.
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(false);
-  const [showMigrationBanner, setShowMigrationBanner] = useState<boolean>(false);
   // Keep hasGoogleToken in sync with Firebase Auth so the
   // browserLocalPersistence session survives close/reopen the next day.
   // If a stale localStorage entry exists from the old inMemory days
-  // (hasLocal true but no Firebase user), clear it and ask for one-time re-login.
+  // (hasLocal true but no Firebase user), clear it silently.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
@@ -54,12 +53,8 @@ export default function PublicRulebookAI() {
           localStorage.removeItem('auth_user');
           localStorage.removeItem('user_picture');
           localStorage.removeItem('user_name');
-          setHasGoogleToken(false);
-          setShowMigrationBanner(true);
-          setTimeout(() => setShowMigrationBanner(false), 6000);
-        } else {
-          setHasGoogleToken(false);
         }
+        setHasGoogleToken(false);
       }
     });
     return () => unsub();
@@ -1106,19 +1101,6 @@ const fetchLatestRulebook = async () => {
         <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.10] rounded-full blur-3xl" />
         <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.07] rounded-full blur-3xl" />
       </div>
-      <AnimatePresence>
-        {showMigrationBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="bg-amber-400 text-slate-900 text-xs font-black text-center py-2.5 px-4 z-30 shrink-0 relative"
-          >
-            שדרוג אבטחה — יש להתחבר מחדש פעם אחת
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Referee Ribbon - slim identity strip */}
       <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0 relative z-10" />
 
