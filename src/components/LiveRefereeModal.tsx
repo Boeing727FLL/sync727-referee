@@ -80,10 +80,10 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
           }
         },
         onInterrupted: () => { if (!cancelled) setPendingModel(''); },
-        onCameraLost: () => {
+        onCameraLost: (detail?: string) => {
           if (cancelled) return;
           setCamOn(false);
-          flashNotice('שליחת תמונה נכשלה. המצלמה כובתה, השיחה ממשיכה בקול.');
+          flashNotice(detail || 'שליחת תמונה נכשלה. המצלמה כובתה, השיחה ממשיכה בקול.');
         },
       },
     });

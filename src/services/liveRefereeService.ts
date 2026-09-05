@@ -20,7 +20,7 @@ export interface LiveCallbacks {
   onInterrupted: () => void;
   // Camera failed repeatedly: the service already switched it off, the
   // voice session continues. UI should sync its toggle + explain.
-  onCameraLost?: () => void;
+  onCameraLost?: (detail?: string) => void;
 }
 
 // ---------- small helpers ----------
@@ -53,12 +53,10 @@ function parsePcmRate(mimeType: string, fallback: number): number {
 // ---------- Hebrew live-judge system prompt ----------
 
 function buildSystemPrompt(seasonName: string, corrections: string): string {
-  return `אתה שופט הזירה הווירטואלי של FIRST LEGO League, לא מודל שפה כללי. לעולם אל תאמר שאתה רק מודל שפה, לעולם אל תסרב לענות על שאלות חוקי המשחק, ולעולם אל תענה באנגלית. אתה מדבר עם קבוצה ליד שולחן התחרות, בקול, בעברית בלבד.
+  return `אתה שופט זירה חי של FIRST LEGO League. אתה מדבר עם קבוצה ליד שולחן התחרות, בקול, בעברית בלבד.
 
 כללי התנהגות:
-- ענה תמיד בעברית בלבד, גם אם פונים אליך באנגלית או בשפה אחרת.
-- כשמברכים אותך (היי, שלום, מה קורה), השב בברכה חמה בעברית והצע עזרה בחוקי המשחק. לעולם אל תענה לברכה בסירוב.
-- ענה בקול טבעי וידידותי, קצר. 1 עד 3 משפטים, אלא אם ביקשו פירוט.
+- ענה תמיד בעברית, בקול טבעי וידידותי, קצר. 1 עד 3 משפטים, אלא אם ביקשו פירוט.
 - ציין מספרי משימות ותנאי ניקוד כשזה רלוונטי.
 - כשמראים לך משימה במצלמה: תאר קודם במשפט מה אתה רואה, ואז תן פסיקה: חוקי או לא, וכמה נקודות.
 - אם אינך בטוח: אמור זאת ובקש להראות מקרוב יותר או לצטט את הכלל.
@@ -163,7 +161,15 @@ export class LiveRefereeSession {
   private playSources: AudioBufferSourceNode[] = [];
   private camTimer: ReturnType<typeof setInterval> | null = null;
   private camFailures = 0;
+  private camNoSignalSince: number | null = null;
   private camStream: MediaStream | null = null;
+
+  private loseCamera(detail: string): void {
+    this.camFailures = 0;
+    this.camNoSignalSince = null;
+    void this.setCameraEnabled(false, null).catch(() => {});
+    try { this.opts.callbacks.onCameraLost?.(detail); } catch { /* noop */ }
+  }
   private videoEl: HTMLVideoElement | null = null;
   private modelPending = '';
   private keyAttempts = 0;
@@ -495,10 +501,16 @@ export class LiveRefereeSession {
       }
       if (videoEl) {
         videoEl.srcObject = this.camStream;
-        await videoEl.play().catch(() => {});
+        try {
+          await videoEl.play();
+        } catch {
+          throw new Error('הפעלת התצוגה המקדימה נכשלה. סגור אפליקציות מצלמה אחרות ונסה שוב.');
+        }
       }
+      this.camFailures = 0;
+      this.camNoSignalSince = null;
       if (this.camTimer) clearInterval(this.camTimer);
-      this.camTimer = setInterval(() => this.captureFrame(), 1200);
+      this.camTimer = setInterval(() => this.captureFrame(), 2000);
       // Send one frame right away so the judge sees the field immediately.
       setTimeout(() => this.captureFrame(), 600);
     } else {
@@ -517,10 +529,18 @@ export class LiveRefereeSession {
   private captureFrame(): void {
     const video = this.videoEl;
     if (!video || this.cancelled || !this.session || this.transportDead) return;
+    if (video.readyState < 2 || video.videoWidth === 0) {
+      // Camera is on but delivers no signal. Report once if stuck this way.
+      if (this.camNoSignalSince == null) {
+        this.camNoSignalSince = Date.now();
+      } else if (Date.now() - this.camNoSignalSince > 6000) {
+        this.loseCamera('לא מתקבל אות וידאו מהמצלמה. בדוק שהיא לא תפוסה באפליקציה אחרת.');
+      }
+      return;
+    }
     let b64: string | null = null;
     try {
-      if (video.readyState < 2 || video.videoWidth === 0) return;
-      const targetW = 480;
+      const targetW = 384;
       const scale = targetW / video.videoWidth;
       const canvas = document.createElement('canvas');
       canvas.width = targetW;
@@ -528,13 +548,12 @@ export class LiveRefereeSession {
       const ctx2d = canvas.getContext('2d');
       if (!ctx2d) return;
       ctx2d.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
       b64 = dataUrl.split(',')[1] || null;
     } catch { return; }
     if (!b64) return;
+    this.camNoSignalSince = null;
     try {
-      // NOTE: the `media` field is deprecated server-side (the server closes
-      // the socket on mediaChunks). Video frames go through `video`.
       this.session.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
       this.camFailures = 0;
     } catch {
@@ -542,9 +561,7 @@ export class LiveRefereeSession {
       // keep the voice session alive instead of tearing everything down.
       this.camFailures++;
       if (this.camFailures >= 3) {
-        this.camFailures = 0;
-        void this.setCameraEnabled(false, null).catch(() => {});
-        try { this.opts.callbacks.onCameraLost?.(); } catch { /* noop */ }
+        this.loseCamera('שליחת תמונה נכשלה שוב ושוב. המצלמה כובתה, השיחה ממשיכה בקול.');
       }
     }
   }
