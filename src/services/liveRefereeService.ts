@@ -531,7 +531,9 @@ export class LiveRefereeSession {
     } catch { return; }
     if (!b64) return;
     try {
-      this.session.sendRealtimeInput({ media: { data: b64, mimeType: 'image/jpeg' } });
+      // NOTE: the `media` field is deprecated server-side (the server closes
+      // the socket on mediaChunks). Video frames go through `video`.
+      this.session.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
       this.camFailures = 0;
     } catch {
       // Camera is auxiliary: after 3 consecutive failures switch it off and
