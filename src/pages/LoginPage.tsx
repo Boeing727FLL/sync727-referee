@@ -496,8 +496,8 @@ export default function LoginPage() {
             key="auth-overlay"
             initial={{ opacity: 0 }}
             animate={authLeaving
-              ? { opacity: [1, 1, 1], scale: [1, 1.07, 1.14], filter: ['blur(0px)', 'blur(8px)', 'blur(20px)'] }
-              : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              ? { opacity: [1, 1, 1], scale: [1, 1.05, 1.1] }
+              : { opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={authLeaving
               ? { duration: 1.3, times: [0, 0.6, 1], ease: [0.22, 1, 0.36, 1] }
@@ -508,8 +508,8 @@ export default function LoginPage() {
             {authLeaving && (
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0, 1] }}
-                transition={{ duration: 1.3, times: [0, 0.7, 1], ease: 'easeIn' }}
+                animate={{ opacity: [0, 0.85, 1] }}
+                transition={{ duration: 1.3, times: [0, 0.5, 1], ease: 'easeOut' }}
                 className="absolute inset-0 bg-[radial-gradient(circle_at_center,#fffbe8_0%,rgba(250,204,21,0.85)_45%,rgba(250,204,21,0.25)_75%,transparent_100%)]"
                 aria-hidden
               />
