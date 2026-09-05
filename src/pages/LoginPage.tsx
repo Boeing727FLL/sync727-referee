@@ -504,8 +504,8 @@ export default function LoginPage() {
             {authLeaving && (
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.9] }}
-                transition={{ duration: 1.15, ease: 'easeInOut' }}
+                animate={{ opacity: [0, 0.9, 0.45] }}
+                transition={{ duration: 1.15, times: [0, 0.65, 1], ease: 'easeInOut' }}
                 className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.9)_0%,rgba(250,204,21,0.45)_45%,rgba(250,204,21,0.12)_75%,transparent_100%)]"
                 aria-hidden
               />

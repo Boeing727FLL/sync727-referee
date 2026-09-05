@@ -1302,9 +1302,9 @@ const fetchLatestRulebook = async () => {
       {/* Golden reveal flash after login transition */}
       {enterFlash && (
         <motion.div
-          initial={{ opacity: 1 }}
+          initial={{ opacity: 0.45 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
           className="pointer-events-none fixed inset-0 z-[9000] bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.8)_0%,rgba(250,204,21,0.4)_50%,rgba(250,204,21,0.1)_78%,transparent_100%)]"
           aria-hidden
         />
