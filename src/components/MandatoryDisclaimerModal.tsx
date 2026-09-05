@@ -21,17 +21,23 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
           dir="rtl"
         >
           <motion.div
-            initial={{ scale: 0.92, opacity: 0, y: 16 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
+            initial={{ scale: 0.9, opacity: 0, y: -160 }}
+            animate={{ scale: [0.9, 1.02, 1], opacity: [0, 1, 1], y: [-160, 12, 0] }}
             exit={{ scale: 0.96, opacity: 0, y: 120 }}
-            transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] }}
             className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             role="dialog"
             aria-modal="true"
           >
             <div className="p-6 md:p-7 text-center">
               <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute -inset-3 bg-yellow-400/25 blur-xl rounded-full pointer-events-none" aria-hidden />
+                <motion.div
+                  className="absolute -inset-3 bg-yellow-400/25 blur-xl rounded-full pointer-events-none"
+                  aria-hidden
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: [0, 0.9, 0.5], scale: [0.6, 1.2, 1] }}
+                  transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] }}
+                />
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 p-[2px] shadow-[0_4px_16px_rgba(250,204,21,0.4)]">
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
                     <Check className="w-8 h-8 text-amber-600 stroke-[3]" />
