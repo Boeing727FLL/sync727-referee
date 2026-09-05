@@ -16,15 +16,10 @@ import {
   type DataSnapshot,
 } from 'firebase/database';
 import { rtdb, db } from './firebase';
-// Firestore is kept only for the one-time migration below and for counting
-// legacy user docs (shared team-app collection, not analytics data).
+// Firestore is kept only for counting legacy user docs (shared team-app
+// collection, not analytics data). All analytics data lives in RTDB.
 import {
-  doc,
   collection,
-  query as fsQuery,
-  orderBy as fsOrderBy,
-  limit as fsLimit,
-  getDoc as fsGetDoc,
   getDocs as fsGetDocs,
   onSnapshot as fsOnSnapshot,
 } from 'firebase/firestore';
@@ -305,132 +300,6 @@ export function watchSession(uid: string, myDeviceId: string, onKicked: () => vo
       onKicked();
     }
   }, (err) => console.warn("session watch failed:", err));
-}
-
-// ===== One-time migration: Firestore -> RTDB (owner only, idempotent) =====
-
-function fsTimestampToMs(v: any): number | null {
-  if (v == null) return null;
-  try {
-    if (typeof v.toMillis === 'function') return v.toMillis();
-    if (typeof v.toDate === 'function') {
-      const t = v.toDate().getTime();
-      return isNaN(t) ? null : t;
-    }
-    if (typeof v.seconds === 'number') return v.seconds * 1000;
-    if (typeof v === 'number') return v < 1e11 ? v * 1000 : v;
-    if (typeof v === 'string') {
-      const t = new Date(v).getTime();
-      return isNaN(t) ? null : t;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-const numOr = (v: any, fallback: number): number => {
-  const n = Number(v);
-  return isNaN(n) ? fallback : n;
-};
-
-function chunkEntries(entries: [string, any][], size: number): [string, any][][] {
-  const out: [string, any][][] = [];
-  for (let i = 0; i < entries.length; i += size) out.push(entries.slice(i, i + size));
-  return out;
-}
-
-export async function migrateFirestoreToRtdb(onProgress?: (msg: string) => void): Promise<{
-  logs: number;
-  feedback: number;
-  skippedFeedback: number;
-  statsMerged: boolean;
-}> {
-  const say = (m: string) => { try { onProgress?.(m); } catch { /* noop */ } };
-  let logs = 0;
-  let feedback = 0;
-  let skippedFeedback = 0;
-  let statsMerged = false;
-
-  // 1. Merge stats (max wins, union of maps) so re-runs are safe.
-  say('קורא סטטיסטיקות מ-Firestore...');
-  const fsStatsSnap = await fsGetDoc(doc(db, 'analytics', 'stats'));
-  const fsStats: any = fsStatsSnap.exists() ? fsStatsSnap.data() : {};
-  const rtStatsSnap = await get(statsRef());
-  const rtStats: any = rtStatsSnap.exists() ? rtStatsSnap.val() : {};
-  const merged: Record<string, any> = {
-    [`${STATS_PATH}/totalQuestions`]: Math.max(numOr(fsStats.totalQuestions, 0), numOr(rtStats.totalQuestions, 0)),
-  };
-  const perUser: Record<string, number> = { ...((rtStats.perUser || {}) as Record<string, number>) };
-  for (const [k, v] of Object.entries((fsStats.perUser || {}) as Record<string, any>)) {
-    perUser[k] = Math.max(numOr(v, 0), numOr(perUser[k], 0));
-  }
-  merged[`${STATS_PATH}/perUser`] = perUser;
-  const refUsers: Record<string, number> = { ...((rtStats.refereeUsers || {}) as Record<string, number>) };
-  for (const [k, v] of Object.entries((fsStats.refereeUsers || {}) as Record<string, any>)) {
-    if (k.includes('.')) continue; // skip legacy dotted keys
-    refUsers[k] = Math.max(numOr(v, 0), numOr(refUsers[k], 0));
-  }
-  merged[`${STATS_PATH}/refereeUsers`] = refUsers;
-  say('כותב סטטיסטיקות ממוזגות ל-Realtime...');
-  await update(ref(rtdb), merged);
-  statsMerged = true;
-
-  // 2. Copy journal entries, keyed by Firestore doc ID (idempotent).
-  say('מעתיק יומן שאלות מ-Firestore...');
-  const logsSnap = await fsGetDocs(fsQuery(collection(db, 'referee_logs'), fsOrderBy('createdAt', 'desc'), fsLimit(500)));
-  const logEntries: [string, any][] = [];
-  logsSnap.docs.forEach(d => {
-    const v = d.data() as any;
-    if (!v.question) return;
-    logEntries.push([`${LOGS_PATH}/${d.id}`, {
-      question: String(v.question),
-      answer: typeof v.answer === 'string' ? v.answer : '',
-      season: v.season || '',
-      language: v.language || '',
-      uid: v.uid || 'anon',
-      model: v.model || '',
-      ok: v.ok !== false,
-      createdAt: fsTimestampToMs(v.createdAt) || Date.now(),
-    }]);
-  });
-  for (const chunk of chunkEntries(logEntries, 50)) {
-    await update(ref(rtdb), Object.fromEntries(chunk));
-    logs += chunk.length;
-    say(`הועתקו ${logs} רשומות יומן...`);
-  }
-
-  // 3. Copy feedback entries (skip invalid ratings so one bad doc can't fail a chunk).
-  say('מעתיק פידבקים מ-Firestore...');
-  const fbSnap = await fsGetDocs(fsQuery(collection(db, 'referee_feedback'), fsOrderBy('createdAt', 'desc'), fsLimit(500)));
-  const fbEntries: [string, any][] = [];
-  fbSnap.docs.forEach(d => {
-    const v = d.data() as any;
-    const rating = Number(v.rating);
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      skippedFeedback++;
-      return;
-    }
-    const entry: Record<string, any> = {
-      rating,
-      uid: v.uid || 'anon',
-      season: v.season || '',
-      language: v.language || '',
-      createdAt: fsTimestampToMs(v.createdAt) || Date.now(),
-    };
-    if (typeof v.improvements === 'string' && v.improvements.trim()) {
-      entry.improvements = v.improvements;
-    }
-    fbEntries.push([`${FEEDBACK_PATH}/${d.id}`, entry]);
-  });
-  for (const chunk of chunkEntries(fbEntries, 50)) {
-    await update(ref(rtdb), Object.fromEntries(chunk));
-    feedback += chunk.length;
-    say(`הועתקו ${feedback} פידבקים...`);
-  }
-
-  say('המיגרציה הסתיימה.');
-  return { logs, feedback, skippedFeedback, statsMerged };
 }
 
 // Realtime ordered queries shared by the journal and feedback viewers.
