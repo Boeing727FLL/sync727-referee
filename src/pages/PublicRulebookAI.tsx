@@ -1498,12 +1498,12 @@ const fetchLatestRulebook = async () => {
                           components={{
                             em: ({children, ...props}) => {
                               const txt = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null;
-                              if (txt === '?') return <span className="typewriter-cursor">?</span>;
+                              if (txt === '▍') return <span className="typewriter-cursor" aria-hidden>▍</span>;
                               return <em {...props}>{children}</em>;
                             }
                           }}
                         >
-                          {isTypewriting ? finalRenderText + '*?*' : finalRenderText}
+                          {isTypewriting ? finalRenderText + '\u200B*\u258D*' : finalRenderText}
                         </ReactMarkdown>
                       </div>
                     )}
