@@ -997,8 +997,6 @@ const fetchLatestRulebook = async () => {
 
       let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
-      trackQuestion(resolveRefereeUid() || 'anon');
-      
       const response = await GeminiService.askRulebook(
         finalPrompt,
         relevantMessages,
@@ -1042,6 +1040,9 @@ const fetchLatestRulebook = async () => {
           return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
         });
       } else {
+        // Count only questions that actually got an answer: stopped or
+        // failed requests never reach here, so they are not counted.
+        trackQuestion(resolveRefereeUid() || 'anon');
         logRefereeQA({
           question: userMessage,
           answer: stripThinkBlocks(response) || response || t('chat.commError'),
