@@ -145,13 +145,15 @@ export default function PublicRulebookAI() {
     if (rect) {
       // Panel opens to the LEFT of the language button. Falls back to the
       // left viewport edge when there is no room (small screens).
-      const panelW = 224;
+      // Top is clamped so the panel always ends with a bottom margin.
+      const panelW = 208;
+      const panelH = window.innerHeight * 0.5;
       const right = Math.min(
         Math.max(12, window.innerWidth - rect.left + 8),
         Math.max(12, window.innerWidth - panelW - 12)
       );
       setLangPos({
-        top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - 340)),
+        top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - panelH - 16)),
         right,
       });
     }
@@ -1872,19 +1874,19 @@ const fetchLatestRulebook = async () => {
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
               style={{ top: langPos.top, right: langPos.right }}
-              className="fixed z-[70] w-56 max-w-[70vw] bg-[#1b1b1d]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden"
+              className="fixed z-[70] w-52 max-w-[70vw] bg-[#1b1b1d] border border-white/15 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden"
               dir="rtl"
               role="dialog"
               aria-label="שפה"
             >
-              <div className="py-1 divide-y divide-white/10 max-h-[60vh] overflow-y-auto">
+              <div className="py-1 divide-y divide-white/10 max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent]">
                 {languages.map((lang) => {
                   const active = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       onClick={() => { setLanguage(lang.code); setShowLangMenu(false); }}
-                      className="relative w-full px-4 py-4 text-white font-bold text-sm text-center hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      className="relative w-full px-4 py-3 text-white font-bold text-sm text-center hover:bg-white/[0.06] transition-colors cursor-pointer"
                     >
                       {lang.native}
                       {active && (
