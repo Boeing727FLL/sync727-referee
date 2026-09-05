@@ -1885,7 +1885,7 @@ const fetchLatestRulebook = async () => {
                   return (
                     <button
                       key={lang.code}
-                      onClick={() => { setLanguage(lang.code); setShowLangMenu(false); }}
+                      onClick={() => { setLanguage(lang.code); setShowLangMenu(false); setShowUserMenu(false); }}
                       className="relative w-full px-4 py-3 text-slate-700 hover:text-slate-900 font-bold text-sm text-center hover:bg-white/70 transition-colors cursor-pointer"
                     >
                       {lang.native}
