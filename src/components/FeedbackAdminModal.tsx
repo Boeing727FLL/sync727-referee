@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Star, MessageSquareHeart, RefreshCw, Trash2, Inbox } from 'lucide-react';
 import { onValue, get, remove, ref, update } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
-import { feedbackQuery } from '../lib/analytics';
+import { feedbackQuery, resetFeedbackForAll } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 
 interface FeedbackAdminModalProps {
@@ -47,9 +47,27 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   const [refreshing, setRefreshing] = useState(false);
   const [timerReset, setTimerReset] = useState(false);
 
-  const resetPopupTimer = () => {
-    localStorage.removeItem('referee_feedback_last_prompt');
-    localStorage.removeItem('referee_feedback_submitted_at');
+  const [resettingTimer, setResettingTimer] = useState(false);
+  const resetPopupTimer = async () => {
+    if (resettingTimer) return;
+    setResettingTimer(true);
+    try {
+      // Server-side: wipe suppression for EVERYONE (all users, all devices).
+      await resetFeedbackForAll();
+    } catch (e) {
+      console.warn('global feedback reset failed:', e);
+    }
+    try {
+      // Local: clear all timer keys on this device too (plus legacy ones).
+      const prefixes = ['referee_feedback_last_prompt', 'referee_feedback_submitted_at'];
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && prefixes.some(p => k === p || k.startsWith(p + '_'))) toRemove.push(k);
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+    } catch { /* storage unavailable */ }
+    setResettingTimer(false);
     setTimerReset(true);
     setTimeout(() => setTimerReset(false), 4000);
   };
@@ -183,7 +201,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
             <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4">
               {timerReset && (
                 <div className="mb-4 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-sm font-bold">
-                  טיימר הפידבק אופס - הטופס יקפוץ שוב אחרי התשובה הבאה
+                  טיימר הפידבק אופס לכולם - הטופס יקפוץ שוב אחרי התשובה הבאה
                 </div>
               )}
 
@@ -219,10 +237,11 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
                     <div className="flex items-center gap-2">
                       <button
                         onClick={resetPopupTimer}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors"
-                        title="מאפס את טיימר הטופס הקופץ של הפידבק במכשיר הזה"
+                        disabled={resettingTimer}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-colors disabled:opacity-50"
+                        title="מאפס את טיימר הטופס הקופץ של הפידבק לכל המשתמשים בכל המכשירים"
                       >
-                        אפס טיימר פידבק
+                        {resettingTimer ? 'מאפס...' : 'אפס טיימר פידבק לכולם'}
                       </button>
                       <button
                         onClick={refreshFromServer}

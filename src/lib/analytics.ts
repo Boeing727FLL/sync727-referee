@@ -302,6 +302,22 @@ export function watchSession(uid: string, myDeviceId: string, onKicked: () => vo
   }, (err) => console.warn("session watch failed:", err));
 }
 
+// ===== Global feedback-timer reset (owner wipes suppression for everyone) =====
+
+// The owner writes a server timestamp here; every client ignores local
+// suppression timers older than it, so the next successful answer prompts
+// feedback again on all devices and accounts.
+export async function resetFeedbackForAll(): Promise<void> {
+  await set(ref(rtdb, 'referee/meta/feedbackResetAt'), rtdbTimestamp());
+}
+
+export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): () => void {
+  return onValue(ref(rtdb, 'referee/meta/feedbackResetAt'), (snap: DataSnapshot) => {
+    const v = snap.val();
+    callback(typeof v === 'number' ? v : 0);
+  }, (err) => console.warn("feedback reset snapshot failed:", err));
+}
+
 // Realtime ordered queries shared by the journal and feedback viewers.
 export function logsQuery(limit = 200) {
   return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));

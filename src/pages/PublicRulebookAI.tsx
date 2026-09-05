@@ -23,7 +23,7 @@ import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import PrivacyModal from '../components/PrivacyModal';
 import { isCurrentUserOwner } from '../lib/owner';
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -355,15 +355,29 @@ export default function PublicRulebookAI() {
   }, [user?.uid]);
 
   // Feedback popup frequency control - never too often:
-  // at most once every 14 days per device, and no new prompt for 45 days after submitting.
+  // at most once every 14 days per user, and no new prompt for 45 days
+  // after submitting. Keys are per-user (not per-device) so shared
+  // devices (e.g. a classroom tablet) prompt each user on their own cadence.
+  const feedbackTimerKey = (base: string): string => {
+    const uid = resolveRefereeUid() || 'anon';
+    return `${base}_${uid}`;
+  };
+  // Server-side global reset (owner): local timers older than it are ignored.
+  const feedbackResetAtRef = useRef<number>(0);
+  useEffect(() => {
+    return subscribeFeedbackReset((ts) => { feedbackResetAtRef.current = ts; });
+  }, []);
   const maybePromptFeedback = () => {
     if (showFeedback) return;
     const now = Date.now();
-    const lastPrompt = parseInt(localStorage.getItem('referee_feedback_last_prompt') || '0', 10);
-    const submittedAt = parseInt(localStorage.getItem('referee_feedback_submitted_at') || '0', 10);
+    const resetAt = feedbackResetAtRef.current || 0;
+    const lastPromptRaw = parseInt(localStorage.getItem(feedbackTimerKey('referee_feedback_last_prompt')) || '0', 10);
+    const submittedAtRaw = parseInt(localStorage.getItem(feedbackTimerKey('referee_feedback_submitted_at')) || '0', 10);
+    const lastPrompt = lastPromptRaw > resetAt ? lastPromptRaw : 0;
+    const submittedAt = submittedAtRaw > resetAt ? submittedAtRaw : 0;
     if (submittedAt && now - submittedAt < 45 * 24 * 60 * 60 * 1000) return;
     if (lastPrompt && now - lastPrompt < 14 * 24 * 60 * 60 * 1000) return;
-    localStorage.setItem('referee_feedback_last_prompt', String(now));
+    localStorage.setItem(feedbackTimerKey('referee_feedback_last_prompt'), String(now));
     feedbackTimeoutRef.current = setTimeout(() => {
       setShowFeedback(true);
     }, 2500);
@@ -1896,7 +1910,8 @@ const fetchLatestRulebook = async () => {
         isOpen={showFeedback}
         onClose={() => setShowFeedback(false)}
         onSubmit={() => {
-          localStorage.setItem('referee_feedback_submitted_at', String(Date.now()));
+          const uid = resolveRefereeUid() || 'anon';
+          localStorage.setItem(`referee_feedback_submitted_at_${uid}`, String(Date.now()));
           setShowFeedback(false);
         }}
         season={seasonName}

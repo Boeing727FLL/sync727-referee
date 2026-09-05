@@ -1,6 +1,13 @@
 {
   "rules": {
     "referee": {
+      "meta": {
+        ".read": "auth != null",
+        "feedbackResetAt": {
+          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+          ".validate": "newData.isNumber()"
+        }
+      },
       "stats": {
         ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
         "totalQuestions": {
