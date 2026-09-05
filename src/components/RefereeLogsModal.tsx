@@ -99,9 +99,9 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
-  // Deletes require a live owner Firebase session. The journal can render
-  // stale local-cache entries without one, so gate the buttons explicitly
-  // instead of failing silently on the server.
+  // Deletes require a live owner Firebase session (server rule), so gate
+  // the buttons explicitly instead of failing on the server. Reading is
+  // allowed for any signed-in user with the code.
   const canDelete = isCurrentUserOwner();
 
   useEffect(() => {
@@ -428,7 +428,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
 
                   {!canDelete && (
                     <div className="mx-4 md:mx-5 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-bold text-amber-200 shrink-0">
-                      צפייה בלבד — מחיקה דורשת חיבור עם חשבון הבעלים. הרשומות עשויות להיות ממטמון מקומי.
+                      צפייה בלבד — מחיקת רשומות זמינה לחשבון הבעלים בלבד.
                     </div>
                   )}
                   {loadError && (
