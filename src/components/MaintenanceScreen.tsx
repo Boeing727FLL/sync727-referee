@@ -36,20 +36,38 @@ export default function MaintenanceScreen() {
       <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0" aria-hidden />
 
       <div className="relative flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8 text-center overflow-hidden">
-        {/* Backdrop: faint field + glows */}
-        <div className="absolute inset-0 pointer-events-none" aria-hidden>
-          <img
+        {/* Backdrop: vivid field + breathing FIRST color glows */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+          <motion.img
             src="/bioglow-table.jpg"
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.08]"
+            className="absolute inset-0 w-full h-full object-cover opacity-25"
             loading="lazy"
             decoding="async"
             draggable={false}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:44px_44px]" />
-          <div className="absolute left-1/2 top-24 -translate-x-1/2 w-[480px] h-[280px] bg-yellow-400/[0.08] rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-[300px] h-[200px] bg-blue-600/[0.08] rounded-full blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/70 to-slate-950/90" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
+          <motion.div
+            className="absolute left-1/2 top-16 w-[560px] h-[320px] bg-yellow-400/[0.14] rounded-full blur-3xl"
+            style={{ x: '-50%' }}
+            animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.1, 1] }}
+            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.div
+            className="absolute bottom-[-60px] right-[-60px] w-[380px] h-[280px] bg-blue-600/[0.16] rounded-full blur-3xl"
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          />
+          <motion.div
+            className="absolute bottom-[10%] left-[-80px] w-[340px] h-[260px] bg-red-600/[0.12] rounded-full blur-3xl"
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(2,6,23,0.75)_100%)]" />
         </div>
 
         <div className="relative flex flex-col items-center w-full max-w-lg">
@@ -64,6 +82,12 @@ export default function MaintenanceScreen() {
               transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute -inset-4 bg-yellow-400/20 blur-2xl rounded-full pointer-events-none"
               aria-hidden
+            />
+            <motion.div
+              className="absolute -inset-2.5 rounded-full border-2 border-dashed border-yellow-400/40 pointer-events-none"
+              aria-hidden
+              animate={{ rotate: 360 }}
+              transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
             />
             <div className="absolute -inset-1.5 rounded-full border border-yellow-400/25 pointer-events-none" aria-hidden />
             <div className="relative w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_44px_rgba(250,204,21,0.4)] overflow-hidden flex items-center justify-center">
@@ -83,7 +107,7 @@ export default function MaintenanceScreen() {
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden />
               עבודות תחזוקה
             </span>
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-4">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-4 bg-gradient-to-b from-white via-amber-100 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_2px_20px_rgba(250,204,21,0.35)]">
               אנחנו בעבודות
             </h1>
             <div className="flex items-center justify-center gap-3 mt-4" aria-hidden>
@@ -108,8 +132,9 @@ export default function MaintenanceScreen() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 + i * 0.08, duration: 0.35 }}
-                className="bg-white/[0.05] backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex sm:flex-col items-start sm:items-center sm:text-center gap-3"
+                className="relative overflow-hidden bg-gradient-to-b from-white/[0.09] to-white/[0.03] backdrop-blur-xl border border-white/15 rounded-2xl p-4 flex sm:flex-col items-start sm:items-center sm:text-center gap-3 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
               >
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-gradient-to-r from-transparent via-yellow-400/80 to-transparent" aria-hidden />
                 <div className="shrink-0 w-10 h-10 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300">
                   <c.icon className="w-5 h-5" />
                 </div>
