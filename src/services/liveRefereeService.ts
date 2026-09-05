@@ -161,14 +161,25 @@ export class LiveRefereeSession {
   private videoEl: HTMLVideoElement | null = null;
   private modelPending = '';
   private keyAttempts = 0;
+  // Once a send fails with a dead socket, the session is unusable. Tear it
+  // down once with an honest error instead of spamming a throw per frame.
+  private transportDead = false;
 
   constructor(private opts: LiveStartOptions) {}
 
   get micEnabled() { return this.micOn; }
 
+  private handleTransportDead(): void {
+    if (this.transportDead || this.cancelled) return;
+    this.transportDead = true;
+    this.opts.callbacks.onStatus('error', 'החיבור לשופט החי נותק. סגרו ופתחו שיחה חדשה.');
+    void this.cleanup();
+  }
+
   async start(): Promise<void> {
     const { callbacks, seasonName, rulebookFiles } = this.opts;
     this.cancelled = false;
+    this.transportDead = false;
     callbacks.onStatus('loading-book');
 
     const corrections = await getRefereeCorrections().catch(() => '');
@@ -359,13 +370,15 @@ export class LiveRefereeSession {
     const src = this.micCtx.createMediaStreamSource(this.micStream);
     this.micNode = new AudioWorkletNode(this.micCtx, 'live-mic-proc');
     this.micNode.port.onmessage = (ev: MessageEvent) => {
-      if (!this.micOn || this.cancelled || !this.session) return;
+      if (!this.micOn || this.cancelled || !this.session || this.transportDead) return;
       try {
         const b64 = arrayBufferToBase64(ev.data as ArrayBuffer);
         this.session.sendRealtimeInput({
           audio: { data: b64, mimeType: 'audio/pcm;rate=16000' },
         });
-      } catch { /* socket busy, drop frame */ }
+      } catch {
+        this.handleTransportDead();
+      }
     };
     src.connect(this.micNode);
     if (this.micCtx.state === 'suspended') {
@@ -491,9 +504,10 @@ export class LiveRefereeSession {
   }
 
   private captureFrame(): void {
+    const video = this.videoEl;
+    if (!video || this.cancelled || !this.session || this.transportDead) return;
+    let b64: string | null = null;
     try {
-      const video = this.videoEl;
-      if (!video || this.cancelled || !this.session) return;
       if (video.readyState < 2 || video.videoWidth === 0) return;
       const targetW = 480;
       const scale = targetW / video.videoWidth;
@@ -504,10 +518,14 @@ export class LiveRefereeSession {
       if (!ctx2d) return;
       ctx2d.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      const b64 = dataUrl.split(',')[1];
-      if (!b64) return;
+      b64 = dataUrl.split(',')[1] || null;
+    } catch { return; }
+    if (!b64) return;
+    try {
       this.session.sendRealtimeInput({ media: { data: b64, mimeType: 'image/jpeg' } });
-    } catch { /* drop frame */ }
+    } catch {
+      this.handleTransportDead();
+    }
   }
 
   // ---------- text ----------
