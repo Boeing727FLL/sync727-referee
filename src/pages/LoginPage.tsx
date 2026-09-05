@@ -237,20 +237,24 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 flex items-center justify-center p-4"
       >
-        <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl w-full max-w-md relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-yellow-400 to-emerald-500" />
+        <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-3xl w-full max-w-md relative overflow-hidden">
+          <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-l from-transparent via-yellow-400/80 to-transparent" />
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-40 bg-yellow-400/[0.08] rounded-full blur-3xl pointer-events-none" aria-hidden />
 
           <button
             onClick={() => navigate('/')}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors text-xs font-bold cursor-pointer flex items-center gap-1 z-10"
+            className="absolute top-4 right-4 text-slate-300 hover:text-white px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all text-xs font-bold cursor-pointer flex items-center gap-1 z-10"
           >
             <ArrowRight className="w-3 h-3" />
             <span>חזרה</span>
           </button>
 
           <div className="p-6 md:p-8 pt-14">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-[3px_3px_0px_#000] border-2 border-slate-950">
-              {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.png" alt="שופט וירטואלי" className="w-9 h-9 object-contain" />}
+            <div className="relative w-16 h-16 mx-auto mb-5">
+              <div className="absolute -inset-3 bg-yellow-400/20 blur-2xl rounded-full pointer-events-none" aria-hidden />
+              <div className="relative w-16 h-16 bg-white rounded-full flex items-center justify-center ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.35)] overflow-hidden">
+                {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.png" alt="שופט וירטואלי" className="w-11 h-11 object-contain" />}
+              </div>
             </div>
 
             <AnimatePresence mode="wait">
@@ -297,14 +301,14 @@ export default function LoginPage() {
                       <div>
                         <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">אימייל</label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input
                             type="email"
                             value={resetEmail}
                             onChange={(e) => setResetEmail(e.target.value)}
                             placeholder="your@email.com"
                             required
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
                             dir="ltr"
                           />
                         </div>
@@ -358,11 +362,16 @@ export default function LoginPage() {
                   <h1 className="text-2xl font-black text-white text-center mb-1">
                     {isSignUp ? 'יצירת חשבון' : 'התחברות'}
                   </h1>
-                  <p className="text-slate-400 text-sm text-center mb-6">
+                  <p className="text-slate-400 text-sm text-center mb-4">
                     {isSignUp
                       ? 'צור חשבון כדי להשתמש בשופט הווירטואלי'
                       : 'התחבר עם אימייל וסיסמה'}
                   </p>
+                  <div className="flex items-center gap-2 mb-6" aria-hidden>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-yellow-400/30" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-400/60" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-yellow-400/30" />
+                  </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <AnimatePresence mode="wait">
@@ -380,7 +389,7 @@ export default function LoginPage() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="השם שלך"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all text-right"
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all text-right"
                             dir="auto"
                           />
                         </motion.div>
@@ -388,35 +397,35 @@ export default function LoginPage() {
                     </AnimatePresence>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">אימייל</label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="your@email.com"
-                          required
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all"
-                          dir="ltr"
-                        />
-                      </div>
+                        <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">אימייל</label>
+                        <div className="relative group">
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="your@email.com"
+                            required
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            dir="ltr"
+                          />
+                        </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">סיסמה</label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="********"
-                          required
-                          minLength={6}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/50 transition-all"
-                          dir="ltr"
-                        />
+                        <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">סיסמה</label>
+                        <div className="relative group">
+                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="********"
+                            required
+                            minLength={6}
+                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            dir="ltr"
+                          />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
@@ -426,21 +435,6 @@ export default function LoginPage() {
                         </button>
                       </div>
                     </div>
-
-                    {!isSignUp && (
-                      <div className="text-left">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowReset(true);
-                            setError(null);
-                          }}
-                          className="text-yellow-400/70 hover:text-yellow-400 text-xs font-bold cursor-pointer transition-colors"
-                        >
-                          שכחתי סיסמה
-                        </button>
-                      </div>
-                    )}
 
                     {error && (
                       <motion.div
@@ -455,7 +449,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:bg-yellow-400/50 text-slate-950 font-black py-3.5 px-4 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                      className="w-full bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 disabled:from-yellow-400/50 disabled:to-yellow-500/50 text-slate-950 font-black py-4 px-4 rounded-2xl transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 text-[15px] shadow-[0_8px_24px_rgba(250,204,21,0.3)] hover:shadow-[0_12px_32px_rgba(250,204,21,0.4)] disabled:shadow-none"
                     >
                       {loading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -463,6 +457,21 @@ export default function LoginPage() {
                         <span>{isSignUp ? 'צור חשבון' : 'היכנס'}</span>
                       )}
                     </button>
+
+                    {!isSignUp && (
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReset(true);
+                            setError(null);
+                          }}
+                          className="text-yellow-400/70 hover:text-yellow-300 text-xs font-bold cursor-pointer transition-colors"
+                        >
+                          שכחתי סיסמה
+                        </button>
+                      </div>
+                    )}
                   </form>
 
                   <div className="mt-5 text-center">
