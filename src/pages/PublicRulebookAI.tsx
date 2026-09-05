@@ -152,10 +152,22 @@ export default function PublicRulebookAI() {
   };
 
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [showIntro, setShowIntro] = useState<boolean>(true);
-  const [chatStarted, setChatStarted] = useState<boolean>(false);
-  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
-  const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(false);
+  // First paint: if we arrived via ?enter=chat with saved auth in localStorage,
+  // start inside the chat immediately so there is no intro flash while
+  // Firebase Auth restores asynchronously. The effect below confirms and
+  // clears the URL once the real auth state arrives.
+  const [autoEnter] = useState<boolean>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('enter') !== 'chat') return false;
+      return !!localStorage.getItem('google_access_token') ||
+        !!localStorage.getItem('auth_user');
+    } catch { return false; }
+  });
+  const [showIntro, setShowIntro] = useState<boolean>(() => !autoEnter);
+  const [chatStarted, setChatStarted] = useState<boolean>(() => autoEnter);
+  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(() => autoEnter);
+  const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(() => autoEnter);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
   const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
