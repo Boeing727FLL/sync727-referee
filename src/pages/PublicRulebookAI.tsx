@@ -349,6 +349,11 @@ export default function PublicRulebookAI() {
     localStorage.removeItem('auth_user');
     setHasGoogleToken(false);
     setShowLogoutConfirm(false);
+    // Back to the main intro page with a fresh chat
+    setMessages([]);
+    setChatStarted(false);
+    setTypewriterReady(false);
+    setShowIntro(true);
   };
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
