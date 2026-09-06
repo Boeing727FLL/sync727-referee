@@ -163,7 +163,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 24 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-            className="w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden rounded-3xl border border-yellow-400/25 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.08)]"
+            className="w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden rounded-[28px] border border-yellow-400/35 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_70px_rgba(250,204,21,0.12)]"
             role="dialog"
             aria-label="שופט לייב"
           >
@@ -193,16 +193,17 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                 <button
                   onClick={onClose}
                   aria-label="סגור"
-                  className="shrink-0 p-2 rounded-xl bg-white/[0.06] text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 cursor-pointer"
+                  className="shrink-0 p-2 rounded-full bg-white/[0.06] text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
+            <div className="h-[2px] shrink-0 bg-gradient-to-l from-transparent via-yellow-400/60 to-transparent" aria-hidden />
 
             {/* Camera */}
             <div className="px-4 md:px-5 pt-3 shrink-0">
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950/70 border border-white/10">
+              <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-slate-950/70 border border-white/10 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
                 <video
                   ref={videoRef}
                   playsInline
@@ -211,14 +212,23 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                 />
                 {!camOn && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-500">
-                    <Camera className="w-8 h-8" />
+                    <span className="w-14 h-14 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center">
+                      <Camera className="w-6 h-6" />
+                    </span>
                     <span className="text-xs font-bold">המצלמה כבויה. הדליקו כדי להראות משימה לשופט.</span>
                   </div>
                 )}
                 {camOn && (
-                  <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full bg-red-500/80 text-white">
-                    השופט רואה
-                  </span>
+                  <>
+                    <span className="absolute top-3 left-3 w-6 h-6 border-t-[3px] border-l-[3px] border-yellow-300/90 rounded-tl-xl pointer-events-none" aria-hidden />
+                    <span className="absolute top-3 right-3 w-6 h-6 border-t-[3px] border-r-[3px] border-yellow-300/90 rounded-tr-xl pointer-events-none" aria-hidden />
+                    <span className="absolute bottom-3 left-3 w-6 h-6 border-b-[3px] border-l-[3px] border-yellow-300/90 rounded-bl-xl pointer-events-none" aria-hidden />
+                    <span className="absolute bottom-3 right-3 w-6 h-6 border-b-[3px] border-r-[3px] border-yellow-300/90 rounded-br-xl pointer-events-none" aria-hidden />
+                    <span className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-950/70 border border-red-500/40 text-red-300 backdrop-blur-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
+                      השופט רואה
+                    </span>
+                  </>
                 )}
               </div>
             </div>
@@ -282,45 +292,52 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                   <Send className="w-4 h-4 -scale-x-100" />
                 </button>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleMic}
-                  disabled={!live}
-                  aria-label={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
-                  title={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border font-bold text-sm transition-all cursor-pointer disabled:opacity-40 ${
-                    micOn
-                      ? 'bg-yellow-400/15 border-yellow-400/40 text-yellow-200'
-                      : 'bg-white/[0.05] border-white/10 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                  {micOn ? 'מיקרופון דולק' : 'מיקרופון כבוי'}
-                </button>
-                <button
-                  onClick={toggleCamera}
-                  disabled={!live || camBusy}
-                  aria-label={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
-                  title={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border font-bold text-sm transition-all cursor-pointer disabled:opacity-40 ${
-                    camOn
-                      ? 'bg-yellow-400/15 border-yellow-400/40 text-yellow-200'
-                      : 'bg-white/[0.05] border-white/10 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {camBusy
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : camOn ? <Camera className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
-                  {camOn ? 'מצלמה דולקת' : 'מצלמה כבויה'}
-                </button>
-                <button
-                  onClick={onClose}
-                  aria-label="סיים שיחה"
-                  title="סיים שיחה"
-                  className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white shadow-[0_4px_16px_rgba(239,68,68,0.4)] active:scale-95 transition-all cursor-pointer"
-                >
-                  <PhoneOff className="w-5 h-5" />
-                </button>
+              <div className="flex items-end justify-center gap-5">
+                <div className="flex flex-col items-center gap-1.5">
+                  <button
+                    onClick={toggleMic}
+                    disabled={!live}
+                    aria-label={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
+                    title={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 active:scale-95 ${
+                      micOn
+                        ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 shadow-[0_6px_24px_rgba(250,204,21,0.45)]'
+                        : 'bg-white/[0.06] border border-white/15 text-slate-400 hover:text-white hover:border-white/25'
+                    }`}
+                  >
+                    {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+                  </button>
+                  <span className="text-[10px] font-bold text-slate-500">מיקרופון</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <button
+                    onClick={onClose}
+                    aria-label="סיים שיחה"
+                    title="סיים שיחה"
+                    className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white shadow-[0_8px_28px_rgba(239,68,68,0.5)] active:scale-95 transition-all cursor-pointer"
+                  >
+                    <PhoneOff className="w-7 h-7" />
+                  </button>
+                  <span className="text-[10px] font-bold text-slate-500">סיים</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <button
+                    onClick={toggleCamera}
+                    disabled={!live || camBusy}
+                    aria-label={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
+                    title={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 active:scale-95 ${
+                      camOn
+                        ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 shadow-[0_6px_24px_rgba(250,204,21,0.45)]'
+                        : 'bg-white/[0.06] border border-white/15 text-slate-400 hover:text-white hover:border-white/25'
+                    }`}
+                  >
+                    {camBusy
+                      ? <Loader2 className="w-6 h-6 animate-spin" />
+                      : camOn ? <Camera className="w-6 h-6" /> : <CameraOff className="w-6 h-6" />}
+                  </button>
+                  <span className="text-[10px] font-bold text-slate-500">מצלמה</span>
+                </div>
               </div>
               <p className="text-center text-[10px] text-slate-500 font-medium">
                 לשיפוט מדויק הראו את המשימה למצלמה.
