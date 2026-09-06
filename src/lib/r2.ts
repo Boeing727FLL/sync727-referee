@@ -30,6 +30,19 @@ export const getPublicUrl = (key: string) => {
   return `${R2_PUBLIC_URL}/${key}`;
 };
 
+/** Return the existing rendered page numbers for one rulebook. */
+export async function listRulebookImagePages(fileName: string): Promise<number[]> {
+  const response = await s3Client.send(new ListObjectsV2Command({
+    Bucket: R2_BUCKET_NAME,
+    Prefix: `fll-rules-images/${fileName}/page_`,
+  }));
+
+  return (response.Contents || [])
+    .map(({ Key }) => Number(Key?.match(/\/page_(\d+)\.jpg$/i)?.[1]))
+    .filter(Number.isInteger)
+    .sort((a, b) => a - b);
+}
+
 /** Delete by public URL, proxied URL, or raw key. Never throws. */
 export const deleteFileFromR2 = async (publicUrl: string) => {
   if (!publicUrl) return;

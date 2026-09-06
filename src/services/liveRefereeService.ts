@@ -20,6 +20,7 @@
 import { GoogleGenAI, Modality, MediaResolution, ThinkingLevel } from '@google/genai';
 import { getNextApiKey, getRefereeCorrections } from './geminiService';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
+import { listRulebookImagePages } from '../lib/r2';
 
 // ---------------------------------------------------------------------------
 // Model, media & tuning constants
@@ -31,11 +32,6 @@ export const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 const MAX_RULEBOOK_PAGES = 40;
 
 /** R2 probe batch size when scanning pre-rendered page images. */
-const PROBE_BATCH_SIZE = 8;
-
-/** Consecutive 404s that mark "no more pages" for one rulebook file. */
-const PROBE_MAX_MISSES = 3;
-
 const JPEG_MIME = 'image/jpeg';
 const MIC_MIME = 'audio/pcm;rate=16000';
 const MIC_SAMPLE_RATE = 16000;
@@ -191,46 +187,19 @@ async function fetchRulebookPages(
     if (!url.includes('fll-rules')) continue;
     const rawName = file.name || 'rulebook';
     const fileName = rawName.split('/').pop() || rawName;
+    const pageNumbers = await listRulebookImagePages(fileName);
     const encoded = encodeURIComponent(fileName);
-
-    let page = 1;
-    let consecutiveMisses = 0;
-    while (consecutiveMisses < PROBE_MAX_MISSES && pages.length < MAX_RULEBOOK_PAGES) {
+    for (const page of pageNumbers) {
+      if (pages.length >= MAX_RULEBOOK_PAGES) break;
       if (isCancelled()) break;
-      // Probe one batch in parallel; pages stay ordered by index.
-      const batch: number[] = [];
-      for (let k = 0; k < PROBE_BATCH_SIZE && pages.length + batch.length < MAX_RULEBOOK_PAGES; k++) {
-        batch.push(page + k);
-      }
-      const results = await Promise.all(batch.map(async (p) => {
-        try {
-          const res = await fetch(`${R2_PUBLIC_URL}/fll-rules-images/${encoded}/page_${p}.jpg`);
-          if (!res.ok) return null;
-          const buf = await res.arrayBuffer();
-          if (buf.byteLength < 500) return null;
-          const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 100)));
-          if (head.includes('<html')) return null;
-          return { data: arrayBufferToBase64(buf), mimeType: JPEG_MIME };
-        } catch {
-          return null;
-        }
-      }));
-      let batchMisses = 0;
-      for (let i = 0; i < batch.length; i++) {
-        const r = results[i];
-        if (r) {
-          consecutiveMisses = 0;
-          batchMisses = 0;
-          pages.push({ data: r.data, mimeType: r.mimeType });
-          onProgress(pages.length);
-        } else {
-          consecutiveMisses++;
-          batchMisses++;
-          if (consecutiveMisses >= PROBE_MAX_MISSES) break;
-        }
-      }
-      page += batch.length;
-      if (batchMisses === batch.length) break;
+      try {
+        const res = await fetch(`${R2_PUBLIC_URL}/fll-rules-images/${encoded}/page_${page}.jpg`);
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength < 500 || new TextDecoder().decode(new Uint8Array(buf.slice(0, 100))).includes('<html')) continue;
+        pages.push({ data: arrayBufferToBase64(buf), mimeType: JPEG_MIME });
+        onProgress(pages.length);
+      } catch { /* skip one missing page */ }
     }
   }
   return pages;

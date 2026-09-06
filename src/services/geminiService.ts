@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { db } from '../lib/firebase';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
+import { listRulebookImagePages } from '../lib/r2';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
-const R2_MAX_CONSECUTIVE_MISSES = 3;
 const MIN_HTML_PROBE_BYTES = 500;
 const HTML_PROBE_BYTES = 100;
 const MODEL_MAX_OUTPUT_TOKENS = 65536;
@@ -279,31 +279,26 @@ function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: st
 }
 
 async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<PageImage[]> {
-  const encodedFileName = encodeURIComponent(fileName);
   const pages: PageImage[] = [];
-  let pageIndex = 1;
-  let consecutiveMisses = 0;
 
-  while (consecutiveMisses < R2_MAX_CONSECUTIVE_MISSES) {
-    if (signal?.aborted) break;
-    try {
+  try {
+    const pageNumbers = await listRulebookImagePages(fileName);
+    for (const pageIndex of pageNumbers) {
+      if (signal?.aborted) break;
+      const encodedFileName = encodeURIComponent(fileName);
       const imageUrl = `${R2_PUBLIC_URL}/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
       const response = await fetch(imageUrl, { signal });
+      if (!response.ok) continue;
       const imageData = await response.arrayBuffer();
       const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
         new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
+      if (isHtmlError) continue;
 
-      if (response.status === 404 || isHtmlError) {
-        consecutiveMisses++;
-      } else {
-        consecutiveMisses = 0;
-        const blob = new Blob([imageData], { type: 'image/jpeg' });
-        pages.push({ pageIndex, data: await fileToBase64(blob) });
-      }
-    } catch {
-      consecutiveMisses++;
+      const blob = new Blob([imageData], { type: 'image/jpeg' });
+      pages.push({ pageIndex, data: await fileToBase64(blob) });
     }
-    pageIndex++;
+  } catch (error) {
+    console.warn('Could not list rendered R2 pages; using PDF fallback:', error);
   }
 
   return pages;
