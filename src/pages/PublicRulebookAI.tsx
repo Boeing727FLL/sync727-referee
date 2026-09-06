@@ -1256,20 +1256,21 @@ export default function PublicRulebookAI() {
   return (
     <motion.div
       initial={false}
-      className="h-screen h-[100dvh] w-full flex flex-col bg-[#f6f7f8] overflow-hidden relative font-sans" dir="rtl"
+      className="h-screen h-[100dvh] w-full flex flex-col bg-[#050a18] overflow-hidden relative font-sans" dir="rtl"
     >
       {/* FLL field backdrop: faint game mat + grid + FIRST color glows */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
           src="/bioglow-table.jpg"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.035] mix-blend-multiply"
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.10]"
           loading="lazy"
           decoding="async"
           draggable={false}
         />
-        <div className="absolute inset-0 bg-[#f6f7f8]/95" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(11,22,40,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(11,22,40,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050a18]/85 via-[#070b19]/92 to-[#020617]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_center,rgba(226,29,47,0.10),transparent_68%)]" />
       </div>
       {/* Referee Ribbon - slim identity strip */}
       <div className="h-1 bg-[#e21d2f] w-full shrink-0 relative z-10" />
