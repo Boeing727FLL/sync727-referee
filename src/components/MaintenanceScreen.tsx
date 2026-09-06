@@ -9,6 +9,9 @@
  * GUEST PASS: the login page renders this with an `onLogoTap` bypass —
  * five rapid logo taps reveal the form so the owner can never lock
  * themselves out.
+ *
+ * DESIGN: Apple-calm dark. One still field photo, one breathing halo,
+ * solid white type — no orbiting decor, no competing glows.
  */
 
 import { motion } from 'framer-motion';
@@ -65,21 +68,13 @@ function Backdrop() {
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/70 to-slate-950/90" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
       <motion.div
-        className="absolute left-1/2 top-16 w-[560px] h-[320px] bg-yellow-400/[0.14] rounded-full blur-3xl"
+        className="absolute left-1/2 top-16 w-[560px] h-[320px] bg-yellow-400/[0.10] rounded-full blur-3xl"
         style={{ x: '-50%' }}
-        animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.1, 1] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{ opacity: [0.6, 0.9, 0.6] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
       />
-      <motion.div
-        className="absolute bottom-[-60px] right-[-60px] w-[380px] h-[280px] bg-blue-600/[0.16] rounded-full blur-3xl"
-        animate={{ opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-      />
-      <motion.div
-        className="absolute bottom-[10%] left-[-80px] w-[340px] h-[260px] bg-red-600/[0.12] rounded-full blur-3xl"
-        animate={{ opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-      />
+      <div className="absolute bottom-[-60px] right-[-60px] w-[380px] h-[280px] bg-blue-600/[0.10] rounded-full blur-3xl" />
+      <div className="absolute bottom-[10%] left-[-80px] w-[340px] h-[260px] bg-red-600/[0.08] rounded-full blur-3xl" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(2,6,23,0.75)_100%)]" />
     </div>
   );
@@ -96,16 +91,10 @@ function LogoMark({ onLogoTap }: { onLogoTap?: () => void }) {
       onClick={onLogoTap}
     >
       <motion.div
-        animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -inset-4 bg-yellow-400/20 blur-2xl rounded-full pointer-events-none"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.55, 0.3] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -inset-4 bg-yellow-400/15 blur-2xl rounded-full pointer-events-none"
         aria-hidden
-      />
-      <motion.div
-        className="absolute -inset-2.5 rounded-full border-2 border-dashed border-yellow-400/40 pointer-events-none"
-        aria-hidden
-        animate={{ rotate: 360 }}
-        transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
       />
       <div className="absolute -inset-1.5 rounded-full border border-yellow-400/25 pointer-events-none" aria-hidden />
       <div className="relative w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_44px_rgba(250,204,21,0.4)] overflow-hidden flex items-center justify-center">
@@ -188,7 +177,7 @@ export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => voi
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden />
               עבודות תחזוקה
             </span>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-4 bg-gradient-to-b from-white via-amber-100 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_2px_20px_rgba(250,204,21,0.35)]">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-4 text-white">
               אנחנו בעבודות
             </h1>
             <div className="flex items-center justify-center gap-3 mt-4" aria-hidden>
