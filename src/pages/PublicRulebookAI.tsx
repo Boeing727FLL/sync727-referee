@@ -1256,23 +1256,26 @@ export default function PublicRulebookAI() {
   return (
     <motion.div
       initial={false}
-      className="h-screen h-[100dvh] w-full flex flex-col bg-[#f6f7f8] overflow-hidden relative font-sans" dir="rtl"
+      className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
       {/* FLL field backdrop: faint game mat + grid + FIRST color glows */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
           src="/bioglow-table.jpg"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.035] mix-blend-multiply"
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.12]"
           loading="lazy"
           decoding="async"
           draggable={false}
         />
-        <div className="absolute inset-0 bg-[#f6f7f8]/95" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(11,22,40,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(11,22,40,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:44px_44px]" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.06] rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.10] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.07] rounded-full blur-3xl" />
       </div>
       {/* Referee Ribbon - slim identity strip */}
-      <div className="h-1 bg-[#e21d2f] w-full shrink-0 relative z-10" />
+      <div className="h-2 bg-[repeating-linear-gradient(45deg,#000000,#000000_12px,#facc15_12px,#facc15_24px,#ffffff_24px,#ffffff_36px)] w-full shrink-0 relative z-10" />
 
       {/* Header - dark glass, premium AI console */}
       <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
@@ -1452,7 +1455,7 @@ export default function PublicRulebookAI() {
 
       {/* Boeing 727 watermark behind the chat */}
       <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center" aria-hidden>
-        <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="" className="w-[70vw] max-w-[560px] opacity-[0.025]" />
+        <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="" className="w-[70vw] max-w-[560px] opacity-[0.05]" />
       </div>
 
       {/* Golden reveal flash after login transition */}
@@ -1477,24 +1480,24 @@ export default function PublicRulebookAI() {
             className="flex flex-col items-center text-center py-8 md:py-10"
           >
             <div className="relative mb-4 md:mb-5">
-              <div className="absolute -inset-6 bg-[#e21d2f]/10 blur-2xl rounded-full pointer-events-none" aria-hidden />
-              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-[#e21d2f]/70 shadow-[0_8px_24px_rgba(226,29,47,0.16)] overflow-hidden">
+              <div className="absolute -inset-8 bg-yellow-400/20 blur-3xl rounded-full pointer-events-none" aria-hidden />
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.4)] overflow-hidden">
                 <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
               </div>
             </div>
-            <h2 className="text-2xl md:text-4xl font-black text-[#0b1628] tracking-tight">
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
               {t('intro.subtitle')}
             </h2>
-            <p className="text-sm md:text-base text-slate-600 font-medium mt-3 max-w-xl leading-relaxed px-2">
+            <p className="text-sm md:text-base text-slate-400 font-medium mt-3 max-w-xl leading-relaxed px-2">
               {t('intro.descFull')}
             </p>
-            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2.5 rounded-full bg-white border border-[#e21d2f]/20 shadow-[0_6px_18px_rgba(11,22,40,0.08)]">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-8 w-auto object-contain" />
-              <span className="text-xs md:text-sm font-bold text-[#0b1628]">
+            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2.5 rounded-full bg-gradient-to-l from-yellow-400/15 to-white/[0.04] border border-yellow-400/30 backdrop-blur-xl shadow-[0_0_24px_rgba(250,204,21,0.15)]">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-8 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)]" />
+              <span className="text-xs md:text-sm font-bold text-slate-200">
                 נבנה בהתנדבות על ידי קבוצת Boeing 727
               </span>
             </div>
-            <p className="text-[11px] md:text-xs text-[#e21d2f] font-bold mt-2">
+            <p className="text-[11px] md:text-xs text-yellow-400/70 font-bold mt-2">
               פותח באהבה על ידי קבוצת Boeing 727
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
@@ -1505,12 +1508,12 @@ export default function PublicRulebookAI() {
                     key={i}
                     onClick={() => handleSend(q)}
                     disabled={isAiBusy || isLearning}
-                    className="relative flex items-center gap-4 text-right px-5 py-5 md:gap-3.5 md:px-5 md:py-4 rounded-3xl md:rounded-2xl bg-white hover:bg-[#fffafa] border border-[#0b1628]/10 hover:border-[#e21d2f]/40 border-r-2 border-r-[#e21d2f] transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(11,22,40,0.08)] hover:shadow-[0_10px_28px_rgba(226,29,47,0.12)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                    className="relative flex items-center gap-4 text-right px-5 py-5 md:gap-3.5 md:px-5 md:py-4 rounded-3xl md:rounded-2xl bg-gradient-to-l from-white/[0.07] to-white/[0.03] hover:from-yellow-400/15 hover:to-white/[0.03] border border-white/10 hover:border-yellow-400/40 border-r-2 border-r-yellow-400/50 hover:border-r-yellow-300 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:shadow-[0_10px_28px_rgba(250,204,21,0.10)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   >
-                    <span className="shrink-0 w-12 h-12 md:w-11 md:h-11 rounded-2xl md:rounded-xl bg-[#e21d2f]/[0.08] border border-[#e21d2f]/[0.20] flex items-center justify-center text-[#e21d2f] group-hover:scale-110 group-hover:bg-[#e21d2f]/[0.15] transition-all duration-300">
+                    <span className="shrink-0 w-12 h-12 md:w-11 md:h-11 rounded-2xl md:rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300 group-hover:scale-110 group-hover:bg-yellow-400/25 group-hover:shadow-[0_0_18px_rgba(250,204,21,0.35)] transition-all duration-300">
                       <Icon className="w-6 h-6 md:w-6 md:h-6" />
                     </span>
-                    <span className="text-[15px] md:text-[15px] font-bold text-[#0b1628] group-hover:text-[#e21d2f] transition-colors duration-300 leading-relaxed">
+                    <span className="text-[15px] md:text-[15px] font-bold text-slate-200 group-hover:text-white transition-colors duration-300 leading-relaxed">
                       {q}
                     </span>
                   </button>
@@ -1557,10 +1560,10 @@ export default function PublicRulebookAI() {
                 <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
                   <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
                 </div>
-                <div className="bg-white border border-[#0b1628]/10 border-r-2 border-r-[#e21d2f] px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%] shadow-[0_6px_18px_rgba(11,22,40,0.08)]">
+                <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
                   <div className="flex items-center gap-3">
                     <motion.span
-                      className="text-xs font-bold text-[#0b1628]"
+                      className="text-xs font-bold bg-gradient-to-l from-slate-400 via-white to-slate-400 bg-[length:200%_100%] bg-clip-text text-transparent"
                       animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
                       transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
                     >
@@ -1591,14 +1594,14 @@ export default function PublicRulebookAI() {
                   (user?.picture || localStorage.getItem('user_picture')) ? (
                     <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
                   ) : (
-                  <div className="w-full h-full rounded-full bg-[#e21d2f] border-2 border-white flex items-center justify-center shadow-[0_4px_10px_rgba(226,29,47,0.2)]">
-                       <span className="text-xs md:text-sm font-black text-white">
+                    <div className="w-full h-full rounded-full bg-yellow-400 border-2 border-slate-950 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                      <span className="text-xs md:text-sm font-black text-slate-950">
                         {(displayUser?.name || 'U').trim().charAt(0)}
                       </span>
                     </div>
                   )
                 ) : (
-                  <div className="w-full h-full rounded-full bg-white ring-2 ring-[#e21d2f]/70 shadow-[0_0_14px_rgba(226,29,47,0.2)] overflow-hidden">
+                  <div className="w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.35)] overflow-hidden">
                     <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
                   </div>
                 )}
@@ -1607,18 +1610,18 @@ export default function PublicRulebookAI() {
               <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
                 <div className={`relative overflow-hidden ${
                   msg.role === 'user'
-                    ? 'bg-[#e21d2f] border border-[#b91528] text-white rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3 shadow-[0_8px_20px_rgba(226,29,47,0.18)]'
-                    : 'bg-white border border-[#0b1628]/10 border-r-2 border-r-[#e21d2f] text-[#0b1628] rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-[0_8px_24px_rgba(11,22,40,0.08)]'
+                    ? 'bg-white/[0.09] border border-white/10 text-slate-100 rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
+                    : 'bg-white/[0.05] backdrop-blur-xl border border-white/10 text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-[0_8px_28px_rgba(0,0,0,0.3)]'
                 }`}>
 
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
-                       <span className="text-[10px] md:text-[11px] font-black text-[#e21d2f] bg-[#e21d2f]/[0.08] border border-[#e21d2f]/[0.20] px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-[10px] md:text-[11px] font-black text-yellow-300 bg-yellow-400/10 border border-yellow-400/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
-                         <span className="text-[10px] md:text-[11px] font-black text-[#e21d2f] bg-[#e21d2f]/[0.08] border border-[#e21d2f]/[0.20] px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] md:text-[11px] font-black text-red-300 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded-full">
                             {t('chat.foulTag')}
                         </span>
                       )}
@@ -1630,10 +1633,10 @@ export default function PublicRulebookAI() {
                       {msg.files.map((file, fIdx) => (
                         <div key={fIdx} className="relative w-16 h-16 md:w-28 md:h-28 group">
                       {(file.key.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.url.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.base64?.startsWith('data:image')) ? (
-                            <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl border border-[#0b1628]/10" />
+                          <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl border border-white/15" />
                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-[#f6f7f8] rounded-xl border border-[#0b1628]/10">
-                                  <FileText className="w-6 h-6 md:w-8 md:h-8 text-[#e21d2f]" />
+                           <div className="w-full h-full flex items-center justify-center bg-white/[0.06] rounded-xl border border-white/10">
+                                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
                               </div>
                            )}
                         </div>
@@ -1645,7 +1648,7 @@ export default function PublicRulebookAI() {
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
-                       <div className="prose max-w-none prose-p:leading-loose prose-p:my-2.5 prose-p:text-[#0b1628] prose-headings:font-black prose-headings:text-[#0b1628] prose-headings:mt-4 prose-headings:mb-2 prose-a:text-[#e21d2f] prose-strong:text-[#0b1628] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1.5 prose-li:text-[#26364d] rtl:text-right">
+                      <div className="prose prose-invert max-w-none prose-p:leading-loose prose-p:my-2.5 prose-p:text-slate-100 prose-headings:font-black prose-headings:text-white prose-headings:mt-4 prose-headings:mb-2 prose-a:text-yellow-300 prose-strong:text-white prose-ul:list-disc prose-ol:list-decimal prose-li:my-1.5 prose-li:text-slate-200 rtl:text-right">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -1670,7 +1673,7 @@ export default function PublicRulebookAI() {
                           showToast(t('chat.copied'));
                         }
                       }}
-                      className="text-[11px] md:text-xs font-bold text-[#0b1628] hover:text-[#e21d2f] transition-all px-2.5 py-1.5 rounded-lg bg-white border border-[#0b1628]/10 hover:border-[#e21d2f]/40 cursor-pointer"
+                      className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/[0.12] hover:border-white/20 cursor-pointer"
                     >
                       {t('chat.copy')}
                     </button>
@@ -1684,12 +1687,12 @@ export default function PublicRulebookAI() {
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-[#e21d2f]/70 shadow-[0_0_16px_rgba(226,29,47,0.2)] overflow-hidden flex items-center justify-center">
+            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center">
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="bg-white border border-[#0b1628]/10 border-r-2 border-r-[#e21d2f] px-4 py-3 rounded-2xl flex items-center gap-3 shadow-[0_6px_18px_rgba(11,22,40,0.08)]">
+            <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-3">
               <motion.span
-                className="text-xs md:text-sm font-bold text-[#0b1628]"
+                className="text-xs md:text-sm font-bold bg-gradient-to-l from-slate-400 via-white to-slate-400 bg-[length:200%_100%] bg-clip-text text-transparent"
                 animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
                 transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
               >
@@ -1703,7 +1706,7 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="w-full flex items-center gap-2 bg-white border border-[#0b1628]/15 rounded-2xl p-2 md:p-2.5 shadow-[0_10px_28px_rgba(11,22,40,0.10)] focus-within:border-[#e21d2f] focus-within:shadow-[0_10px_28px_rgba(226,29,47,0.12)] transition-all">
+        <div className="w-full flex items-center gap-2 bg-slate-900/80 backdrop-blur-2xl border border-white/12 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-yellow-400/40 focus-within:shadow-[0_12px_40px_rgba(250,204,21,0.12)] transition-all">
           <input
             type="text"
             value={input}
@@ -1712,7 +1715,7 @@ export default function PublicRulebookAI() {
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
             disabled={isAiBusy || isLearning}
             style={{ flex: 1, minWidth: 0 }}
-            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-[#0b1628] placeholder-slate-400 font-medium transition-all disabled:opacity-50"
+            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
           <button
@@ -1720,7 +1723,7 @@ export default function PublicRulebookAI() {
             style={{ flexShrink: 0 }}
             aria-label="שופט לייב"
             title="שופט לייב"
-            className="w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-[#f6c700] hover:bg-[#e21d2f] hover:text-white text-[#0b1628] shadow-[0_4px_12px_rgba(246,199,0,0.22)] active:scale-95 transition-all cursor-pointer"
+            className="w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all cursor-pointer"
           >
             <Mic className="w-4 h-4 md:w-5 md:h-5" />
           </button>
@@ -1740,7 +1743,7 @@ export default function PublicRulebookAI() {
               disabled={isAiBusy || isLearning || !input.trim()}
               style={{ flexShrink: 0 }}
               aria-label={t('chat.send')}
-              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-[#e21d2f] hover:bg-[#b91528] text-white shadow-[0_4px_12px_rgba(226,29,47,0.22)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
             >
               <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
             </button>
@@ -1748,7 +1751,7 @@ export default function PublicRulebookAI() {
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
-            <p className="text-[11px] text-[#526176] font-medium">
+           <p className="text-[11px] text-slate-500 font-medium">
             נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}
           </p>
         </div>
