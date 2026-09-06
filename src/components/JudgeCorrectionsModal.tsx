@@ -1,3 +1,14 @@
+/**
+ * JudgeCorrectionsModal — owner-only editor for referee overrides.
+ *
+ * WHAT: one text line = one correction the AI judge must obey above the
+ * rulebook (stored as a single newline-joined doc). Saving also busts the
+ * service-side cache so the very next question picks the new text up.
+ *
+ * ACCESS: decided by the signed-in account (owner only), no code gate.
+ * Writes are additionally enforced by the Firestore rules.
+ */
+
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,22 +29,141 @@ import { db } from '../lib/firebase';
 import { invalidateCorrectionsCache } from '../services/geminiService';
 import { isCurrentUserOwner } from '../lib/owner';
 
+// ---------------------------------------------------------------------------
+// Configuration constants (no magic numbers in logic or JSX below)
+// ---------------------------------------------------------------------------
+
+/** How long the green "saved" tick stays on the save button. */
+const SAVED_TICK_MS = 2000;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface JudgeCorrectionsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/** Firestore location of the single corrections document. */
+const correctionsDocRef = () => doc(db, 'app_config', 'corrections');
+
+// ---------------------------------------------------------------------------
+// Presentational pieces (no hooks, no logic — pure props in, JSX out)
+// ---------------------------------------------------------------------------
+
+/** Owner lock screen for non-owner accounts. */
+function LockGate() {
+  return (
+    <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
+      <div className="relative w-16 h-16 mx-auto mb-4">
+        <div className="absolute -inset-3 bg-blue-500/15 blur-xl rounded-full" aria-hidden />
+        <div className="relative w-full h-full rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
+          <Lock className="w-6 h-6 text-blue-400" />
+        </div>
+      </div>
+      <h4 className="text-white font-black mb-1">אזור מוגן</h4>
+      <p className="text-slate-400 text-sm">עריכת תיקונים פתוחה לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
+    </div>
+  );
+}
+
+/** Spinner placeholder while the document loads. */
+function LoadingView() {
+  return (
+    <div className="m-auto px-6 py-10 text-center">
+      <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-3" />
+      <p className="text-slate-400 text-sm font-bold">טוען תיקונים</p>
+    </div>
+  );
+}
+
+/** Empty state when no correction lines exist (or match the search). */
+function EmptyCorrections() {
+  return (
+    <div className="text-center py-10">
+      <p className="text-slate-300 font-bold text-sm">אין תיקונים עדיין</p>
+      <p className="text-slate-500 text-xs mt-1">הוסיפו תיקון ראשון למעלה</p>
+    </div>
+  );
+}
+
+/** Ghost toolbar button (reload / clear-all / add share this look). */
+function ToolbarButton({ onClick, disabled, title, dangerHover, children }: {
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  dangerHover?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold transition-colors cursor-pointer disabled:opacity-40 ${
+        dangerHover
+          ? 'text-slate-300 hover:text-red-300 hover:bg-red-500/10'
+          : 'text-slate-300 hover:text-white hover:bg-white/10'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** One editable correction row: number badge + textarea + delete. */
+function CorrectionRow({ num, value, onChange, onDelete }: {
+  num: number;
+  value: string;
+  onChange: (value: string) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-white/8 bg-slate-800/40 hover:border-white/15 px-3 py-2.5 transition-colors">
+      <span className="shrink-0 w-6 h-6 mt-1 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-200 text-[11px] font-black flex items-center justify-center">
+        {num}
+      </span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+        placeholder="כתבו תיקון"
+        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-base md:text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
+        dir="auto"
+      />
+      <button
+        onClick={onDelete}
+        className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
+        title="מחק שורה"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The modal: gate -> load -> edit lines -> save (with cache invalidation)
+// ---------------------------------------------------------------------------
+
 export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrectionsModalProps) {
+  // -- gate + document state ----------------------------------------------------
   const [unlocked, setUnlocked] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const [initialText, setInitialText] = useState('');
+
+  // -- async flags -----------------------------------------------------------------
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+
+  // -- view state (search + new-line draft) -------------------------------------------
   const [search, setSearch] = useState('');
   const [newLine, setNewLine] = useState('');
 
+  // Fresh gate + wiped draft on every opening.
   useEffect(() => {
     if (!isOpen) {
       setUnlocked(false);
@@ -49,10 +179,11 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     setUnlocked(isCurrentUserOwner());
   }, [isOpen]);
 
+  /** Load the doc into one-editable-line-per-row state. */
   const load = async () => {
     setLoading(true);
     try {
-      const snap = await getDoc(doc(db, 'app_config', 'corrections'));
+      const snap = await getDoc(correctionsDocRef());
       const t = snap.exists() ? String(snap.data().text || '') : '';
       const u = snap.exists() ? Number(snap.data().updatedAt || 0) : 0;
       setLines(t ? t.split('\n') : []);
@@ -70,17 +201,21 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
+  /**
+   * Join lines back into the doc, stamp it, and bust the service cache so
+   * the next question already obeys the new text.
+   */
   const handleSave = async () => {
     setSaving(true);
     try {
       const now = Date.now();
       const t = lines.join('\n');
-      await setDoc(doc(db, 'app_config', 'corrections'), { text: t, updatedAt: now });
+      await setDoc(correctionsDocRef(), { text: t, updatedAt: now });
       invalidateCorrectionsCache();
       setInitialText(t);
       setUpdatedAt(now);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => setSaved(false), SAVED_TICK_MS);
     } catch {
       return;
     } finally {
@@ -90,6 +225,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
 
   const nonEmptyCount = useMemo(() => lines.filter((l) => l.trim().length > 0).length, [lines]);
 
+  /** Search matches keep their ORIGINAL indices (delete/edit target them). */
   const visibleLines = useMemo(() => {
     const q = search.trim().toLowerCase();
     const all = lines.map((line, index) => ({ line, index }));
@@ -112,8 +248,11 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     setNewLine('');
   };
 
+  /** Unsaved-changes flag drives the save button state and the footer hint. */
   const dirty = lines.join('\n') !== initialText;
 
+  // No early return on purpose: AnimatePresence needs the tree mounted
+  // to play the exit animation.
   return (
     <AnimatePresence>
       {isOpen && (
@@ -173,21 +312,9 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
 
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {!unlocked ? (
-                <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
-                  <div className="relative w-16 h-16 mx-auto mb-4">
-                    <div className="absolute -inset-3 bg-blue-500/15 blur-xl rounded-full" aria-hidden />
-                    <div className="relative w-full h-full rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-blue-400" />
-                    </div>
-                  </div>
-                  <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-                  <p className="text-slate-400 text-sm">עריכת תיקונים פתוחה לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
-                </div>
+                <LockGate />
               ) : loading ? (
-                <div className="m-auto px-6 py-10 text-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm font-bold">טוען תיקונים</p>
-                </div>
+                <LoadingView />
               ) : (
                 <div className="flex flex-col flex-1 min-h-0">
                   <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/5 shrink-0 space-y-3">
@@ -213,22 +340,14 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         )}
                         {saved ? 'נשמר' : 'שמור תיקונים'}
                       </button>
-                      <button
-                        onClick={load}
-                        disabled={loading}
-                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 text-sm font-bold transition-colors cursor-pointer"
-                      >
+                      <ToolbarButton onClick={load} disabled={loading}>
                         <RotateCcw className="w-4 h-4" />
                         טען מחדש
-                      </button>
-                      <button
-                        onClick={() => setLines([])}
-                        disabled={lines.length === 0}
-                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-red-300 hover:bg-red-500/10 text-sm font-bold transition-colors cursor-pointer disabled:opacity-40"
-                      >
+                      </ToolbarButton>
+                      <ToolbarButton onClick={() => setLines([])} disabled={lines.length === 0} dangerHover>
                         <Trash2 className="w-4 h-4" />
                         נקה הכל
-                      </button>
+                      </ToolbarButton>
                       <span className="mr-auto text-[11px] text-slate-500 font-medium">
                         {nonEmptyCount} שורות{updatedAt ? `, עודכן ${new Date(updatedAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
                         {dirty ? ', יש שינויים שלא נשמרו' : ''}
@@ -244,14 +363,10 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                         dir="auto"
                       />
-                      <button
-                        onClick={addLine}
-                        disabled={!newLine.trim()}
-                        className="shrink-0 flex items-center gap-1 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 text-sm font-bold transition-colors cursor-pointer disabled:opacity-40"
-                      >
+                      <ToolbarButton onClick={addLine} disabled={!newLine.trim()}>
                         <Plus className="w-4 h-4" />
                         הוסף
-                      </button>
+                      </ToolbarButton>
                     </div>
                   </div>
 
@@ -263,7 +378,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="חיפוש בתיקונים"
-                           className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
+                        className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                       />
                       {search && (
                         <button
@@ -283,35 +398,16 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
 
                   <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 pb-5 space-y-2">
                     {visibleLines.length === 0 ? (
-                      <div className="text-center py-10">
-                        <p className="text-slate-300 font-bold text-sm">אין תיקונים עדיין</p>
-                        <p className="text-slate-500 text-xs mt-1">הוסיפו תיקון ראשון למעלה</p>
-                      </div>
+                      <EmptyCorrections />
                     ) : (
                       visibleLines.map((o, n) => (
-                        <div
-                          key={`${o.index}`}
-                          className="flex items-start gap-3 rounded-xl border border-white/8 bg-slate-800/40 hover:border-white/15 px-3 py-2.5 transition-colors"
-                        >
-                          <span className="shrink-0 w-6 h-6 mt-1 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-200 text-[11px] font-black flex items-center justify-center">
-                            {n + 1}
-                          </span>
-                          <textarea
-                            value={o.line}
-                            onChange={(e) => editLine(o.index, e.target.value)}
-                            rows={2}
-                            placeholder="כתבו תיקון"
-                            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-base md:text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
-                            dir="auto"
-                          />
-                          <button
-                            onClick={() => deleteLine(o.index)}
-                            className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
-                            title="מחק שורה"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <CorrectionRow
+                          key={o.index}
+                          num={n + 1}
+                          value={o.line}
+                          onChange={(v) => editLine(o.index, v)}
+                          onDelete={() => deleteLine(o.index)}
+                        />
                       ))
                     )}
                   </div>
