@@ -1,3 +1,18 @@
+/**
+ * LoginPage — email/password entry to the Virtual Referee.
+ *
+ * FLOW (top to bottom):
+ *   1. Form        — login / signup / password-reset, one card, animated swaps
+ *   2. Verify      — "מתחבר..." overlay while Firebase answers
+ *   3. Celebrate   — golden veil departure that navigates INSIDE the flash,
+ *                    so the route swap to /?enter=chat is invisible
+ *   4. Gate        — during maintenance mode non-owners see MaintenanceScreen
+ *                    (5 rapid logo taps reveal the form as an owner bypass)
+ *
+ * DESIGN: ChatGPT-clean minimal card on a dark premium stage, with Gemini
+ * gradient accents (blue -> violet -> gold) and a sparkle mark.
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
@@ -5,13 +20,64 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
 import { subscribeMaintenance } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 
+// ---------------------------------------------------------------------------
+// Constants & shared looks
+// ---------------------------------------------------------------------------
+
+/** Staged timings of the post-login departure (tuned as one choreography). */
+const VERIFY_DELAY_MS = 650;
+const SUCCESS_HOLD_MS = 1600;
+const NAVIGATE_AFTER_LEAVE_MS = 1150;
+
+/** Firebase Auth error code -> Hebrew message (single source of truth). */
+const FIREBASE_AUTH_MESSAGES: Record<string, string> = {
+  'auth/email-already-in-use': 'כבר קיים חשבון עם האימייל הזה. נסה להתחבר.',
+  'auth/user-not-found': 'אימייל או סיסמה שגויים.',
+  'auth/invalid-credential': 'אימייל או סיסמה שגויים.',
+  'auth/wrong-password': 'סיסמה שגויה.',
+  'auth/weak-password': 'הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.',
+  'auth/invalid-email': 'כתובת אימייל לא תקינה.',
+  'auth/too-many-requests': 'יותר מדי ניסיונות. נסה שוב מאוחר יותר.',
+  'auth/missing-email': 'כתובת אימייל לא תקינה.',
+  'auth/invalid-recipient-email': 'כתובת אימייל לא תקינה.',
+  'auth/network-request-failed': 'שגיאת רשת. בדוק חיבור לאינטרנט ונסה שוב.',
+};
+
+/** Look up the Hebrew message, falling back to the raw Firebase text. */
+function authErrorMessage(code: string | undefined, fallback: string): string {
+  if (code && FIREBASE_AUTH_MESSAGES[code]) return FIREBASE_AUTH_MESSAGES[code];
+  return fallback;
+}
+
+/** One form label, right-aligned Hebrew. */
+const LABEL_CLASS = 'block text-xs font-bold text-slate-400 mb-1.5 text-right';
+
+/** One text input: 16px on phones (stops iOS auto-zoom), compact on desktop. */
+const INPUT_CLASS = 'w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all';
+
+/** Same input with room for a left-side icon. */
+const INPUT_ICON_CLASS = 'w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all';
+
+/** Red inline error box shared by all three forms. */
+const FORM_ERROR_CLASS = 'p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-right';
+
+/** Credentials captured at submit time (the overlay flow is async). */
+type PendingAuth = {
+  email: string;
+  password: string;
+  isSignUp: boolean;
+  name: string;
+};
+
 export default function LoginPage() {
   const navigate = useNavigate();
+
+  // -- form state ------------------------------------------------------------
   const [isSignUp, setIsSignUp] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [email, setEmail] = useState('');
@@ -22,11 +88,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+
+  // -- post-login overlay state (verifying -> success -> golden exit) --------
   const [authOverlay, setAuthOverlay] = useState<null | 'verifying' | 'success'>(null);
   const [authLeaving, setAuthLeaving] = useState(false);
   const [welcomeName, setWelcomeName] = useState('');
-  const pendingAuthRef = useRef<{ email: string; password: string; isSignUp: boolean; name: string } | null>(null);
+  const pendingAuthRef = useRef<PendingAuth | null>(null);
   const authTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // -- maintenance gate (non-owners see the work screen instead) -------------
   const [maintenance, setMaintenance] = useState(false);
   const [formUnlocked, setFormUnlocked] = useState(false);
   const logoTapTimesRef = useRef<number[]>([]);
@@ -34,6 +104,7 @@ export default function LoginPage() {
   useEffect(() => {
     return subscribeMaintenance(setMaintenance);
   }, []);
+
   // Hidden owner bypass: 5 rapid taps on the maintenance logo reveal the form.
   const handleSecretTap = () => {
     const now = Date.now();
@@ -46,6 +117,7 @@ export default function LoginPage() {
   };
   const gated = maintenance && !ownerHere && !formUnlocked;
 
+  // Deferred timers (departure choreography) are tracked for unmount cleanup.
   useEffect(() => {
     const timers = authTimersRef.current;
     return () => { timers.forEach(clearTimeout); };
@@ -55,6 +127,11 @@ export default function LoginPage() {
     authTimersRef.current.push(setTimeout(fn, ms));
   };
 
+  /**
+   * Run Firebase signup/signin, persist the user doc on first signup, and
+   * cache a light session for the chat page. Returns true on success and
+   * shows a Hebrew error otherwise.
+   */
   const doAuth = async (emailVal: string, passwordVal: string, isSignUpMode: boolean, nameVal: string): Promise<boolean> => {
     try {
       let uid: string;
@@ -99,28 +176,16 @@ export default function LoginPage() {
       return true;
     } catch (err: any) {
       setLoading(false);
-      let msg: string;
-      const code = err.code;
-      if (code === 'auth/email-already-in-use') {
-        msg = 'כבר קיים חשבון עם האימייל הזה. נסה להתחבר.';
-      } else if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
-        msg = 'אימייל או סיסמה שגויים.';
-      } else if (code === 'auth/wrong-password') {
-        msg = 'סיסמה שגויה.';
-      } else if (code === 'auth/weak-password') {
-        msg = 'הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.';
-      } else if (code === 'auth/invalid-email') {
-        msg = 'כתובת אימייל לא תקינה.';
-      } else if (code === 'auth/too-many-requests') {
-        msg = 'יותר מדי ניסיונות. נסה שוב מאוחר יותר.';
-      } else {
-        msg = err.message;
-      }
-      setError(msg);
+      setError(authErrorMessage(err?.code, err.message));
       return false;
     }
   };
 
+  /**
+   * Submit handler: freeze credentials, show the verifying overlay, then run
+   * auth after a beat so the animation reads. On success the golden veil
+   * plays and navigation happens INSIDE peak brightness (invisible swap).
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -137,19 +202,22 @@ export default function LoginPage() {
         trackRefereeUser(fbUid);
         setWelcomeName(pending.name || pending.email.split('@')[0]);
         setAuthOverlay('success');
-        // Golden veil departure (~2.2s of light): content softly recedes while
-        // a warm gold veil blooms from the center. Navigate inside the veil
-        // so the swap is invisible, and the chat-side reveal continues it.
         later(() => {
           setAuthLeaving(true);
-          later(() => navigate('/?enter=chat'), 1150);
-        }, 1600);
+          later(() => navigate('/?enter=chat'), NAVIGATE_AFTER_LEAVE_MS);
+        }, SUCCESS_HOLD_MS);
       } else {
         setAuthOverlay(null);
       }
-    }, 650);
+    }, VERIFY_DELAY_MS);
   };
 
+  /**
+   * Password reset with Hebrew email. Tries the app continue-URL first and
+   * falls back to the plain Firebase handler when the domain is not
+   * whitelisted yet. A "user not found" still shows success on purpose, so
+   * the form never leaks which emails exist.
+   */
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -190,18 +258,10 @@ export default function LoginPage() {
       if (code === 'auth/user-not-found') {
         // Don't leak existence — still show success
         setResetSent(true);
-      } else if (code === 'auth/invalid-email') {
-        setError('כתובת אימייל לא תקינה.');
-      } else if (code === 'auth/too-many-requests') {
-        setError('יותר מדי ניסיונות. נסה שוב מאוחר יותר.');
-      } else if (code === 'auth/missing-email' || code === 'auth/invalid-recipient-email') {
-        setError('כתובת אימייל לא תקינה.');
-      } else if (code === 'auth/network-request-failed') {
-        setError('שגיאת רשת. בדוק חיבור לאינטרנט ונסה שוב.');
       } else {
         // Fallback: show raw message for debugging, but also handle enumeration
         console.error('sendPasswordResetEmail failed:', err);
-        setError(err?.message || 'שגיאה בשליחת אימייל. נסה שוב.');
+        setError(authErrorMessage(code, err?.message || 'שגיאה בשליחת אימייל. נסה שוב.'));
       }
     } finally {
       setLoading(false);
@@ -217,7 +277,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen h-full bg-slate-950 flex flex-col relative overflow-hidden">
-      {/* FLL field backdrop: faint game mat + grid + FIRST color glows (same DNA as chat) */}
+      {/* Backdrop: FLL field + grid + FIRST glows, plus a Gemini violet aura */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
           src="/bioglow-table.jpg"
@@ -230,6 +290,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[380px] bg-yellow-400/[0.08] rounded-full blur-3xl" />
+        <div className="absolute top-1/4 right-[-120px] w-[380px] h-[380px] bg-violet-600/[0.10] rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-0 w-[420px] h-[280px] bg-blue-600/[0.12] rounded-full blur-3xl" />
         <div className="absolute bottom-1/3 left-0 w-[300px] h-[300px] bg-red-600/[0.08] rounded-full blur-3xl" />
         {/* Vignette for depth */}
@@ -256,8 +317,9 @@ export default function LoginPage() {
         className="flex-1 flex flex-col items-center justify-center gap-3 p-4"
       >
         {gated && <MaintenanceScreen onLogoTap={handleSecretTap} />}
-        <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-3xl w-full max-w-md relative overflow-hidden">
-          <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-l from-transparent via-yellow-400/80 to-transparent" />
+        <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(250,204,21,0.06)] rounded-[28px] w-full max-w-md relative overflow-hidden">
+          {/* Gemini gradient hairline: blue -> violet -> gold */}
+          <div className="absolute top-0 left-8 right-8 h-[3px] bg-gradient-to-l from-blue-400 via-violet-500 to-yellow-400 rounded-full" />
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-40 bg-yellow-400/[0.08] rounded-full blur-3xl pointer-events-none" aria-hidden />
 
           <button
@@ -267,6 +329,11 @@ export default function LoginPage() {
             <ArrowRight className="w-3 h-3" />
             <span>חזרה</span>
           </button>
+
+          {/* Gemini sparkle mark */}
+          <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-violet-500/15 border border-violet-400/30 flex items-center justify-center z-10" aria-hidden>
+            <Sparkles className="w-4 h-4 text-violet-300" />
+          </div>
 
           <div className="p-6 md:p-8 pt-14">
             <div className="relative w-16 h-16 mx-auto mb-5">
@@ -318,7 +385,7 @@ export default function LoginPage() {
                   ) : (
                     <form onSubmit={handleResetPassword} className="space-y-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">אימייל</label>
+                        <label className={LABEL_CLASS}>אימייל</label>
                         <div className="relative">
                           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input
@@ -327,7 +394,7 @@ export default function LoginPage() {
                             onChange={(e) => setResetEmail(e.target.value)}
                             placeholder="your@email.com"
                             required
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className={INPUT_ICON_CLASS}
                             dir="ltr"
                           />
                         </div>
@@ -337,7 +404,7 @@ export default function LoginPage() {
                         <motion.div
                           initial={{ opacity: 0, y: -5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-right"
+                          className={FORM_ERROR_CLASS}
                         >
                           {error}
                         </motion.div>
@@ -378,7 +445,7 @@ export default function LoginPage() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <h1 className="text-2xl font-black text-white text-center mb-1">
+                  <h1 className="text-2xl font-black text-center mb-1 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
                     {isSignUp ? 'יצירת חשבון' : 'התחברות'}
                   </h1>
                   <p className="text-slate-400 text-sm text-center mb-4">
@@ -387,9 +454,9 @@ export default function LoginPage() {
                       : 'התחבר עם אימייל וסיסמה'}
                   </p>
                   <div className="flex items-center gap-2 mb-6" aria-hidden>
-                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-yellow-400/30" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-400/60" />
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-yellow-400/30" />
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-violet-400/40" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-blue-400 via-violet-400 to-yellow-400" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-violet-400/40" />
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -402,13 +469,13 @@ export default function LoginPage() {
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">שם מלא</label>
+                          <label className={LABEL_CLASS}>שם מלא</label>
                           <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="השם שלך"
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all text-right"
+                            className={`${INPUT_CLASS} text-right`}
                             dir="auto"
                           />
                         </motion.div>
@@ -416,7 +483,7 @@ export default function LoginPage() {
                     </AnimatePresence>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">אימייל</label>
+                        <label className={LABEL_CLASS}>אימייל</label>
                         <div className="relative group">
                           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
                           <input
@@ -425,14 +492,14 @@ export default function LoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"
                             required
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className={INPUT_ICON_CLASS}
                             dir="ltr"
                           />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-1.5 text-right">סיסמה</label>
+                        <label className={LABEL_CLASS}>סיסמה</label>
                         <div className="relative group">
                           <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
                           <input
@@ -442,7 +509,7 @@ export default function LoginPage() {
                             placeholder="********"
                             required
                             minLength={6}
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all"
+                            className={INPUT_ICON_CLASS}
                             dir="ltr"
                           />
                         <button
@@ -459,7 +526,7 @@ export default function LoginPage() {
                       <motion.div
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-right"
+                        className={FORM_ERROR_CLASS}
                       >
                         {error}
                       </motion.div>
@@ -499,7 +566,7 @@ export default function LoginPage() {
                         setIsSignUp(!isSignUp);
                         setError(null);
                       }}
-                      className="text-yellow-400 hover:text-yellow-300 text-sm font-bold cursor-pointer transition-colors"
+                      className="text-sm font-bold cursor-pointer transition-colors bg-gradient-to-l from-blue-300 via-violet-300 to-yellow-300 bg-clip-text text-transparent hover:opacity-80"
                     >
                       {isSignUp ? 'כבר יש לך חשבון? התחבר' : 'אין לך חשבון? הירשם'}
                     </button>
@@ -535,6 +602,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 pointer-events-none" aria-hidden>
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-yellow-400/[0.08] rounded-full blur-3xl" />
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] bg-violet-600/[0.10] rounded-full blur-3xl" aria-hidden />
             </div>
             <motion.div
               className="relative flex flex-col items-center px-6"
@@ -549,7 +617,7 @@ export default function LoginPage() {
                   aria-hidden
                 />
                 <motion.div
-                  className="absolute inset-3 rounded-full border border-yellow-400/20"
+                  className="absolute inset-3 rounded-full border border-violet-400/30"
                   animate={{ rotate: -360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                   aria-hidden
@@ -598,6 +666,7 @@ export default function LoginPage() {
                           className="w-2 h-2 rounded-full bg-yellow-400"
                           animate={{ opacity: [0.25, 1, 0.25], scale: [0.8, 1.15, 0.8] }}
                           transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
+                          style={i === 1 ? { backgroundColor: '#a78bfa' } : undefined}
                         />
                       ))}
                     </div>
@@ -609,7 +678,7 @@ export default function LoginPage() {
                     transition={{ delay: 0.3, duration: 0.4 }}
                     className="flex flex-col items-center"
                   >
-                    <p className="text-yellow-400 font-black text-xl">ברוך הבא{welcomeName ? `, ${welcomeName}` : ''}!</p>
+                    <p className="text-xl font-black bg-gradient-to-b from-white to-yellow-200 bg-clip-text text-transparent">ברוך הבא{welcomeName ? `, ${welcomeName}` : ''}!</p>
                     <p className="text-slate-400 text-sm font-bold mt-1.5">נכנסים לשופט הווירטואלי...</p>
                   </motion.div>
                 )}
