@@ -1,3 +1,20 @@
+/**
+ * Analytics + presence + remote flags for the Virtual Referee app.
+ *
+ * WHAT: every number and list the owner sees (questions asked, registered
+ * users, online users, Q&A journal, feedback, maintenance mode) lives here.
+ *
+ * WHERE: all analytics data lives in Firebase Realtime Database under the
+ * `referee/` tree (fast live listeners, atomic counters, on-disconnect
+ * cleanup). The only Firestore touch left is counting legacy signup docs
+ * in the shared team-app `users` collection, which is user data, not
+ * analytics, and therefore stays where it is.
+ *
+ * FAILURE POLICY: analytics must never break the app. Every write is
+ * wrapped so a network or permission failure degrades to a console
+ * warning, never to a user-facing error.
+ */
+
 import {
   ref,
   child,
@@ -16,53 +33,48 @@ import {
   type DataSnapshot,
 } from 'firebase/database';
 import { rtdb, db } from './firebase';
-// Firestore is kept only for counting legacy user docs (shared team-app
-// collection, not analytics data). All analytics data lives in RTDB.
 import {
   collection,
   getDocs as fsGetDocs,
   onSnapshot as fsOnSnapshot,
 } from 'firebase/firestore';
 
+// ---------------------------------------------------------------------------
+// Paths & tuning constants
+// ---------------------------------------------------------------------------
+
 const STATS_PATH = 'referee/stats';
 const LOGS_PATH = 'referee/logs';
 const FEEDBACK_PATH = 'referee/feedback';
 const PRESENCE_PATH = 'referee/presence';
 const SESSIONS_PATH = 'referee/sessions';
+const META_PATH = 'referee/meta';
 
-const statsRef = () => ref(rtdb, STATS_PATH);
-const logsRef = () => ref(rtdb, LOGS_PATH);
-const feedbackRef = () => ref(rtdb, FEEDBACK_PATH);
-const presenceRef = () => ref(rtdb, PRESENCE_PATH);
-const sessionsRef = () => ref(rtdb, SESSIONS_PATH);
+/** How often a tab re-announces "I'm still here" (presence heartbeat). */
+const PRESENCE_HEARTBEAT_MS = 30_000;
 
-export async function trackQuestion(uid: string) {
-  try {
-    // Server-side atomic increments: no read needed, safe under owner-only reads.
-    await update(statsRef(), {
-      totalQuestions: increment(1),
-      [`perUser/${uid}`]: increment(1),
-    });
-  } catch (e) {
-    console.warn("trackQuestion failed:", e);
-  }
-}
+/** Presence entries older than this are treated as stale ghosts. */
+const ONLINE_CUTOFF_MS = 120_000;
 
-// The virtual referee (השופט) has its OWN login - track its users separately,
-// NOT the shared `users` collection of the main team app.
-export async function trackRefereeUser(uid: string) {
-  try {
-    await update(statsRef(), {
-      [`refereeUsers/${uid}`]: rtdbTimestamp(),
-    });
-  } catch (e) {
-    console.warn("trackRefereeUser failed:", e);
-  }
-}
+/**
+ * Doc IDs starting with these prefixes belong to the main team app's own
+ * login (passcode users), not to referee-app signups. They must never
+ * inflate the referee "registered users" count.
+ */
+const TEAM_APP_ID_PREFIX = /^(member|parent|mentor|admin)_/;
 
-// Log every question + answer pair so the head referees can review them
-// from the hidden logs screen (tools menu, code "fLl").
-export async function logRefereeQA(payload: {
+// ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
+
+export type AnalyticsStats = {
+  totalQuestions: number;
+  registeredUsers: number;
+  activeUsers: number;
+  avgPerUser: number;
+};
+
+type QuestionLog = {
   question: string;
   answer: string;
   season?: string;
@@ -70,79 +82,212 @@ export async function logRefereeQA(payload: {
   uid?: string | null;
   model?: string;
   ok?: boolean;
-}) {
+};
+
+type FeedbackLog = {
+  rating: number;
+  improvements?: string;
+  uid?: string | null;
+  season?: string;
+  language?: string;
+};
+
+type PresenceEntry = {
+  uid: string;
+  deviceId?: string;
+  onlineAt?: number;
+};
+
+// ---------------------------------------------------------------------------
+// Small internal helpers
+// ---------------------------------------------------------------------------
+
+const statsRef = () => ref(rtdb, STATS_PATH);
+const logsRef = () => ref(rtdb, LOGS_PATH);
+const feedbackRef = () => ref(rtdb, FEEDBACK_PATH);
+const presenceRef = () => ref(rtdb, PRESENCE_PATH);
+const sessionsRef = () => ref(rtdb, SESSIONS_PATH);
+const sessionRef = (uid: string) => child(sessionsRef(), uid);
+
+/**
+ * Run an analytics write without ever throwing: failures become warnings.
+ * Analytics is observability, not functionality, so it must stay silent.
+ */
+async function guard(label: string, fn: () => PromiseLike<unknown>): Promise<void> {
   try {
-    await push(logsRef(), {
+    await fn();
+  } catch (e) {
+    console.warn(`${label} failed:`, e);
+  }
+}
+
+/** True for team-app passcode IDs, which are not referee signups. */
+function isTeamAppId(id: string): boolean {
+  return TEAM_APP_ID_PREFIX.test(id);
+}
+
+/**
+ * Derive the dashboard numbers from a raw stats object. Shared by the
+ * one-shot fetch and the live subscription so both always agree.
+ */
+function deriveStats(raw: any, registeredUsers: number): AnalyticsStats {
+  const totalQuestions = Number(raw.totalQuestions) || 0;
+  const perUser = raw.perUser || {};
+  const activeUsers = Object.keys(perUser).length;
+  const avgPerUser = activeUsers > 0 ? totalQuestions / activeUsers : 0;
+  return { totalQuestions, registeredUsers, activeUsers, avgPerUser };
+}
+
+// ---------------------------------------------------------------------------
+// Counters
+// ---------------------------------------------------------------------------
+
+/**
+ * Count one answered question, globally and per user.
+ * Uses server-side atomic increments: no read is needed, so concurrent
+ * questions from many devices can never overwrite each other, and the
+ * call stays permitted under owner-only stats reads.
+ */
+export async function trackQuestion(uid: string): Promise<void> {
+  await guard('trackQuestion', () =>
+    update(statsRef(), {
+      totalQuestions: increment(1),
+      [`perUser/${uid}`]: increment(1),
+    }),
+  );
+}
+
+/**
+ * Remember that this uid opened the referee app (stores last-seen time).
+ * The referee app has its own login, separate from the team app, so its
+ * users are tracked here rather than in the shared `users` collection.
+ */
+export async function trackRefereeUser(uid: string): Promise<void> {
+  await guard('trackRefereeUser', () =>
+    update(statsRef(), {
+      [`refereeUsers/${uid}`]: rtdbTimestamp(),
+    }),
+  );
+}
+
+/** Forget a user from every counter map (used when an account is deleted). */
+export async function removeRefereeUser(uid: string): Promise<void> {
+  await guard('removeRefereeUser', () =>
+    update(statsRef(), {
+      [`refereeUsers/${uid}`]: null,
+      [`perUser/${uid}`]: null,
+    }),
+  );
+}
+
+/** Zero the question counters (owner action, two-tap confirmed in the UI). */
+export async function resetQuestions(): Promise<void> {
+  await guard('resetQuestions', async () => {
+    // NOTE: writing `{}` would be a no-op merge in RTDB, so the map is
+    // removed outright instead of overwritten with an empty object.
+    await remove(child(statsRef(), 'perUser'));
+    await set(child(statsRef(), 'totalQuestions'), 0);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Journal (Q&A log) and feedback log
+// ---------------------------------------------------------------------------
+
+/** Append one answered question for head-referee review in the journal. */
+export async function logRefereeQA(payload: QuestionLog): Promise<void> {
+  await guard('logRefereeQA', () =>
+    push(logsRef(), {
       question: payload.question,
       answer: payload.answer || '',
       season: payload.season || '',
       language: payload.language || '',
       uid: payload.uid || 'anon',
       model: payload.model || '',
+      // Absent means success; only an explicit false marks a failure.
       ok: payload.ok !== false,
       createdAt: rtdbTimestamp(),
-    });
-  } catch (e) {
-    console.warn("logRefereeQA failed:", e);
-  }
+    }),
+  );
 }
 
-// Save user feedback on the virtual referee so the head referees can review it
-// from the feedback viewer (opened from the analytics panel).
-export async function logRefereeFeedback(payload: {
-  rating: number;
-  improvements?: string;
-  uid?: string | null;
-  season?: string;
-  language?: string;
-}) {
-  try {
-    const entry: Record<string, any> = {
+/** Save one user rating for head-referee review in the feedback viewer. */
+export async function logRefereeFeedback(payload: FeedbackLog): Promise<void> {
+  await guard('logRefereeFeedback', () => {
+    const entry: Record<string, unknown> = {
       rating: payload.rating,
       uid: payload.uid || 'anon',
       season: payload.season || '',
       language: payload.language || '',
       createdAt: rtdbTimestamp(),
     };
-    // RTDB rejects undefined values, so only include improvements when set.
+    // RTDB rejects undefined values outright, so the optional field is only
+    // added when it actually holds text.
     if (typeof payload.improvements === 'string' && payload.improvements.trim()) {
       entry.improvements = payload.improvements;
     }
-    await push(feedbackRef(), entry);
-  } catch (e) {
-    console.warn("logRefereeFeedback failed:", e);
-  }
+    return push(feedbackRef(), entry);
+  });
 }
 
+/** Newest-first queries shared by the journal and feedback viewers. */
+export function logsQuery(limit = 200) {
+  return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));
+}
+
+export function feedbackQuery(limit = 300) {
+  return rtdbQuery(feedbackRef(), orderByChild('createdAt'), limitToLast(limit));
+}
+
+// ---------------------------------------------------------------------------
+// Presence ("who is online") and single-session lock
+// ---------------------------------------------------------------------------
+
+/** Stable per-device identifier, created once and kept in localStorage. */
+export function getDeviceId(): string {
+  let id = localStorage.getItem('referee_device_id');
+  if (!id) {
+    id = `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem('referee_device_id', id);
+  }
+  return id;
+}
+
+/**
+ * Announce this tab as online. Returns a cleanup that stops the heartbeat
+ * and removes the entry. The server ALSO removes the entry automatically on
+ * disconnect, so crashed tabs and killed browsers leave no ghosts behind.
+ */
 export function startPresence(uid: string, deviceId?: string): () => void {
   const devId = deviceId || getDeviceId();
   const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const pRef = child(presenceRef(), sessionId);
-  const touch = () => set(pRef, {
-    uid,
-    deviceId: devId,
-    onlineAt: rtdbTimestamp()
-  }).catch((e) => console.warn("startPresence failed:", e));
+  const entryRef = child(presenceRef(), sessionId);
+  const touch = () =>
+    set(entryRef, {
+      uid,
+      deviceId: devId,
+      onlineAt: rtdbTimestamp(),
+    }).catch((e) => console.warn('startPresence failed:', e));
   touch();
-  // RTDB superpower: the server removes our presence automatically when we
-  // disconnect, so no stale docs linger after crashes or closed tabs.
-  onDisconnect(pRef).remove().catch(() => {});
-  const heartbeat = setInterval(touch, 30000);
+  onDisconnect(entryRef).remove().catch(() => {});
+  const heartbeat = setInterval(touch, PRESENCE_HEARTBEAT_MS);
   return () => {
     clearInterval(heartbeat);
-    remove(pRef).catch(() => {});
+    remove(entryRef).catch(() => {});
   };
 }
 
-// A user counts as online only when their presence doc comes from the device
-// that currently owns the active session for that user (see registerSession).
-// This filters out stale/leftover docs from old tabs, other devices and 'anon'.
+/**
+ * Live online-user count. A user counts only when their presence entry comes
+ * from the device that currently owns their session (see registerSession),
+ * which filters out stale tabs, other devices, and anonymous entries.
+ */
 export function onOnlineUsersChange(callback: (count: number) => void): () => void {
-  let presence: { uid: string; deviceId?: string; onlineAt?: number }[] = [];
+  let presence: PresenceEntry[] = [];
   let activeByUid: Record<string, string> = {};
 
   const pushCount = () => {
-    const cutoff = Date.now() - 120000;
+    const cutoff = Date.now() - ONLINE_CUTOFF_MS;
     const counted = new Set<string>();
     for (const p of presence) {
       if (!p.uid) continue;
@@ -153,192 +298,171 @@ export function onOnlineUsersChange(callback: (count: number) => void): () => vo
     callback(counted.size);
   };
 
-  const unsubPresence = onValue(presenceRef(), (snap: DataSnapshot) => {
-    const val = snap.val() || {};
-    presence = Object.values(val) as { uid: string; deviceId?: string; onlineAt?: number }[];
-    pushCount();
-  }, (err) => console.warn("presence snapshot failed:", err));
+  const unsubPresence = onValue(
+    presenceRef(),
+    (snap: DataSnapshot) => {
+      const val = snap.val() || {};
+      presence = Object.values(val) as PresenceEntry[];
+      pushCount();
+    },
+    (err) => console.warn('presence snapshot failed:', err),
+  );
 
-  const unsubSessions = onValue(sessionsRef(), (snap: DataSnapshot) => {
-    const val = snap.val() || {};
-    activeByUid = {};
-    for (const [uid, data] of Object.entries(val) as [string, any][]) {
-      if (data?.deviceId) activeByUid[uid] = data.deviceId;
-    }
-    pushCount();
-  }, (err) => console.warn("sessions snapshot failed:", err));
+  const unsubSessions = onValue(
+    sessionsRef(),
+    (snap: DataSnapshot) => {
+      const val = snap.val() || {};
+      activeByUid = {};
+      for (const [uid, data] of Object.entries(val) as [string, any][]) {
+        if (data?.deviceId) activeByUid[uid] = data.deviceId;
+      }
+      pushCount();
+    },
+    (err) => console.warn('sessions snapshot failed:', err),
+  );
 
-  return () => { unsubPresence(); unsubSessions(); };
+  return () => {
+    unsubPresence();
+    unsubSessions();
+  };
 }
 
-export async function getAnalytics(): Promise<{
-  totalQuestions: number;
-  registeredUsers: number;
-  activeUsers: number;
-  avgPerUser: number;
-}> {
-  const snap = await get(statsRef());
-  const stats = snap.exists() ? (snap.val() as any) : {};
-  const totalQuestions = Number(stats.totalQuestions) || 0;
-  const perUser = stats.perUser || {};
-  const activeUsers = Object.keys(perUser).length;
+/** Claim the single active session for this device (called on login). */
+export async function registerSession(uid: string, deviceId: string): Promise<void> {
+  await guard('registerSession', () =>
+    set(sessionRef(uid), {
+      deviceId,
+      claimedAt: rtdbTimestamp(),
+    }),
+  );
+}
 
-  // Registered = has a users doc (the signup record) from the referee app's
-  // own login, not the main team app's users. The refereeUsers tracking map
-  // is deliberately NOT included: it also holds test/Google logins with no
-  // signup doc, which used to inflate the count with ghost entries.
-  const refereeUserIds = new Set<string>();
+/**
+ * Watch for another device claiming the same user. Calls onKicked exactly
+ * once, then goes silent.
+ */
+export function watchSession(uid: string, myDeviceId: string, onKicked: () => void): () => void {
+  let kicked = false;
+  return onValue(
+    sessionRef(uid),
+    (snap: DataSnapshot) => {
+      if (kicked) return;
+      const data = snap.val();
+      if (!data || !data.deviceId) return;
+      if (data.deviceId !== myDeviceId) {
+        kicked = true;
+        onKicked();
+      }
+    },
+    (err) => console.warn('session watch failed:', err),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard reads (one-shot + live)
+// ---------------------------------------------------------------------------
+
+/**
+ * Count referee-app signups: every users doc EXCEPT team-app passcode IDs.
+ * Signup docs are the definition of "registered" — the last-seen tracking
+ * map is deliberately excluded because it also holds test and social
+ * logins with no signup doc, which once inflated this number with ghosts.
+ */
+async function countRegisteredUsers(): Promise<number> {
   try {
     const usersSnap = await fsGetDocs(collection(db, 'users'));
+    let n = 0;
     for (const d of usersSnap.docs) {
-      const id = d.id;
-      if (/^(member|parent|mentor|admin)_/.test(id)) continue;
-      refereeUserIds.add(id);
+      if (!isTeamAppId(d.id)) n++;
     }
+    return n;
   } catch (e) {
-    console.warn("registered users count failed:", e);
-  }
-  const registeredUsers = refereeUserIds.size;
-
-  const avgPerUser = activeUsers > 0 ? totalQuestions / activeUsers : 0;
-  return { totalQuestions, registeredUsers, activeUsers, avgPerUser };
-}
-
-export async function removeRefereeUser(uid: string) {
-  try {
-    await update(statsRef(), {
-      [`refereeUsers/${uid}`]: null,
-      [`perUser/${uid}`]: null,
-    });
-  } catch (e) {
-    console.warn("removeRefereeUser failed:", e);
+    console.warn('registered users count failed:', e);
+    return 0;
   }
 }
 
-export async function resetQuestions() {
-  try {
-    await remove(child(statsRef(), 'perUser'));
-    await set(child(statsRef(), 'totalQuestions'), 0);
-  } catch (e) {
-    console.warn("resetQuestions failed:", e);
-  }
+/** One-shot dashboard snapshot. */
+export async function getAnalytics(): Promise<AnalyticsStats> {
+  const snap = await get(statsRef());
+  const stats = snap.exists() ? (snap.val() as any) : {};
+  return deriveStats(stats, await countRegisteredUsers());
 }
 
-export type AnalyticsStats = {
-  totalQuestions: number;
-  registeredUsers: number;
-  activeUsers: number;
-  avgPerUser: number;
-};
-
-// Real-time analytics via RTDB listeners (no polling).
+/** Live dashboard: re-emits whenever counters or the user list change. */
 export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): () => void {
   let lastStats: any = null;
-  let lastRefereeIds = new Set<string>();
+  let registered = 0;
 
   const pushStats = () => {
     if (!lastStats) return;
-    const totalQuestions = Number(lastStats.totalQuestions) || 0;
-    const perUser = lastStats.perUser || {};
-    const activeUsers = Object.keys(perUser).length;
-    const avgPerUser = activeUsers > 0 ? totalQuestions / activeUsers : 0;
-    callback({ totalQuestions, registeredUsers: lastRefereeIds.size, activeUsers, avgPerUser });
+    callback(deriveStats(lastStats, registered));
   };
 
-  const unsubStats = onValue(statsRef(), (snap: DataSnapshot) => {
-    lastStats = snap.val() || {};
-    pushStats();
-  }, (err) => console.warn("analytics stats snapshot failed:", err));
+  const unsubStats = onValue(
+    statsRef(),
+    (snap: DataSnapshot) => {
+      lastStats = snap.val() || {};
+      pushStats();
+    },
+    (err) => console.warn('analytics stats snapshot failed:', err),
+  );
 
-  // Legacy user docs live in the shared Firestore `users` collection.
-  // (Same definition as getAnalytics: signup docs only, no tracking-map ghosts.)
-  const unsubUsers = fsOnSnapshot(collection(db, 'users'), (snap) => {
-    const ids = new Set<string>();
-    snap.docs.forEach(d => {
-      const id = d.id;
-      if (/^(member|parent|mentor|admin)_/.test(id)) return;
-      ids.add(id);
-    });
-    lastRefereeIds = ids;
-    pushStats();
-  }, (err) => console.warn("analytics users snapshot failed:", err));
+  const unsubUsers = fsOnSnapshot(
+    collection(db, 'users'),
+    (snap) => {
+      registered = 0;
+      snap.docs.forEach((d) => {
+        if (!isTeamAppId(d.id)) registered++;
+      });
+      pushStats();
+    },
+    (err) => console.warn('analytics users snapshot failed:', err),
+  );
 
-  return () => { unsubStats(); unsubUsers(); };
+  return () => {
+    unsubStats();
+    unsubUsers();
+  };
 }
 
-// ===== Single-session lock (kick old device when same user logs in elsewhere) =====
+// ---------------------------------------------------------------------------
+// Owner remote flags (global feedback reset + maintenance mode)
+// ---------------------------------------------------------------------------
 
-// Stable per-device identifier stored in localStorage.
-export function getDeviceId(): string {
-  let id = localStorage.getItem('referee_device_id');
-  if (!id) {
-    id = `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-    localStorage.setItem('referee_device_id', id);
-  }
-  return id;
-}
-
-const sessionRef = (uid: string) => child(sessionsRef(), uid);
-
-// Claim the session for this device. Called on login.
-export async function registerSession(uid: string, deviceId: string) {
-  try {
-    await set(sessionRef(uid), {
-      deviceId,
-      claimedAt: rtdbTimestamp()
-    });
-  } catch (e) {
-    console.warn("registerSession failed:", e);
-  }
-}
-
-// Listen for another device claiming the same user. Calls onKicked exactly once.
-export function watchSession(uid: string, myDeviceId: string, onKicked: () => void): () => void {
-  let kicked = false;
-  return onValue(sessionRef(uid), (snap: DataSnapshot) => {
-    if (kicked) return;
-    const data = snap.val();
-    if (!data || !data.deviceId) return;
-    if (data.deviceId !== myDeviceId) {
-      kicked = true;
-      onKicked();
-    }
-  }, (err) => console.warn("session watch failed:", err));
-}
-
-// ===== Global feedback-timer reset (owner wipes suppression for everyone) =====
-
-// The owner writes a server timestamp here; every client ignores local
-// suppression timers older than it, so the next successful answer prompts
-// feedback again on all devices and accounts.
+/**
+ * Wipe feedback-popup suppression for EVERYONE (all users, all devices).
+ * Clients ignore their local timers older than this server timestamp, so
+ * the next answered question prompts feedback again everywhere.
+ */
 export async function resetFeedbackForAll(): Promise<void> {
-  await set(ref(rtdb, 'referee/meta/feedbackResetAt'), rtdbTimestamp());
+  await guard('resetFeedbackForAll', () =>
+    set(ref(rtdb, `${META_PATH}/feedbackResetAt`), rtdbTimestamp()),
+  );
 }
 
 export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): () => void {
-  return onValue(ref(rtdb, 'referee/meta/feedbackResetAt'), (snap: DataSnapshot) => {
-    const v = snap.val();
-    callback(typeof v === 'number' ? v : 0);
-  }, (err) => console.warn("feedback reset snapshot failed:", err));
+  return onValue(
+    ref(rtdb, `${META_PATH}/feedbackResetAt`),
+    (snap: DataSnapshot) => {
+      const v = snap.val();
+      callback(typeof v === 'number' ? v : 0);
+    },
+    (err) => console.warn('feedback reset snapshot failed:', err),
+  );
 }
 
-// ===== Maintenance mode (owner freezes the app for everyone else) =====
-
+/** Freeze the app for everyone except the owner (work mode switch). */
 export async function setMaintenance(on: boolean): Promise<void> {
-  await set(ref(rtdb, 'referee/meta/maintenance'), on);
+  await guard('setMaintenance', () => set(ref(rtdb, `${META_PATH}/maintenance`), on));
 }
 
 export function subscribeMaintenance(callback: (on: boolean) => void): () => void {
-  return onValue(ref(rtdb, 'referee/meta/maintenance'), (snap: DataSnapshot) => {
-    callback(snap.val() === true);
-  }, (err) => console.warn("maintenance snapshot failed:", err));
-}
-
-// Realtime ordered queries shared by the journal and feedback viewers.
-export function logsQuery(limit = 200) {
-  return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));
-}
-
-export function feedbackQuery(limit = 300) {
-  return rtdbQuery(feedbackRef(), orderByChild('createdAt'), limitToLast(limit));
+  return onValue(
+    ref(rtdb, `${META_PATH}/maintenance`),
+    (snap: DataSnapshot) => {
+      callback(snap.val() === true);
+    },
+    (err) => console.warn('maintenance snapshot failed:', err),
+  );
 }
