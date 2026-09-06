@@ -361,6 +361,28 @@ export function invalidateCorrectionsCache(): void {
   REFEREE_CORRECTIONS = null;
 }
 
+export async function getNextApiKey(): Promise<string> {
+  await ensureKeysLoaded();
+
+  const availableKeys = GEMINI_KEYS.filter(k => !unhealthyKeys.has(k));
+  if (availableKeys.length) {
+    const index = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+    const key = availableKeys[index % availableKeys.length];
+    localStorage.setItem('gemini_key_rotation_index', String((index + 1) % availableKeys.length));
+    return key;
+  }
+
+  if (GEMINI_KEYS.length) {
+    console.warn("All keys are unhealthy, resetting state");
+    unhealthyKeys.clear();
+    return GEMINI_KEYS[0];
+  }
+
+  const envKey = getEnvKey();
+  if (envKey) return envKey;
+  throw new Error("No API keys configured");
+}
+
 function markKeyUnhealthy(key: string): void {
   if (key !== 'proxy-key') unhealthyKeys.add(key);
 }
