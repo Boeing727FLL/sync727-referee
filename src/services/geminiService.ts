@@ -800,6 +800,11 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       // down/quota-limited we swap to the fallback models in order. We never tell
       // the user the referee is unavailable until every model and every API key
       // has genuinely been attempted.
+      //
+      // One guardrail: consecutive quota rejections mean the WHOLE pool is hot.
+      // Grinding through hundreds of doomed requests then would only hammer
+      // recovering keys, so we stop early with the busy message instead.
+      const MAX_CONSECUTIVE_QUOTA_ERRORS = 5;
       const modelChain: ModelChainEntry[] = [
         {
           name: googleModelName,
@@ -906,6 +911,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
       let responseText = "";
       let success = false;
+      let consecutiveQuotaErrors = 0;
       const allKeys = await getAllApiKeys();
 
       for (let mi = 0; mi < effectiveChain.length && !success; mi++) {
@@ -950,19 +956,34 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             responseText = finalAnswer;
             success = true;
             break;
-          } catch (err: any) {
-            // User pressed Stop: never rotate to the next key/model,
-            // that would fire new requests after the abort.
-            if (signal?.aborted) return '';
-            const errMsg = err?.message || JSON.stringify(err);
-            if (isKeyInvalidErr(errMsg)) {
-              markKeyUnhealthy(key);
-            } else if (isRequestLevelErr(errMsg)) {
-              break; // Same request error will repeat for every key — fail fast to the next model.
-            } else if (isTransientErr(errMsg)) {
-              if (isQuotaErr(errMsg)) markKeyUnhealthy(key);
+        } catch (err: any) {
+          // User pressed Stop: never rotate to the next key/model,
+          // that would fire new requests after the abort.
+          if (signal?.aborted) return '';
+          const errMsg = err?.message || JSON.stringify(err);
+          if (isKeyInvalidErr(errMsg)) {
+            markKeyUnhealthy(key);
+            consecutiveQuotaErrors = 0;
+          } else if (isRequestLevelErr(errMsg)) {
+            consecutiveQuotaErrors = 0;
+            break; // Same request error will repeat for every key — fail fast to the next model.
+          } else if (isTransientErr(errMsg) && isQuotaErr(errMsg)) {
+            markKeyUnhealthy(key);
+            consecutiveQuotaErrors++;
+            // The whole pool is answering 429: every further attempt is doomed,
+            // so stop the grind and tell the user to wait a minute.
+            if (consecutiveQuotaErrors >= MAX_CONSECUTIVE_QUOTA_ERRORS) {
+              console.warn(`[gemini] pool-wide quota exhaustion (${consecutiveQuotaErrors} consecutive 429s) — failing fast with the busy message`);
+              const busy: any = new Error('מערכת השופט הווירטואלי עמוסה כרגע. אנא המתן כדקה ונסה שוב.');
+              busy.isBusy = true;
+              throw busy;
             }
+          } else {
+            // Any other error (500s, 503 overloaded, malformed responses) is
+            // transient — the key itself is still usable, so just rotate on.
+            consecutiveQuotaErrors = 0;
           }
+        }
         }
       }
 
@@ -974,6 +995,10 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
     } catch (error: any) {
       if (signal?.aborted) return '';
+      // Fail-fast busy signal from the key loop: rethrow so the chat layer
+      // shows the text as an error — logged as failed, never counted as an
+      // answered question.
+      if (error?.isBusy) throw error;
       const errMsg = error?.message || String(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
