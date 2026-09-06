@@ -1,79 +1,14 @@
-/**
- * GeminiService — the AI brain of the Virtual Referee.
- *
- * PIPELINE of askRulebook() (the only entry point the chat uses):
- *   1. Keys & corrections load (pooled API keys, admin referee overrides).
- *   2. History is normalized (strict user/model alternation for the API).
- *   3. Rulebook files become labeled image parts (R2 image sets, or PDF
- *      pages rendered locally when no pre-render exists).
- *   4. Three silent passes per model: draft -> adversarial critique ->
- *      streamed polished answer (only the last one reaches the screen).
- *   5. On failure the model/key fallback chain rotates until something
- *      answers; aborts always win immediately and return silence.
- *
- * Prompt strings below are PRODUCT BEHAVIOR (wording = answers), so the
- * refactor documents everything around them and never rewords them.
- */
-
 import axios from 'axios';
 import { GoogleGenAI } from '@google/genai';
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// ---------------------------------------------------------------------------
-// Configuration constants
-// ---------------------------------------------------------------------------
+// Cache for extracted rulebook text
+const rulebookCache = new Map<string, string>();
 
-/** Public R2 host serving rulebook PDFs and pre-rendered page images. */
-const R2_PUBLIC_HOST = 'https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev';
-const JPEG_MIME = 'image/jpeg';
-
-/** Marker of backend-proxied file URLs that must be rewritten to direct R2. */
-const R2_PROXY_MARKER = '/api/r2/file/';
-
-/** R2 probe batch size when scanning pre-rendered page images. */
-const R2_PROBE_BATCH = 8;
-
-/** Consecutive 404s that mark "no more pages" for one rulebook file. */
-const R2_PROBE_MAX_MISSES = 3;
-
-/** Bodies smaller than this are error pages, not images. */
-const MIN_VALID_IMAGE_BYTES = 500;
-
-/** Leading bytes sniffed to detect HTML error pages in disguise. */
-const SNIFF_BYTES = 100;
-
-/** Cap on PDF text extraction so runaway documents cannot hang a question. */
-const PDF_TEXT_MAX_PAGES = 50;
-
-/** Output budget requested from every model in the fallback chain. */
-const MODEL_MAX_OUTPUT_TOKENS = 65536;
-
-// ---------------------------------------------------------------------------
-// Shared types (type-only changes; zero runtime impact)
-// ---------------------------------------------------------------------------
-
-/** A rulebook file known by display name + reachable URL. */
-export type RulebookFileRef = { name: string; url: string };
-
-/** A user-attached file in any of its carried forms. */
-export type UserFileRef = { url: string; key: string; base64?: string; actualFile?: File };
-
-/** One chat history message as the UI stores it. */
-export type ChatHistoryMessage = { role: 'user' | 'model'; text: string; files?: any[] };
-
-/** One pre-rendered rulebook page (base64 JPEG + 1-based index). */
-type PageImage = { pageIndex: number; data: string; mimeType: string };
-
-/** One entry of the model fallback chain (two SDK dialects). */
-type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent'; config: any };
-
-// ---------------------------------------------------------------------------
-// PDF tooling (MuPDF WASM: renders pages without pdf.js/canvas pitfalls)
-// ---------------------------------------------------------------------------
-
+// Lazy MuPDF loader. MuPDF renders PDF pages to JPEG in WASM without relying on
+// ReadableStream/canvas readback, so it is safe even in environments where pdf.js fails.
 let mupdfLibPromise: Promise<typeof import('mupdf')> | null = null;
-
-/** Load the MuPDF WASM module once and reuse it for every conversion. */
 async function getMupdfLib(): Promise<typeof import('mupdf')> {
   if (!mupdfLibPromise) {
     (globalThis as any).$libmupdf_wasm_Module = { locateFile: () => '/mupdf-wasm.wasm' };
@@ -82,7 +17,7 @@ async function getMupdfLib(): Promise<typeof import('mupdf')> {
   return mupdfLibPromise;
 }
 
-/** Plain text of PDF bytes, page-delimited, capped for safety. */
+// Extract plain text from PDF bytes using MuPDF (maxPages limits runaway PDFs)
 async function extractPdfText(data: Uint8Array, maxPages: number): Promise<string> {
   const mupdf = await getMupdfLib();
   let doc: any = null;
@@ -104,7 +39,44 @@ async function extractPdfText(data: Uint8Array, maxPages: number): Promise<strin
   }
 }
 
-/** A File/Blob as a base64 string (no data-URL prefix). */
+async function extractTextFromUrl(url: string): Promise<string> {
+  if (rulebookCache.has(url)) return rulebookCache.get(url)!;
+
+  try {
+    let response = await axios.get(url, { responseType: 'arraybuffer' });
+    let contentType = String(response.headers['content-type'] || '');
+
+    // Check if what we got is actually HTML (e.g. from an error page, redirect, or SPA fallback)
+    const textPreview = new TextDecoder().decode(new Uint8Array(response.data.slice(0, 100)));
+    if (textPreview.trim().startsWith('<!doctype') || textPreview.trim().startsWith('<html') || contentType.includes('text/html')) {
+      console.warn("API returned HTML instead of a file. Falling back to direct R2 public bucket download for:", url);
+      // Extract the key
+      const fileKey = url.includes('/api/r2/file/') ? url.substring(url.indexOf('/api/r2/file/') + '/api/r2/file/'.length) : url;
+      const fallbackUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
+      response = await axios.get(fallbackUrl, { responseType: 'arraybuffer' });
+      contentType = String(response.headers['content-type'] || 'application/pdf');
+    }
+
+    const fileName = url.split('/').pop()?.split('?')[0] || 'file';
+
+    let text = "";
+
+    if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
+      text = await extractPdfText(new Uint8Array(response.data), 50);
+    } else {
+      // Assume text-based
+      text = new TextDecoder().decode(response.data);
+    }
+
+    rulebookCache.set(url, text);
+    return text;
+  } catch (error) {
+    console.error(`Error extracting text from ${url}:`, error);
+    return "";
+  }
+}
+
+// Convert a File or Blob to a base64 string
 async function fileToBase64(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -118,10 +90,22 @@ async function fileToBase64(file: File | Blob): Promise<string> {
   });
 }
 
-/**
- * Render every page of a PDF to JPEG blobs (the judge reads pictures, not
- * text, so diagrams and symbols survive). Returns [] on any failure.
- */
+// Local text extractor for uploaded custom files (PDF/TXT)
+export async function extractTextFromFile(file: File): Promise<string> {
+  try {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      const arrayBuffer = await file.arrayBuffer();
+      return await extractPdfText(new Uint8Array(arrayBuffer), 50);
+    } else if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt') || file.name.toLowerCase().endsWith('.json')) {
+      return await file.text();
+    }
+  } catch (err) {
+    console.error("Error extracting text from file:", file.name, err);
+  }
+  return "";
+}
+
+// Convert PDF pages to images (JPEG Blobs) using MuPDF WASM
 export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor: number = 2.0, specificPage?: number): Promise<{ data: Blob; name: string }[]> {
   try {
     const mupdf = await getMupdfLib();
@@ -168,54 +152,47 @@ export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor: num
   }
 }
 
-// ---------------------------------------------------------------------------
-// Fetch helpers (R2 + generic blobs)
-// ---------------------------------------------------------------------------
+// Client-side 4K Zoom & Crop implementation for images
+async function cropAndScaleImage(imageBlob: Blob, xPercent: number, yPercent: number, wPercent: number, hPercent: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(null);
 
-/**
- * Rewrite a backend-proxied file URL to its direct public R2 address.
- * Direct fetches are faster and dodge proxy HTML error pages.
- */
-function resolveR2Url(url: string): string {
-  if (url.includes(R2_PROXY_MARKER)) {
-    const fileKey = url.substring(url.indexOf(R2_PROXY_MARKER) + R2_PROXY_MARKER.length);
-    return `${R2_PUBLIC_HOST}/${fileKey}`;
-  }
-  return url;
-}
+      // Source dimensions
+      const sx = (xPercent / 100) * img.width;
+      const sy = (yPercent / 100) * img.height;
+      const sw = (wPercent / 100) * img.width;
+      const sh = (hPercent / 100) * img.height;
 
-/** GET a URL as a Blob. Null (plus one log line) on any failure. */
-async function fetchBlob(url: string): Promise<Blob | null> {
-  try {
-    const res = await axios.get(resolveR2Url(url), { responseType: 'blob' });
-    return res.data as Blob;
-  } catch (err) {
-    console.error("Could not fetch blob:", url, err);
-    return null;
-  }
-}
+      // Ensure dimensions are valid
+      if (sw <= 0 || sh <= 0) return resolve(null);
 
-/** Append a labeled text part + base64 JPEG part to a request. */
-async function appendImagePart(parts: any[], prefixText: string, blob: Blob | File, mimeType = 'image/jpeg'): Promise<void> {
-  parts.push({ text: prefixText });
-  parts.push({
-    inlineData: {
-      data: await fileToBase64(blob),
-      mimeType
-    }
+      // Target 4K resolution mapping (scaling up the crop so the model gets maximum detail)
+      let scale = 1;
+      const maxDim = Math.max(sw, sh);
+      if (maxDim > 0 && maxDim < 3840) {
+         scale = Math.min(3840 / maxDim, 4); // max scale by 4x to avoid browser crashing
+      }
+
+      canvas.width = sw * scale;
+      canvas.height = sh * scale;
+
+      // Draw the cropped portion scaled up
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', 1.0);
+    };
+    img.onerror = () => resolve(null);
+    img.src = URL.createObjectURL(imageBlob);
   });
 }
 
-/** Append a labeled part for already-encoded base64 image data. */
-function pushBase64ImagePart(parts: any[], prefixText: string, base64: string, mimeType = 'image/jpeg'): void {
-  parts.push({ text: prefixText });
-  parts.push({ inlineData: { data: base64, mimeType } });
-}
-
-// ---------------------------------------------------------------------------
-// API key pool (Firebase pool + env fallback, rotation, health tracking)
-// ---------------------------------------------------------------------------
-
+// Client-side secure API keys pool
 let GEMINI_KEYS: string[] = [];
 
 const unhealthyKeys = new Set<string>();
@@ -223,7 +200,6 @@ const unhealthyKeys = new Set<string>();
 async function ensureKeysLoaded(): Promise<void> {
   if (GEMINI_KEYS.length > 0) return;
   try {
-    // Dynamic import keeps this service light until an AI call is actually made.
     const { doc, getDoc } = await import('firebase/firestore');
     const docRef = doc(db, "secrets", "api_keys");
     const docSnap = await getDoc(docRef);
@@ -232,7 +208,7 @@ async function ensureKeysLoaded(): Promise<void> {
       if (data.gemini_keys && Array.isArray(data.gemini_keys)) {
         GEMINI_KEYS = data.gemini_keys;
       } else {
-        // Tolerate map-shaped pools ({ "0": "AIza...", ... }).
+        // Check if it's stored as fields like 0: "key", 1: "key" or any string keys
         const keys = [];
         for (const key in data) {
           if (typeof data[key] === 'string' && data[key].startsWith('AIza')) {
@@ -248,7 +224,7 @@ async function ensureKeysLoaded(): Promise<void> {
   }
 }
 
-/** Every usable key: the Firebase pool plus an env fallback if configured. */
+// Full snapshot of every available API key (the pool from Firebase + any env fallback).
 async function getAllApiKeys(): Promise<string[]> {
   await ensureKeysLoaded();
   const envKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) ||
@@ -259,20 +235,40 @@ async function getAllApiKeys(): Promise<string[]> {
   return list;
 }
 
-/** Next healthy key, round-robin. Resets the health set once all are burnt. */
+// Official referee corrections (admin overrides) loaded from Firestore.
+let REFEREE_CORRECTIONS: string | null = null;
+
+export async function getRefereeCorrections(): Promise<string> {
+  if (REFEREE_CORRECTIONS !== null) return REFEREE_CORRECTIONS;
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const docSnap = await getDoc(doc(db, "app_config", "corrections"));
+    REFEREE_CORRECTIONS = docSnap.exists() ? String(docSnap.data().text || '') : '';
+  } catch (err) {
+    console.error("Error fetching referee corrections:", err);
+    REFEREE_CORRECTIONS = '';
+  }
+  return REFEREE_CORRECTIONS;
+}
+
+// Called by the admin page after saving so the next request picks up fresh data.
+export function invalidateCorrectionsCache(): void {
+  REFEREE_CORRECTIONS = null;
+}
+
 export async function getNextApiKey(): Promise<string> {
   await ensureKeysLoaded();
 
   const availableKeys = GEMINI_KEYS.filter(k => !unhealthyKeys.has(k));
   if (availableKeys.length === 0) {
     if (GEMINI_KEYS.length === 0) {
-      // Fallback to environment key only if no keys in Firebase
-      const envKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) ||
-                     (import.meta.env?.VITE_GEMINI_API_KEY);
-      if (envKey) {
-        return envKey;
-      }
-      throw new Error("No API keys configured");
+        // Fallback to environment key only if no keys in Firebase
+        const envKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+                       (import.meta.env?.VITE_GEMINI_API_KEY);
+        if (envKey) {
+          return envKey;
+        }
+        throw new Error("No API keys configured");
     }
     console.warn("All keys are unhealthy, resetting state");
     unhealthyKeys.clear();
@@ -291,99 +287,13 @@ function markKeyUnhealthy(key: string) {
   unhealthyKeys.add(key);
 }
 
-// ---------------------------------------------------------------------------
-// Official referee corrections (owner overrides, cached per session)
-// ---------------------------------------------------------------------------
-
-let REFEREE_CORRECTIONS: string | null = null;
-
-export async function getRefereeCorrections(): Promise<string> {
-  if (REFEREE_CORRECTIONS !== null) return REFEREE_CORRECTIONS;
-  try {
-    const { doc, getDoc } = await import('firebase/firestore');
-    const docSnap = await getDoc(doc(db, "app_config", "corrections"));
-    REFEREE_CORRECTIONS = docSnap.exists() ? String(docSnap.data().text || '') : '';
-  } catch (err) {
-    console.error("Error fetching referee corrections:", err);
-    REFEREE_CORRECTIONS = '';
-  }
-  return REFEREE_CORRECTIONS;
-}
-
-/** Called by the admin page after saving so the next request picks up fresh data. */
-export function invalidateCorrectionsCache(): void {
-  REFEREE_CORRECTIONS = null;
-}
-
-// ---------------------------------------------------------------------------
-// Pre-rendered R2 image sets (page_1.jpg, page_2.jpg, ...)
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch one rulebook's pre-rendered pages, sorted by TRUE page number
- * (a gap keeps its neighbors' original numbers, exactly like before).
- * 404s are EXPECTED: three consecutive misses simply mean "last page",
- * which is how the scan knows when to stop.
- */
-async function fetchR2ImageSet(
-  fileName: string,
-  signal: AbortSignal | undefined,
-): Promise<PageImage[]> {
-  const encodedFileName = encodeURIComponent(fileName);
-  const pages: PageImage[] = [];
-  let page = 1;
-  let consecutiveMisses = 0;
-
-  while (consecutiveMisses < R2_PROBE_MAX_MISSES) {
-    if (signal?.aborted) break;
-    // Probe one batch in parallel; results[i] always means page+i.
-    const batch: number[] = [];
-    for (let k = 0; k < R2_PROBE_BATCH; k++) batch.push(page + k);
-    const results = await Promise.all(batch.map(async (p) => {
-      try {
-        const imgUrl = `${R2_PUBLIC_HOST}/fll-rules-images/${encodedFileName}/page_${p}.jpg`;
-        const imgRes = await fetch(imgUrl);
-        const imgData = await imgRes.arrayBuffer();
-        if (imgRes.status === 404 || (imgData.byteLength < MIN_VALID_IMAGE_BYTES && new TextDecoder().decode(new Uint8Array(imgData.slice(0, SNIFF_BYTES))).includes('<html'))) {
-          return null;
-        }
-        const blobToUpload = new Blob([imgData], { type: 'image/jpeg' });
-        return await fileToBase64(blobToUpload);
-      } catch (e) {
-        return null;
-      }
-    }));
-
-    let batchMisses = 0;
-    for (let i = 0; i < results.length; i++) {
-      const base64 = results[i];
-      if (base64) {
-        consecutiveMisses = 0;
-        batchMisses = 0;
-        pages.push({ pageIndex: page + i, data: base64, mimeType: JPEG_MIME });
-      } else {
-        consecutiveMisses++;
-        batchMisses++;
-        if (consecutiveMisses >= R2_PROBE_MAX_MISSES) break;
-      }
-    }
-    page += batch.length;
-    if (batchMisses === batch.length) break;
-  }
-  return pages;
-}
-
-// ---------------------------------------------------------------------------
-// The judge: history, files, 3-pass answering, model/key fallback chain
-// ---------------------------------------------------------------------------
-
 export const GeminiService = {
   async askRulebook(
     question: string,
-    history: ChatHistoryMessage[],
-    rulebookFiles: RulebookFileRef[] = [],
+    history: { role: 'user' | 'model', text: string, files?: any[] }[],
+    rulebookFiles: { name: string, url: string }[] = [],
     seasonName: string = "SUBMERGED",
-    userFiles?: UserFileRef[],
+    userFiles?: { url: string, key: string, base64?: string, actualFile?: File }[],
     modelName: string = "gemini-3.6-flash",
     onChunk?: (text: string) => void,
     tripleJudgeMode: boolean = true,
@@ -394,8 +304,7 @@ export const GeminiService = {
     try {
       console.log("Processing FLL Query directly on the client-side...");
 
-      // Rulebook images first, user photos last: the question-adjacent
-      // photos stay closest to the question in context.
+      // Merge rulebookFiles first, then userFiles last, so they are processed in order and user's photos are closest to the question
       const allFiles: any[] = [];
       if (rulebookFiles && rulebookFiles.length > 0) {
         rulebookFiles.forEach(f => {
@@ -408,24 +317,26 @@ export const GeminiService = {
         });
       }
 
-      const googleModelName = modelName;
+      // 2. Map chosen model to modern, valid GoogleGenAI API options
+      const activeModel = modelName;
 
-      // Build contents: strict user/model alternation starting with 'user'
-      // (a hard API requirement), merging consecutive same-role messages.
+      // 3. Build contents array representing conversation history for a multi-turn chat
       const contents: any[] = [];
+      
+      // Populate history and ensure strict alternating roles starting with 'user'
       history.forEach(msg => {
         const role = msg.role === 'user' ? 'user' : 'model';
-
+        
         // Skip leading model messages (Gemini API requires history to start with 'user')
         if (contents.length === 0 && role === 'model') {
           return;
         }
-
+        
         let msgText = msg.text || " ";
         if (role === 'user' && msg.files && msg.files.length > 0) {
           msgText += "\n[הערת מערכת: המשתמש צירף תמונה בהודעה זו. התמונה ההיא כבר לא מוצגת לך, ולכן אל תשליך מהתשובה שלך עליה לתמונות עתידיות שיועלו].";
         }
-
+        
         // Merge consecutive messages of the same role
         if (contents.length > 0 && contents[contents.length - 1].role === role) {
           contents[contents.length - 1].parts.push({ text: "\n\n" + msgText });
@@ -440,7 +351,7 @@ export const GeminiService = {
       // Assemble current turn parts
       const currentParts: any[] = [];
 
-      // Official FLL Head Referee system prompt (wording = answers: do not reword).
+      // 4. Set up official FLL Head Referee system prompt
       const langNames: Record<string, string> = {
         he: 'עברית', en: 'English', ar: 'العربية', es: 'Español',
         fr: 'Français', de: 'Deutsch', ru: 'Русский', pt: 'Português',
@@ -500,8 +411,10 @@ ${correctionsText.trim()}
 --- סוף תיקונים ---`;
       }
 
-      // Non-Gemini models cannot take a native system instruction, so it is
-      // prepended as the first user turn instead.
+      // Use the requested model directly
+      const googleModelName = activeModel;
+
+      // If we are calling a model that does not support system instructions natively, we prepend it.
       const useNativeSystemInstruction = googleModelName.startsWith('gemini-');
       if (!useNativeSystemInstruction) {
         currentParts.push({ text: `System Instructions:\n${activeSystemPrompt}\n\nUser Question:` });
@@ -512,8 +425,8 @@ ${correctionsText.trim()}
 
       let globalImageIndex = 1;
 
-      // The text label before each image, telling the model whether it looks
-      // at a rulebook page, an official updates page, or the user's own photo.
+      // Build the text prefix that precedes each attached image so the model can tell
+      // user photos, rulebook pages, and official updates pages apart.
       const pagePrefixText = (fileName: string, isUserPhoto: boolean, pageIndex?: number): string => {
         if (isUserPhoto) {
           return `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`;
@@ -524,9 +437,8 @@ ${correctionsText.trim()}
         return `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName}${pageIndex ? ` | PAGE: ${pageIndex}` : ''} ---\n`;
       };
 
-      // Attach rulebook files and user photos as labeled image parts.
-      // Counts attached rulebook pages, so a question with zero of them can
-      // be refused instead of answered blind (fabricated).
+      // Extract and append text or base64 components from allFiles
+      // Counts rulebook images actually attached, so we never answer blind.
       let attachedRulebookImages = 0;
       if (allFiles.length > 0) {
         currentParts.push({ text: `Below are all the rulebook pages and user photos loaded into your context.
@@ -538,57 +450,113 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 - Official rulebook document images are prefixed with '--- RULEBOOK PAGE ... ---'. Do NOT judge these as the user's query! Use them ONLY as a dictionary of rules.
 - The actual user's photo to be judged is prefixed with '--- USER PHOTO ... ---'. It shows a robot or the field state that the user is asking about. You MUST look at the USER PHOTO to identify which mission or game state the user is asking about!
 \n\n` });
-
+        
         for (const file of allFiles) {
           if (signal?.aborted) return '';
           const rawFileName = file.actualFile?.name || file.key || 'file';
           const fileName = rawFileName.split('/').pop() || rawFileName;
-          const isPdf = file.actualFile?.type === 'application/pdf' ||
-                        fileName.toLowerCase().endsWith('.pdf') ||
+          const isPdf = file.actualFile?.type === 'application/pdf' || 
+                        fileName.toLowerCase().endsWith('.pdf') || 
                         file.url?.toLowerCase().endsWith('.pdf');
-          const isText = file.actualFile?.type?.startsWith('text/') ||
-                         fileName.toLowerCase().endsWith('.txt') ||
+          const isText = file.actualFile?.type?.startsWith('text/') || 
+                         fileName.toLowerCase().endsWith('.txt') || 
                          fileName.toLowerCase().endsWith('.json') ||
                          fileName.toLowerCase().endsWith('.xml');
-
+                         
           const fileTypeStr = file.isRulebook ? "rulebook_image" : "user_image";
 
           if (isPdf) {
-            // Pre-rendered R2 rulebooks first; live PDF conversion as fallback.
+            // Check if it's a pre-processed R2 rulebook
             const isR2Rulebook = !file.actualFile && file.url && file.url.includes('fll-rules');
-
+            
             if (isR2Rulebook) {
               console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
-              const uploadedImages = await fetchR2ImageSet(fileName, signal);
-              console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
-              for (const img of uploadedImages) {
+              const uploadedImages: { pageIndex: number; inlineData: any }[] = [];
+              let pageIndex = 1;
+              let consecutiveMisses = 0;
+              const maxMisses = 3;
+              // URL-encode the filename for R2 (handles Hebrew chars)
+              const encodedFileName = encodeURIComponent(fileName);
+              
+              while (consecutiveMisses < maxMisses) {
                 if (signal?.aborted) return '';
-                currentParts.push({ text: pagePrefixText(fileName, fileTypeStr === 'user_image', img.pageIndex) });
-                pushBase64ImagePart(currentParts, img.data, img.mimeType);
-                attachedRulebookImages++;
+                try {
+                  const imgUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
+                  const imgRes = await fetch(imgUrl);
+                  const imgData = await imgRes.arrayBuffer();
+                  
+                  if (imgRes.status === 404 || (imgData.byteLength < 500 && new TextDecoder().decode(new Uint8Array(imgData.slice(0, 100))).includes('<html'))) {
+                    consecutiveMisses++;
+                    pageIndex++;
+                    continue;
+                  }
+                  
+                  consecutiveMisses = 0;
+                  const blobToUpload = new Blob([imgData], { type: 'image/jpeg' });
+
+                  uploadedImages.push({
+                    pageIndex,
+                    inlineData: {
+                      data: await fileToBase64(blobToUpload),
+                      mimeType: 'image/jpeg'
+                    }
+                  });
+                  pageIndex++;
+                } catch (e) {
+                  consecutiveMisses++;
+                  pageIndex++;
+                }
               }
+              
+console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
 
               if (uploadedImages.length === 0 && file.url) {
                 console.log(`No pre-processed images found for ${fileName}, converting PDF on the fly...`);
-                const pdfBlob = await fetchBlob(file.url);
-                if (pdfBlob) {
-                  const pageImages = await convertPdfToImages(pdfBlob);
-                  console.log(`Converted ${pageImages.length} pages on the fly for ${fileName}`);
-                  let onTheFlyIndex = 1;
-                  for (const pageImg of pageImages) {
-                    if (signal?.aborted) return '';
-                    try {
-                      await appendImagePart(currentParts, pagePrefixText(fileName, fileTypeStr === 'user_image', onTheFlyIndex), pageImg.data);
-                      attachedRulebookImages++;
-                      onTheFlyIndex++;
-                    } catch (err: any) {
-                      console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
+                try {
+                  let fetchUrl = file.url;
+                  if (fetchUrl.includes('/api/r2/file/')) {
+                    const fileKey = fetchUrl.substring(fetchUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
+                    fetchUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
+                  }
+                  const res = await axios.get(fetchUrl, { responseType: 'blob' });
+                  const pdfBlob = res.data;
+                  if (pdfBlob) {
+                    const pageImages = await convertPdfToImages(pdfBlob);
+                    console.log(`Converted ${pageImages.length} pages on the fly for ${fileName}`);
+                      let pageIndex = 1;
+                      for (const pageImg of pageImages) {
+                        if (signal?.aborted) return '';
+                        try {
+                          const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
+                          currentParts.push({ text: prefixText });
+                          currentParts.push({
+                            inlineData: {
+                              data: await fileToBase64(pageImg.data),
+                              mimeType: 'image/jpeg'
+                            }
+                          });
+                          attachedRulebookImages++;
+                          pageIndex++;
+                      } catch (err: any) {
+                        console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
+                      }
                     }
                   }
+                } catch (err) {
+                  console.error(`Failed to fetch/convert PDF for ${fileName}:`, err);
                 }
               }
+
+              uploadedImages
+                .sort((a: any, b: any) => a.pageIndex - b.pageIndex)
+                .forEach((res: any) => {
+                  const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', res.pageIndex);
+                  currentParts.push({ text: prefixText });
+                  currentParts.push({ inlineData: res.inlineData });
+                  attachedRulebookImages++;
+                });
             } else {
-              // A local/uploaded PDF (or any direct PDF URL): render it now.
+              // Fetch the PDF blob to convert pages to visual images for Gemma
               let pdfBlob: Blob | File | null = null;
               if (file.actualFile) {
                 pdfBlob = file.actualFile;
@@ -599,18 +567,35 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
                 const fetchRes = await fetch(file.url);
                 pdfBlob = await fetchRes.blob();
               } else if (file.url) {
-                pdfBlob = await fetchBlob(file.url);
+                try {
+                  let fetchUrl = file.url;
+                  if (fetchUrl.includes('/api/r2/file/')) {
+                    const fileKey = fetchUrl.substring(fetchUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
+                    fetchUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
+                  }
+                  const res = await axios.get(fetchUrl, { responseType: 'blob' });
+                  pdfBlob = res.data;
+                } catch (err) {
+                  console.error("Could not fetch PDF URL for visual rendering:", file.url, err);
+                }
               }
-
+  
               if (pdfBlob) {
                 const pageImages = await convertPdfToImages(pdfBlob);
                 console.log(`Successfully rendered ${pageImages.length} visual pages for PDF: ${fileName}`);
-
+                
                 let pageIndex = 1;
                 for (const pageImg of pageImages) {
                   if (signal?.aborted) return '';
                   try {
-                    await appendImagePart(currentParts, pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex), pageImg.data);
+                    const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image', pageIndex);
+                    currentParts.push({ text: prefixText });
+                    currentParts.push({
+                      inlineData: {
+                        data: await fileToBase64(pageImg.data),
+                        mimeType: 'image/jpeg'
+                      }
+                    });
                     pageIndex++;
                   } catch (err: any) {
                     console.error(`Failed to attach PDF page ${pageImg.name}:`, err);
@@ -619,7 +604,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               }
             }
           } else if (!isText) {
-            // Any other binary file is treated as a photo to judge.
+            // Treat as media/binary file (images)
             let mimeType = 'image/jpeg';
             let blobToUpload: Blob | File | null = null;
 
@@ -635,24 +620,29 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               const fetchRes = await fetch(file.url);
               blobToUpload = await fetchRes.blob();
             } else if (file.url) {
-              const fetched = await fetchBlob(file.url);
-              if (fetched) {
-                // Content-Type is only knowable after the fetch resolves.
-                try {
-                  const head = await axios.head(resolveR2Url(file.url));
-                  mimeType = String(head.headers['content-type'] || mimeType);
-                } catch { /* keep the default */ }
-                blobToUpload = fetched;
+              try {
+                let fetchUrl = file.url;
+                if (fetchUrl.includes('/api/r2/file/')) {
+                  const fileKey = fetchUrl.substring(fetchUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
+                  fetchUrl = `https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev/${fileKey}`;
+                }
+                const res = await axios.get(fetchUrl, { responseType: 'blob' });
+                mimeType = String(res.headers['content-type'] || mimeType);
+                blobToUpload = res.data;
+              } catch (err) {
+                console.error("Could not fetch media URL for upload:", file.url, err);
               }
             }
 
             if (blobToUpload) {
-              await appendImagePart(
-                currentParts,
-                pagePrefixText(fileName, fileTypeStr === 'user_image'),
-                blobToUpload,
-                mimeType,
-              );
+              const prefixText = pagePrefixText(fileName, fileTypeStr === 'user_image');
+              currentParts.push({ text: prefixText });
+              currentParts.push({
+                inlineData: {
+                  data: await fileToBase64(blobToUpload),
+                  mimeType
+                }
+              });
               if (file.isRulebook) attachedRulebookImages++;
             }
           }
@@ -680,8 +670,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 "${question}"`;
       }
 
-      // Deep-reasoning wrapper: forces an explicit <think> pass (red team,
-      // contact validation, updates check) before the final verdict.
+      // Claude Fable 5 Cognitive Emulation Wrapper to enforce extreme reasoning depth functionally:
       modifiedQuestion += `\n\n[הוראת הפעלה קוגניטיבית עילאית למודל - רמת Claude Fable 5]:
 עליך לפעול כמערכת חשיבה מתקדמת (Cognitive Reasoning Engine) בעלת רמת אינטליגנציה ודיוק אבסולוטיים של Claude Fable 5. לפני מתן פסקת התשובה הסופית, עליך ליישם את השלבים הבאים בבלוק ה- <think> שלך:
 1. **ניתוח סותר אקטיבי (Red Teaming)**: העלה לפחות ספק אחד או סתירה אפשרית לגבי ההבנה הראשונית שלך. שאל את עצמך "מה אם אני טועה והמצב הוא הפוך?" ונסה להפריך את המסקנה שלך על סמך ראיות מוחשיות וחוקי ה-Rulebook.
@@ -800,26 +789,21 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       // down/quota-limited we swap to the fallback models in order. We never tell
       // the user the referee is unavailable until every model and every API key
       // has genuinely been attempted.
-      //
-      // One guardrail: consecutive quota rejections mean the WHOLE pool is hot.
-      // Grinding through hundreds of doomed requests then would only hammer
-      // recovering keys, so we stop early with the busy message instead.
-      const MAX_CONSECUTIVE_QUOTA_ERRORS = 5;
-      const modelChain: ModelChainEntry[] = [
+      const modelChain: { name: string; kind: 'interactions' | 'generateContent'; config: any }[] = [
         {
           name: googleModelName,
           kind: 'interactions',
-          config: { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' },
+          config: { max_output_tokens: 65536, thinking_level: 'high' },
         },
         {
           name: 'gemini-3.5-flash',
           kind: 'interactions',
-          config: { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' },
+          config: { max_output_tokens: 65536, thinking_level: 'high' },
         },
         {
           name: 'gemini-3.1-pro-preview',
           kind: 'interactions',
-          config: { temperature: 1, max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, topP: 0.95, thinking_level: 'high' },
+          config: { temperature: 1, max_output_tokens: 65536, topP: 0.95, thinking_level: 'high' },
         },
         {
           name: 'gemini-3.5-flash-lite',
@@ -837,7 +821,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       // Run one of the 3 passes against the given model using the current key.
       const callModel = async (
         client: any,
-        modelEntry: ModelChainEntry,
+        modelEntry: { name: string; kind: 'interactions' | 'generateContent'; config: any },
         stepInput: any[],
         isStream: boolean,
         onText?: (text: string) => void,
@@ -893,7 +877,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         return (result && result.text) || '';
       };
 
-      // Error classifiers: each failure mode dictates a different recovery.
       const isKeyInvalidErr = (m: string) =>
         m.includes("403") || m.includes("401") || m.includes("leaked") || m.includes("PERMISSION_DENIED") || m.includes("API key not valid") || m.includes("API_KEY_INVALID");
       const isQuotaErr = (m: string) =>
@@ -911,7 +894,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
       let responseText = "";
       let success = false;
-      let consecutiveQuotaErrors = 0;
       const allKeys = await getAllApiKeys();
 
       for (let mi = 0; mi < effectiveChain.length && !success; mi++) {
@@ -921,10 +903,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         if (mi === effectiveChain.length - 1) {
           unhealthyKeys.clear();
         }
+        let triedAnyKeyForModel = false;
 
         for (const key of allKeys) {
           if (signal?.aborted) return '';
           if (unhealthyKeys.has(key)) continue;
+          triedAnyKeyForModel = true;
 
           const client = new GoogleGenAI({ apiKey: key });
 
@@ -956,34 +940,19 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             responseText = finalAnswer;
             success = true;
             break;
-        } catch (err: any) {
-          // User pressed Stop: never rotate to the next key/model,
-          // that would fire new requests after the abort.
-          if (signal?.aborted) return '';
-          const errMsg = err?.message || JSON.stringify(err);
-          if (isKeyInvalidErr(errMsg)) {
-            markKeyUnhealthy(key);
-            consecutiveQuotaErrors = 0;
-          } else if (isRequestLevelErr(errMsg)) {
-            consecutiveQuotaErrors = 0;
-            break; // Same request error will repeat for every key — fail fast to the next model.
-          } else if (isTransientErr(errMsg) && isQuotaErr(errMsg)) {
-            markKeyUnhealthy(key);
-            consecutiveQuotaErrors++;
-            // The whole pool is answering 429: every further attempt is doomed,
-            // so stop the grind and tell the user to wait a minute.
-            if (consecutiveQuotaErrors >= MAX_CONSECUTIVE_QUOTA_ERRORS) {
-              console.warn(`[gemini] pool-wide quota exhaustion (${consecutiveQuotaErrors} consecutive 429s) — failing fast with the busy message`);
-              const busy: any = new Error('מערכת השופט הווירטואלי עמוסה כרגע. אנא המתן כדקה ונסה שוב.');
-              busy.isBusy = true;
-              throw busy;
+          } catch (err: any) {
+            // User pressed Stop: never rotate to the next key/model,
+            // that would fire new requests after the abort.
+            if (signal?.aborted) return '';
+            const errMsg = err?.message || JSON.stringify(err);
+            if (isKeyInvalidErr(errMsg)) {
+              markKeyUnhealthy(key);
+            } else if (isRequestLevelErr(errMsg)) {
+              break; // Same request error will repeat for every key — fail fast to the next model.
+            } else if (isTransientErr(errMsg)) {
+              if (isQuotaErr(errMsg)) markKeyUnhealthy(key);
             }
-          } else {
-            // Any other error (500s, 503 overloaded, malformed responses) is
-            // transient — the key itself is still usable, so just rotate on.
-            consecutiveQuotaErrors = 0;
           }
-        }
         }
       }
 
@@ -995,10 +964,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
     } catch (error: any) {
       if (signal?.aborted) return '';
-      // Fail-fast busy signal from the key loop: rethrow so the chat layer
-      // shows the text as an error — logged as failed, never counted as an
-      // answered question.
-      if (error?.isBusy) throw error;
       const errMsg = error?.message || String(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
