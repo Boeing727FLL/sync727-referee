@@ -1,3 +1,18 @@
+/**
+ * PublicRulebookAI — the whole Virtual Referee experience in one screen.
+ *
+ * ARCHITECTURE MAP (top to bottom):
+ *   1. Identity & session   — who is signed in, single-device lock, presence
+ *   2. Entry flow           — intro -> mandatory disclaimer -> chat (or straight
+ *                             back in via ?enter=chat after login)
+ *   3. Chat engine          — messages, streaming send/stop, typewriter effect
+ *   4. Rulebook management  — R2 file list, season detection, owner uploads
+ *   5. Render               — backdrop, header + user menu, hero/chat, input,
+ *                             and every floating layer (modals, toasts, drawers)
+ *
+ * STATE LIVES HERE; the lib/ services only talk to backends. Nothing in this
+ * file throws to the user: failures degrade to chat notices or console warns.
+ */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,12 +53,50 @@ const stripThinkBlocks = (text: string): string =>
 // (copy/like) are rendered under it.
 const STOPPED_TEXT = 'הפעולה הופסקה על ידי המשתמש.';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Client-side send throttles (anti-spam; the hourly bucket is refunded on Stop).
+const RATE_GAP_MS = 4_000;
+const RATE_HOURLY_MAX = 120;
+
+// Feedback popup cadence: re-prompt window + quiet period after submitting.
+const FEEDBACK_REPROMPT_DAYS = 14;
+const FEEDBACK_QUIET_AFTER_SUBMIT_DAYS = 45;
+const FEEDBACK_PROMPT_DELAY_MS = 2_500;
+
+// Transient UI lifetimes.
+const TOAST_MS = 2_600;
+const ENTER_FLASH_MS = 1_200;
+
+// Typewriter speed: one character per tick.
+const TYPEWRITER_TICK_MS = 35;
+
+/** One attached file on a chat message (images render inline). */
+type ChatFile = {
+  url: string;
+  key: string;
+  name?: string;
+  base64?: string;
+};
+
+/** One chat bubble. `isProgress` marks live upload-progress notices. */
+type ChatMessage = {
+  role: 'user' | 'model';
+  text: string;
+  files?: ChatFile[];
+  isProgress?: boolean;
+};
+
+/** Shared look for every row inside the user dropdown menu. */
+const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer';
+
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const location = useLocation();
   const { connectDrive, user, logout } = useAuth();
   const { t, language, isRTL, setLanguage, languages } = useLanguage();
   
+  // ===== 1. Identity & session: who is signed in, kept alive across reloads.
   // Login state comes only from Firebase Auth (user) or the saved auth_user.
   // URL bypass params were removed for security, everyone must log in.
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(false);
@@ -129,6 +182,7 @@ export default function PublicRulebookAI() {
     };
   }, []);
 
+  // ===== 2. Overlays, menus & toast: open/close state only, no data.
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
@@ -146,7 +200,7 @@ export default function PublicRulebookAI() {
   const showToast = (msg: string) => {
     setToast(msg);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), 2600);
+    toastTimerRef.current = setTimeout(() => setToast(null), TOAST_MS);
   };
 
   useEffect(() => {
@@ -208,6 +262,7 @@ export default function PublicRulebookAI() {
     setShowLangMenu(true);
   };
 
+  // ===== 3. Entry flow: intro -> mandatory disclaimer -> chat.
   const [loginError, setLoginError] = useState<string | null>(null);
   // First paint: if we arrived via ?enter=chat with saved auth in localStorage,
   // start inside the chat immediately so there is no intro flash while
@@ -230,7 +285,7 @@ export default function PublicRulebookAI() {
   const [enterFlash, setEnterFlash] = useState<boolean>(() => autoEnter);
   useEffect(() => {
     if (!enterFlash) return;
-    const t = setTimeout(() => setEnterFlash(false), 1200);
+    const t = setTimeout(() => setEnterFlash(false), ENTER_FLASH_MS);
     return () => clearTimeout(t);
   }, [enterFlash]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
@@ -386,12 +441,12 @@ export default function PublicRulebookAI() {
     const submittedAtRaw = parseInt(localStorage.getItem(feedbackTimerKey('referee_feedback_submitted_at')) || '0', 10);
     const lastPrompt = lastPromptRaw > resetAt ? lastPromptRaw : 0;
     const submittedAt = submittedAtRaw > resetAt ? submittedAtRaw : 0;
-    if (submittedAt && now - submittedAt < 45 * 24 * 60 * 60 * 1000) return;
-    if (lastPrompt && now - lastPrompt < 14 * 24 * 60 * 60 * 1000) return;
+    if (submittedAt && now - submittedAt < FEEDBACK_QUIET_AFTER_SUBMIT_DAYS * DAY_MS) return;
+    if (lastPrompt && now - lastPrompt < FEEDBACK_REPROMPT_DAYS * DAY_MS) return;
     localStorage.setItem(feedbackTimerKey('referee_feedback_last_prompt'), String(now));
     feedbackTimeoutRef.current = setTimeout(() => {
       setShowFeedback(true);
-    }, 2500);
+    }, FEEDBACK_PROMPT_DELAY_MS);
   };
 
   useEffect(() => {
@@ -400,6 +455,7 @@ export default function PublicRulebookAI() {
     };
   }, []);
 
+  /** Sign out everywhere and reset to a fresh intro screen. */
   const handleLogout = async () => {
     try {
       await logout();
@@ -415,11 +471,17 @@ export default function PublicRulebookAI() {
     setShowIntro(true);
   };
 
+  // ===== 4. Account deletion (password re-auth, then wipe everything).
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
   const [deletePassword, setDeletePassword] = useState<string>('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  /**
+   * Delete the account after password re-authentication: user doc, RTDB
+   * traces, then the Auth user itself, then every local trace and a reset
+   * to the intro screen.
+   */
   const handleDeleteAccount = async () => {
     setDeleteError(null);
     const current = auth.currentUser;
@@ -488,8 +550,9 @@ export default function PublicRulebookAI() {
     setHasGoogleToken(false);
     setSessionKicked(true);
   };
+  // ===== 5. Chat state: messages, input, rulebook files, request flags.
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
-  const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, files?: { url: string, key: string, name?: string, base64?: string }[] }[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
@@ -508,6 +571,7 @@ export default function PublicRulebookAI() {
   // message, so Stop can remove it and no answer ever remains.
   const requestCreatedModelMsgRef = useRef<boolean>(false);
 
+  /** Abort the in-flight AI request. The send button becomes Stop while loading. */
   const handleStop = () => {
     abortControllerRef.current?.abort();
   };
@@ -563,7 +627,7 @@ export default function PublicRulebookAI() {
         if (prev >= typewriterTargetRef.current) return prev;
         return prev + 1;
       });
-    }, 35);
+    }, TYPEWRITER_TICK_MS);
     return () => clearInterval(interval);
   }, [typewriterReady]);
 
@@ -574,19 +638,14 @@ export default function PublicRulebookAI() {
     }
   }, [loading]);
 
+  // Fresh typing session whenever a new chat begins or the gate opens.
+  // (Previously two identical effects; one covers both dependency sets.)
   useEffect(() => {
     if (chatStarted && typewriterReady) {
       setTypewriterCount(0);
       typewriterTargetRef.current = 0;
     }
   }, [chatStarted, typewriterReady]);
-
-  useEffect(() => {
-    if (typewriterReady && chatStarted) {
-      setTypewriterCount(0);
-      typewriterTargetRef.current = 0;
-    }
-  }, [typewriterReady]);
 
   useEffect(() => {
     if (!chatStarted) setTypewriterReady(false);
@@ -610,7 +669,11 @@ export default function PublicRulebookAI() {
     return () => unsubSettings();
   }, [seasonName]);
 
-const fetchLatestRulebook = async () => {
+  /**
+   * Load the newest rulebook files from R2 (latest 5) and detect the season
+   * from their filenames, syncing it back to the shared config when it changes.
+   */
+  const fetchLatestRulebook = async () => {
     try {
       let files = [];
       try {
@@ -748,6 +811,10 @@ const fetchLatestRulebook = async () => {
     await performUpload(file);
   };
 
+  /**
+   * Upload a rulebook PDF to R2, render its pages to images for the judge,
+   * clear replaced versions, detect a season change, and refresh the list.
+   */
   const performUpload = async (file: File) => {
     setUploading(true);
     setUploadProgress(0);
@@ -876,7 +943,7 @@ const fetchLatestRulebook = async () => {
             setMessages(prev => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
-              if (last?.role === 'model' && (last as any).isProgress) {
+              if (last?.role === 'model' && last.isProgress) {
                 newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות... ${pct}% (${i + 1}/${images.length})` };
               }
               return newMsgs;
@@ -887,7 +954,7 @@ const fetchLatestRulebook = async () => {
             setMessages(prev => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
-              if (last?.role === 'model' && (last as any).isProgress) {
+              if (last?.role === 'model' && last.isProgress) {
                 newMsgs[newMsgs.length - 1] = { ...last, text: `קובץ החוקים (${file.name}) הועלה, אבל המרת העמודים לתמונות נכשלה. נסו להעלות שוב.` };
               }
               return newMsgs;
@@ -907,9 +974,9 @@ const fetchLatestRulebook = async () => {
         setIsLearning(false);
         setMessages(prev => {
           const newMsgs = [...prev];
-          if (newMsgs.length > 0 && (newMsgs[newMsgs.length - 1] as any).isProgress) {
+          if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].isProgress) {
             newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' };
-            delete (newMsgs[newMsgs.length - 1] as any).isProgress;
+            delete newMsgs[newMsgs.length - 1].isProgress;
           } else {
             newMsgs.push({ role: 'model', text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' });
           }
@@ -942,6 +1009,12 @@ const fetchLatestRulebook = async () => {
     } catch { /* storage unavailable, nothing to refund */ }
   };
 
+  /**
+   * Send the input (or a tapped suggestion) to the referee: input guards,
+   * anti-spam rate limits, then a streamed answer appended chunk by chunk.
+   * On success the question is counted, logged, and may trigger the feedback
+   * popup. Abort via handleStop: partial text is dropped and the quota refunded.
+   */
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
 
@@ -964,7 +1037,7 @@ const fetchLatestRulebook = async () => {
     try {
       const now = Date.now();
       const lastSend = Number(localStorage.getItem('referee_last_send') || 0);
-      if (now - lastSend < 4000) {
+      if (now - lastSend < RATE_GAP_MS) {
         setMessages(prev => [...prev, { role: 'model', text: 'חכו כמה שניות בין שאלה לשאלה.' }]);
         return;
       }
@@ -977,7 +1050,7 @@ const fetchLatestRulebook = async () => {
           if (bucket.hour === hour) count = Number(bucket.count) || 0;
         } catch { count = 0; }
       }
-      if (count >= 120) {
+      if (count >= RATE_HOURLY_MAX) {
         setMessages(prev => [...prev, { role: 'model', text: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' }]);
         return;
       }
@@ -1056,16 +1129,16 @@ const fetchLatestRulebook = async () => {
         // Count only questions that actually got an answer: stopped or
         // failed requests never reach here, so they are not counted.
         if (!isCurrentUserOwner()) {
-        trackQuestion(resolveRefereeUid() || 'anon');
-        logRefereeQA({
-          question: userMessage,
-          answer: stripThinkBlocks(response) || response || t('chat.commError'),
-          season: seasonName,
-          language,
-          uid: resolveRefereeUid(),
-          model: 'gemini-3.6-flash',
-          ok: true,
-        });
+          trackQuestion(resolveRefereeUid() || 'anon');
+          logRefereeQA({
+            question: userMessage,
+            answer: stripThinkBlocks(response) || response || t('chat.commError'),
+            season: seasonName,
+            language,
+            uid: resolveRefereeUid(),
+            model: 'gemini-3.6-flash',
+            ok: true,
+          });
         }
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
@@ -1296,7 +1369,7 @@ const fetchLatestRulebook = async () => {
                             setShowUserMenu(false);
                             setShowLogoutConfirm(true);
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className={MENU_ROW_CLASS}
                         >
                           <LogOut className="w-4 h-4 text-slate-500" />
                           התנתק
@@ -1317,7 +1390,7 @@ const fetchLatestRulebook = async () => {
                             setShowUserMenu(false);
                             setShowPrivacy(true);
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className={MENU_ROW_CLASS}
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
                           פרטיות
@@ -1325,7 +1398,7 @@ const fetchLatestRulebook = async () => {
                         {isCurrentUserOwner() && (
                           <button
                             onClick={() => { setShowUserMenu(false); setShowSettings(true); }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                            className={MENU_ROW_CLASS}
                           >
                             <Settings className="w-4 h-4 text-slate-500" />
                             הגדרות
@@ -1334,7 +1407,7 @@ const fetchLatestRulebook = async () => {
                         <div className="h-px bg-white/60 my-1" />
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className={MENU_ROW_CLASS}
                         >
                           <ScrollText className="w-4 h-4 text-slate-500" />
                           יומן שופטים
@@ -1343,7 +1416,7 @@ const fetchLatestRulebook = async () => {
                         <button
                           ref={langBtnRef}
                           onClick={openLangMenu}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className={MENU_ROW_CLASS}
                         >
                           <Globe className="w-4 h-4 text-slate-500" />
                           <span className="flex-1">שפה</span>
@@ -1682,6 +1755,9 @@ const fetchLatestRulebook = async () => {
           </p>
         </div>
       </div>
+
+      {/* ===== Floating layers: every modal/toast/drawer mounts here and
+          gates itself with isOpen, so the chat tree underneath never unmounts. ===== */}
 
       {/* Upload Modal */}
       <AnimatePresence>
