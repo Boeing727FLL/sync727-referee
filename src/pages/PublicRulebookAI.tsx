@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, Mic } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -39,7 +39,6 @@ import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import PrivacyModal from '../components/PrivacyModal';
 import SettingsModal from '../components/SettingsModal';
 import MaintenanceScreen from '../components/MaintenanceScreen';
-import LiveRefereeModal from '../components/LiveRefereeModal';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
@@ -188,7 +187,6 @@ export default function PublicRulebookAI() {
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
-  const [showLive, setShowLive] = useState<boolean>(false);
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
     return subscribeMaintenanceGate(setMaintenanceState);
@@ -1711,15 +1709,6 @@ export default function PublicRulebookAI() {
             className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
 
-          <button
-            onClick={() => setShowLive(true)}
-            style={{ flexShrink: 0 }}
-            aria-label="שופט לייב"
-            title="שופט לייב"
-            className="w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-white/[0.07] hover:bg-white/[0.12] text-slate-200 border border-white/10 active:scale-95 transition-colors cursor-pointer"
-          >
-            <Mic className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
           {isAiBusy ? (
             <button
               onClick={handleStop}
@@ -1892,12 +1881,6 @@ export default function PublicRulebookAI() {
         onOpenPrivacy={() => setShowPrivacy(true)}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
-      <LiveRefereeModal
-        isOpen={showLive}
-        onClose={() => setShowLive(false)}
-        seasonName={seasonName}
-        rulebookFiles={activeRulebookFiles}
-      />
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
