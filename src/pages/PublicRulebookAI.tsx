@@ -565,14 +565,8 @@ export default function PublicRulebookAI() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  // Tracks whether the in-flight request already created a partial model
-  // message, so Stop can remove it and no answer ever remains.
-  const requestCreatedModelMsgRef = useRef<boolean>(false);
-
-  /** Abort the in-flight AI request. The send button becomes Stop while loading. */
-  const handleStop = () => {
-    abortControllerRef.current?.abort();
-  };
+  const requestFinishedRef = useRef(false);
+  const stopHandledRef = useRef(false);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -617,6 +611,7 @@ export default function PublicRulebookAI() {
 
   const typewriterTargetRef = useRef(0);
   const [typewriterCount, setTypewriterCount] = useState(0);
+  const [renderingResponse, setRenderingResponse] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -649,7 +644,16 @@ export default function PublicRulebookAI() {
     if (!chatStarted) setTypewriterReady(false);
   }, [chatStarted]);
 
-  const isTypewriterActive = typewriterCount < typewriterTargetRef.current;
+  const isAiBusy = loading || renderingResponse;
+
+  useEffect(() => {
+    const typewriterDone = typewriterReady && typewriterTargetRef.current > 0 && typewriterCount >= typewriterTargetRef.current;
+    if (renderingResponse && (!typewriterReady || typewriterDone)) {
+      setRenderingResponse(false);
+      requestFinishedRef.current = false;
+      abortControllerRef.current = null;
+    }
+  }, [renderingResponse, typewriterReady, typewriterCount]);
 
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, 'app_config', 'rulebook'), (docSnap) => {
@@ -1007,6 +1011,22 @@ export default function PublicRulebookAI() {
     } catch { /* storage unavailable, nothing to refund */ }
   };
 
+  const handleStop = () => {
+    if (stopHandledRef.current) return;
+    stopHandledRef.current = true;
+    requestFinishedRef.current = false;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    typewriterTargetRef.current = 0;
+    setTypewriterCount(0);
+    setRenderingResponse(false);
+    refundRateLimit();
+    setMessages(prev => {
+      const trimmed = prev[prev.length - 1]?.role === 'model' ? prev.slice(0, -1) : prev;
+      return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
+    });
+  };
+
   /**
    * Send the input (or a tapped suggestion) to the referee: input guards,
    * anti-spam rate limits, then a streamed answer appended chunk by chunk.
@@ -1016,7 +1036,7 @@ export default function PublicRulebookAI() {
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
 
-    if (!textToSend.trim() || loading) return;
+    if (!textToSend.trim() || isAiBusy) return;
 
     // Never answer blind: with no rulebook files loaded at all, the model
     // would fabricate. Tell the user instead of guessing.
@@ -1071,7 +1091,9 @@ export default function PublicRulebookAI() {
     setLoading(true);
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    requestCreatedModelMsgRef.current = false;
+    requestFinishedRef.current = false;
+    stopHandledRef.current = false;
+    setRenderingResponse(false);
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
@@ -1095,7 +1117,6 @@ export default function PublicRulebookAI() {
               };
             } else {
               newMessages.push({ role: 'model', text: chunkText });
-              requestCreatedModelMsgRef.current = true;
             }
             return newMessages;
           });
@@ -1105,17 +1126,7 @@ export default function PublicRulebookAI() {
       );
       
       if (controller.signal.aborted) {
-        // Stop means stop: drop any partial answer this request streamed
-        // so no answer ever remains, then leave a short stopped notice.
-        const dropPartial = requestCreatedModelMsgRef.current;
-        requestCreatedModelMsgRef.current = false;
-        refundRateLimit();
-        setMessages(prev => {
-          const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
-            ? prev.slice(0, -1)
-            : prev;
-          return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
-        });
+        handleStop();
       } else {
         // Owner questions are invisible to analytics: not counted and not
         // logged to the journal.
@@ -1133,6 +1144,8 @@ export default function PublicRulebookAI() {
             ok: true,
           });
         }
+        requestFinishedRef.current = true;
+        setRenderingResponse(true);
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'model') return prev;
@@ -1142,15 +1155,7 @@ export default function PublicRulebookAI() {
       }
     } catch (error: any) {
       if (controller.signal.aborted) {
-        const dropPartial = requestCreatedModelMsgRef.current;
-        requestCreatedModelMsgRef.current = false;
-        refundRateLimit();
-        setMessages(prev => {
-          const trimmed = dropPartial && prev[prev.length - 1]?.role === 'model'
-            ? prev.slice(0, -1)
-            : prev;
-          return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
-        });
+        handleStop();
       } else {
         const errMsg = error?.message || t('chat.connectionLost');
         logRefereeQA({
@@ -1165,7 +1170,7 @@ export default function PublicRulebookAI() {
         setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
       }
     } finally {
-      abortControllerRef.current = null;
+      if (!requestFinishedRef.current) abortControllerRef.current = null;
       setLoading(false);
       if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
     }
@@ -1502,7 +1507,7 @@ export default function PublicRulebookAI() {
                   <button
                     key={i}
                     onClick={() => handleSend(q)}
-                    disabled={loading || isLearning}
+                    disabled={isAiBusy || isLearning}
                     className="relative flex items-center gap-4 text-right px-5 py-5 md:gap-3.5 md:px-5 md:py-4 rounded-3xl md:rounded-2xl bg-gradient-to-l from-white/[0.07] to-white/[0.03] hover:from-yellow-400/15 hover:to-white/[0.03] border border-white/10 hover:border-yellow-400/40 border-r-2 border-r-yellow-400/50 hover:border-r-yellow-300 transition-all duration-300 cursor-pointer group hover:-translate-y-0.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:shadow-[0_10px_28px_rgba(250,204,21,0.10)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   >
                     <span className="shrink-0 w-12 h-12 md:w-11 md:h-11 rounded-2xl md:rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300 group-hover:scale-110 group-hover:bg-yellow-400/25 group-hover:shadow-[0_0_18px_rgba(250,204,21,0.35)] transition-all duration-300">
@@ -1605,8 +1610,8 @@ export default function PublicRulebookAI() {
               <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
                 <div className={`relative overflow-hidden ${
                   msg.role === 'user'
-                    ? 'bg-white/[0.09] border border-white/10 text-slate-100 rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
-                    : 'bg-white/[0.05] backdrop-blur-xl border border-white/10 text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-[0_8px_28px_rgba(0,0,0,0.3)]'
+                    ? 'bg-[#0876c9]/25 border border-[#0876c9]/45 text-blue-50 rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3 shadow-[0_8px_24px_rgba(8,118,201,0.16)]'
+                    : 'bg-slate-900/65 backdrop-blur-xl border border-yellow-400/15 text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-[0_8px_28px_rgba(0,0,0,0.3)]'
                 }`}>
 
                   {/* Referee Tag */}
@@ -1701,14 +1706,14 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="w-full flex items-center gap-2 bg-slate-900/80 backdrop-blur-2xl border border-white/12 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-yellow-400/40 focus-within:shadow-[0_12px_40px_rgba(250,204,21,0.12)] transition-all">
+        <div className="w-full flex items-center gap-2 bg-slate-900/90 backdrop-blur-2xl border border-yellow-400/25 rounded-2xl p-2 md:p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] focus-within:border-[#0876c9] focus-within:shadow-[0_12px_40px_rgba(8,118,201,0.2)] transition-all">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
-            disabled={loading || isLearning || (isTypewriterActive && !heroActive)}
+            disabled={isAiBusy || isLearning}
             style={{ flex: 1, minWidth: 0 }}
             className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
           />
@@ -1722,7 +1727,7 @@ export default function PublicRulebookAI() {
           >
             <Mic className="w-4 h-4 md:w-5 md:h-5" />
           </button>
-          {loading ? (
+          {isAiBusy ? (
             <button
               onClick={handleStop}
               style={{ flexShrink: 0 }}
@@ -1735,7 +1740,7 @@ export default function PublicRulebookAI() {
           ) : (
             <button
               onClick={() => handleSend()}
-              disabled={loading || isLearning || (isTypewriterActive && !heroActive) || !input.trim()}
+              disabled={isAiBusy || isLearning || !input.trim()}
               style={{ flexShrink: 0 }}
               aria-label={t('chat.send')}
               className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 shadow-[0_4px_16px_rgba(250,204,21,0.35)] active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
