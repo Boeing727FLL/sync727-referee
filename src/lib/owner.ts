@@ -1,3 +1,11 @@
+/**
+ * owner.ts — single source of truth for "is this the owner?".
+ *
+ * The owner account (below) unlocks every admin surface: settings, analytics,
+ * journal deletes, feedback viewer, uploads, maintenance mode. Client checks
+ * here are convenience only — the Firestore/RTDB rules enforce the same
+ * email independently on the server.
+ */
 import { auth } from './firebase';
 
 export const OWNER_EMAIL = 'boeing727.il@gmail.com';

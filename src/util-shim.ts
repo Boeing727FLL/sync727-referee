@@ -1,3 +1,6 @@
+/** Node 'util' stub: vite.config aliases node:util here so browser-safe
+ * dependencies importing it (e.g. mupdf) keep bundling. APIs are silent
+ * no-ops except best-effort stringify. */
 export function debuglog(name: string) {
   return function(...args: any[]) {
     // Silent logger

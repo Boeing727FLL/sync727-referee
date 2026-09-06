@@ -6,6 +6,11 @@ import PublicRulebookAI from './pages/PublicRulebookAI';
 import LoginPage from './pages/LoginPage';
 import PrivacyPage from './pages/PrivacyPage';
 
+/**
+ * App — router shell. Public referee chat, login, and privacy page behind
+ * auth/locale providers. Unknown paths fall back to the chat (which itself
+ * gates logged-out visitors to the intro).
+ */
 function App() {
   return (
     <BrowserRouter>

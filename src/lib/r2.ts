@@ -1,3 +1,10 @@
+/**
+ * r2.ts — Cloudflare R2 object storage client (rulebook PDFs + page images).
+ *
+ * WHAT: an S3-compatible client pointed at the team's R2 bucket, plus tiny
+ * URL/key translators between public download links and bucket keys.
+ * Used by rulebook listing, owner uploads, and AI page-image fetching.
+ */
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 const R2_ACCOUNT_ID = '2d106fb460c2e5c4df4201020f56d44a';
@@ -17,10 +24,12 @@ export const s3Client = new S3Client({
   },
 });
 
+/** Public download URL for a bucket key. */
 export const getPublicUrl = (key: string) => {
   return `${R2_PUBLIC_URL}/${key}`;
 };
 
+/** Delete by public URL, proxied URL, or raw key. Never throws. */
 export const deleteFileFromR2 = async (publicUrl: string) => {
   if (!publicUrl) return;
   let key = '';

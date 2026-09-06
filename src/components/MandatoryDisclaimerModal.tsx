@@ -1,11 +1,31 @@
+/**
+ * MandatoryDisclaimerModal — the must-approve gate before the chat.
+ *
+ * WHAT: descends from the top on entry (fast, opaque panel over a quickly
+ * dimmed backdrop so texts never smear), and exits downward over 2.25s on
+ * confirm, revealing the live chat underneath. Timings are product
+ * behavior — never "cleaned up".
+ *
+ * COPY: title/body/confirm arrive translated via t(); only the tiny Hebrew
+ * helper line below is hardcoded.
+ */
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface Props {
   isOpen: boolean;
   onConfirm: () => void;
   t: (key: string) => string;
 }
+
+// ---------------------------------------------------------------------------
+// The modal
+// ---------------------------------------------------------------------------
 
 export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props) {
   // No early return here on purpose: AnimatePresence needs the tree mounted
@@ -24,7 +44,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             initial={{ scale: 0.95, opacity: 0, y: -120 }}
             animate={{ scale: [0.95, 1.01, 1], opacity: [0, 1, 1], y: [-120, 8, 0], transition: { duration: 1.0, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
             exit={{ scale: [1, 0.99, 0.94], opacity: [1, 1, 0], y: [0, 45, 170], transition: { duration: 2.25, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
-            className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-slate-900/95 backdrop-blur-2xl border-2 border-yellow-400/25 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(250,204,21,0.08)] w-full max-w-md overflow-hidden"
             role="dialog"
             aria-modal="true"
           >
@@ -44,10 +64,10 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
                 </div>
                 <div className="absolute -inset-1 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
               </div>
-              <h3 className="text-xl md:text-2xl font-black text-white mb-3 leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-white mb-3 leading-tight tracking-tight">
                 {t('disclaimerPopup.title')}
               </h3>
-              <div className="text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap text-right bg-slate-950/40 rounded-xl p-4 border border-white/5">
+              <div className="text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap text-right bg-slate-950/40 rounded-2xl p-4 border border-white/10">
                 {t('disclaimerPopup.body')}
               </div>
               <p className="text-[11px] text-slate-400 mt-3 font-medium">
@@ -55,7 +75,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               </p>
               <button
                 onClick={onConfirm}
-                className="mt-4 w-full bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-3.5 md:py-4 px-6 rounded-xl transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:shadow-[0_12px_28px_rgba(250,204,21,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer text-base"
+                className="mt-4 w-full bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-3.5 md:py-4 px-6 rounded-2xl transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:shadow-[0_12px_28px_rgba(250,204,21,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer text-base"
               >
                 {t('disclaimerPopup.confirm')}
               </button>

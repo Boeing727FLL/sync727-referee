@@ -1,3 +1,9 @@
+/**
+ * main-app.tsx — browser entry point. Mounts <App/> under StrictMode and an
+ * error boundary, silences chatty logs in production, and unregisters any
+ * stale service worker left by older builds (this app is online-only; a
+ * leftover worker would serve frozen bundles with "Failed to fetch").
+ */
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';

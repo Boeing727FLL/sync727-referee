@@ -1,3 +1,11 @@
+/**
+ * firebase.ts — one initialized Firebase app shared by the whole codebase.
+ *
+ * SERVICES: Auth (email/password + Google), Firestore (users, rulebooks,
+ * corrections, key pool — offline-persistent), Realtime Database (all
+ * analytics/presence/flags), Storage, Messaging (initialized only where
+ * supported). App Check (reCAPTCHA Enterprise) attests web clients.
+ */
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
@@ -35,6 +43,7 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// --- Service singletons (import these, never re-initialize) ---
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
