@@ -1,9 +1,26 @@
+/**
+ * Live Referee call window (voice + camera judging over the Gemini Live API).
+ *
+ * WHAT: a phone-call-style modal. The referee talks back in voice, shows
+ * live captions, and watches the table through the camera while the user
+ * holds a mission up to it. Opened from the gold mic button in the chat.
+ *
+ * HOW IT WORKS: on open, a LiveRefereeSession is created (rulebook pages
+ * load, socket connects, mic starts). Everything teardown-related lives
+ * in the session; this component only mirrors session events into React
+ * state and renders controls. Closing the modal always stops the session.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mic, MicOff, Camera, CameraOff, PhoneOff, Send, Loader2,
 } from 'lucide-react';
 import { LiveRefereeSession, type LiveStatus, type LiveTranscriptLine } from '../services/liveRefereeService';
+
+// ---------------------------------------------------------------------------
+// Props & static copy
+// ---------------------------------------------------------------------------
 
 interface LiveRefereeModalProps {
   isOpen: boolean;
@@ -12,6 +29,7 @@ interface LiveRefereeModalProps {
   rulebookFiles: { name: string; url: string }[];
 }
 
+/** Hebrew label for each connection phase, shown in the header pill. */
 const STATUS_LABEL: Record<LiveStatus, string> = {
   idle: 'מוכן',
   'loading-book': 'טוען חוברת חוקים...',
@@ -20,13 +38,86 @@ const STATUS_LABEL: Record<LiveStatus, string> = {
   error: 'שגיאת חיבור',
 };
 
+/** How long a transient notice (camera hiccup, etc.) stays on screen. */
+const NOTICE_MS = 3500;
+
+// ---------------------------------------------------------------------------
+// Small presentational pieces (no hooks, no logic)
+// ---------------------------------------------------------------------------
+
+/** One round call button with its caption underneath (mic / hang up / camera). */
+function RoundControl({ onClick, disabled, title, caption, active, danger, icon }: {
+  onClick: () => void;
+  disabled?: boolean;
+  title: string;
+  caption: string;
+  active?: boolean;
+  danger?: boolean;
+  icon: React.ReactNode;
+}) {
+  const palette = danger
+    ? 'bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white shadow-[0_8px_28px_rgba(239,68,68,0.5)]'
+    : active
+      ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 shadow-[0_6px_24px_rgba(250,204,21,0.45)]'
+      : 'bg-white/[0.06] border border-white/15 text-slate-400 hover:text-white hover:border-white/25';
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={title}
+        title={title}
+        className={`${danger ? 'w-16 h-16' : 'w-14 h-14'} rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 active:scale-95 ${palette}`}
+      >
+        {icon}
+      </button>
+      <span className="text-[10px] font-bold text-slate-500">{caption}</span>
+    </div>
+  );
+}
+
+/** The four gold viewfinder corners drawn over a live camera feed. */
+function ViewfinderCorners() {
+  const base = 'absolute w-6 h-6 border-yellow-300/90 pointer-events-none';
+  return (
+    <>
+      <span className={`${base} top-3 left-3 border-t-[3px] border-l-[3px] rounded-tl-xl`} aria-hidden />
+      <span className={`${base} top-3 right-3 border-t-[3px] border-r-[3px] rounded-tr-xl`} aria-hidden />
+      <span className={`${base} bottom-3 left-3 border-b-[3px] border-l-[3px] rounded-bl-xl`} aria-hidden />
+      <span className={`${base} bottom-3 right-3 border-b-[3px] border-r-[3px] rounded-br-xl`} aria-hidden />
+    </>
+  );
+}
+
+/** One transcript bubble; user lines sit on the outer side, model lines glow gold. */
+function TranscriptBubble({ who, children }: { who: 'user' | 'model'; children: React.ReactNode }) {
+  return (
+    <div className={`flex ${who === 'user' ? 'justify-start flex-row-reverse' : 'justify-start'}`}>
+      <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+        who === 'user'
+          ? 'bg-white/[0.09] border border-white/10 text-slate-100'
+          : 'bg-yellow-400/[0.08] border border-yellow-400/25 text-slate-100'
+      }`}>
+        <div className="whitespace-pre-wrap break-words">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The modal
+// ---------------------------------------------------------------------------
+
 export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebookFiles }: LiveRefereeModalProps) {
+  // -- connection & media state -------------------------------------------
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [statusDetail, setStatusDetail] = useState<string>('');
   const [bookPages, setBookPages] = useState(0);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
   const [camBusy, setCamBusy] = useState(false);
+
+  // -- conversation & UI state ----------------------------------------------
   const [notice, setNotice] = useState<string | null>(null);
   const [lines, setLines] = useState<LiveTranscriptLine[]>([]);
   const [pendingModel, setPendingModel] = useState('');
@@ -37,14 +128,18 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Show a transient amber notice that dismisses itself. */
   const flashNotice = (msg: string) => {
     setNotice(msg);
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
-    noticeTimer.current = setTimeout(() => setNotice(null), 3500);
+    noticeTimer.current = setTimeout(() => setNotice(null), NOTICE_MS);
   };
 
+  // -- session lifecycle: one session per opening, always torn down --------
   useEffect(() => {
     if (!isOpen) return;
+
+    // Fresh conversation every time the window opens.
     setStatus('idle');
     setStatusDetail('');
     setBookPages(0);
@@ -55,6 +150,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
     setInput('');
     setNotice(null);
 
+    // Guards setState after unmount (the async start can outlive the modal).
     let cancelled = false;
     const sess = new LiveRefereeSession({
       seasonName,
@@ -73,6 +169,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
         onModelText: (text, done) => {
           if (cancelled) return;
           if (done) {
+            // A finished turn moves from the streaming line into history.
             setLines(prev => [...prev, { who: 'model', text }]);
             setPendingModel('');
           } else {
@@ -105,14 +202,17 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
       if (noticeTimer.current) clearTimeout(noticeTimer.current);
       void sess.stop();
     };
+    // Session intentionally depends only on opening; props are read once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  // -- keep the newest caption visible ---------------------------------------
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [lines, pendingModel]);
 
+  // -- control handlers --------------------------------------------------------
   const toggleMic = () => {
     const next = !micOn;
     setMicOn(next);
@@ -138,12 +238,23 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
     const text = input.trim();
     if (!sess || !text || status !== 'live') return;
     sess.sendText(text);
+    // Typed lines never come back as transcripts, so echo them locally.
     setLines(prev => [...prev, { who: 'user', text }]);
     setInput('');
   };
 
   const live = status === 'live';
   const busy = status === 'loading-book' || status === 'connecting';
+
+  /** Second header line: book progress, error/server detail, or idle hint. */
+  const subtitle = status === 'loading-book'
+    ? `טוען חוברת חוקים כרפרנס${bookPages > 0 ? ` (${bookPages} עמודים)` : '...'}`
+    : statusDetail || (live ? 'דברו או הראו משימה למצלמה' : 'מתחבר...');
+
+  /** Placeholder when the transcript is still empty. */
+  const emptyHint = busy
+    ? 'מכין את השופט...'
+    : live ? 'שאלו בקול, למשל: האם המשימה הזאת חוקית?' : '...';
 
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
@@ -167,7 +278,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
             role="dialog"
             aria-label="שופט לייב"
           >
-            {/* Header */}
+            {/* Header: identity + live badge + status line + close */}
             <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/10 bg-white/[0.03] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_16px_rgba(250,204,21,0.35)] overflow-hidden flex items-center justify-center shrink-0">
@@ -185,9 +296,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-400 font-medium truncate">
-                    {status === 'loading-book'
-                      ? `טוען חוברת חוקים כרפרנס${bookPages > 0 ? ` (${bookPages} עמודים)` : '...'}`
-                      : statusDetail || (live ? 'דברו או הראו משימה למצלמה' : 'מתחבר...')}
+                    {subtitle}
                   </p>
                 </div>
                 <button
@@ -201,7 +310,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
             </div>
             <div className="h-[2px] shrink-0 bg-gradient-to-l from-transparent via-yellow-400/60 to-transparent" aria-hidden />
 
-            {/* Camera */}
+            {/* Camera: live feed with viewfinder frame, or an inviting off-state */}
             <div className="px-4 md:px-5 pt-3 shrink-0">
               <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-slate-950/70 border border-white/10 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
                 <video
@@ -220,10 +329,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                 )}
                 {camOn && (
                   <>
-                    <span className="absolute top-3 left-3 w-6 h-6 border-t-[3px] border-l-[3px] border-yellow-300/90 rounded-tl-xl pointer-events-none" aria-hidden />
-                    <span className="absolute top-3 right-3 w-6 h-6 border-t-[3px] border-r-[3px] border-yellow-300/90 rounded-tr-xl pointer-events-none" aria-hidden />
-                    <span className="absolute bottom-3 left-3 w-6 h-6 border-b-[3px] border-l-[3px] border-yellow-300/90 rounded-bl-xl pointer-events-none" aria-hidden />
-                    <span className="absolute bottom-3 right-3 w-6 h-6 border-b-[3px] border-r-[3px] border-yellow-300/90 rounded-br-xl pointer-events-none" aria-hidden />
+                    <ViewfinderCorners />
                     <span className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full bg-slate-950/70 border border-red-500/40 text-red-300 backdrop-blur-md">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
                       השופט רואה
@@ -233,31 +339,23 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
               </div>
             </div>
 
-            {/* Transcript */}
+            {/* Transcript: finished lines plus the streaming caption */}
             <div ref={scrollRef} className="flex-1 min-h-[140px] overflow-y-auto px-4 md:px-5 py-3 space-y-2.5">
               {lines.length === 0 && !pendingModel && (
                 <div className="text-center py-6 text-slate-500 text-sm font-medium">
-                  {busy ? 'מכין את השופט...' : live ? 'שאלו בקול, למשל: האם המשימה הזאת חוקית?' : '...'}
+                  {emptyHint}
                 </div>
               )}
               {lines.map((l, i) => (
-                <div key={i} className={`flex ${l.who === 'user' ? 'justify-start flex-row-reverse' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                    l.who === 'user'
-                      ? 'bg-white/[0.09] border border-white/10 text-slate-100'
-                      : 'bg-yellow-400/[0.08] border border-yellow-400/25 text-slate-100'
-                  }`}>
-                    <div className="whitespace-pre-wrap break-words">{l.text}</div>
-                  </div>
-                </div>
+                <TranscriptBubble key={i} who={l.who}>
+                  {l.text}
+                </TranscriptBubble>
               ))}
               {pendingModel && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed bg-yellow-400/[0.08] border border-yellow-400/25 text-slate-100">
-                    <span className="whitespace-pre-wrap break-words">{pendingModel}</span>
-                    <span className="typewriter-cursor" aria-hidden>▍</span>
-                  </div>
-                </div>
+                <TranscriptBubble who="model">
+                  {pendingModel}
+                  <span className="typewriter-cursor" aria-hidden>▍</span>
+                </TranscriptBubble>
               )}
               {status === 'error' && (
                 <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-200 text-center">
@@ -271,7 +369,7 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
               )}
             </div>
 
-            {/* Controls */}
+            {/* Controls: typed message row, then the call buttons */}
             <div className="px-4 md:px-5 pb-4 pt-1 shrink-0 space-y-2.5">
               <div className="flex items-center gap-2">
                 <input
@@ -293,51 +391,31 @@ export default function LiveRefereeModal({ isOpen, onClose, seasonName, rulebook
                 </button>
               </div>
               <div className="flex items-end justify-center gap-5">
-                <div className="flex flex-col items-center gap-1.5">
-                  <button
-                    onClick={toggleMic}
-                    disabled={!live}
-                    aria-label={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
-                    title={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 active:scale-95 ${
-                      micOn
-                        ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 shadow-[0_6px_24px_rgba(250,204,21,0.45)]'
-                        : 'bg-white/[0.06] border border-white/15 text-slate-400 hover:text-white hover:border-white/25'
-                    }`}
-                  >
-                    {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-                  </button>
-                  <span className="text-[10px] font-bold text-slate-500">מיקרופון</span>
-                </div>
-                <div className="flex flex-col items-center gap-1.5">
-                  <button
-                    onClick={onClose}
-                    aria-label="סיים שיחה"
-                    title="סיים שיחה"
-                    className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white shadow-[0_8px_28px_rgba(239,68,68,0.5)] active:scale-95 transition-all cursor-pointer"
-                  >
-                    <PhoneOff className="w-7 h-7" />
-                  </button>
-                  <span className="text-[10px] font-bold text-slate-500">סיים</span>
-                </div>
-                <div className="flex flex-col items-center gap-1.5">
-                  <button
-                    onClick={toggleCamera}
-                    disabled={!live || camBusy}
-                    aria-label={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
-                    title={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 active:scale-95 ${
-                      camOn
-                        ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-slate-950 shadow-[0_6px_24px_rgba(250,204,21,0.45)]'
-                        : 'bg-white/[0.06] border border-white/15 text-slate-400 hover:text-white hover:border-white/25'
-                    }`}
-                  >
-                    {camBusy
-                      ? <Loader2 className="w-6 h-6 animate-spin" />
-                      : camOn ? <Camera className="w-6 h-6" /> : <CameraOff className="w-6 h-6" />}
-                  </button>
-                  <span className="text-[10px] font-bold text-slate-500">מצלמה</span>
-                </div>
+                <RoundControl
+                  onClick={toggleMic}
+                  disabled={!live}
+                  title={micOn ? 'כבה מיקרופון' : 'הדלק מיקרופון'}
+                  caption="מיקרופון"
+                  active={micOn}
+                  icon={micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+                />
+                <RoundControl
+                  onClick={onClose}
+                  title="סיים שיחה"
+                  caption="סיים"
+                  danger
+                  icon={<PhoneOff className="w-7 h-7" />}
+                />
+                <RoundControl
+                  onClick={toggleCamera}
+                  disabled={!live || camBusy}
+                  title={camOn ? 'כבה מצלמה' : 'הדלק מצלמה'}
+                  caption="מצלמה"
+                  active={camOn}
+                  icon={camBusy
+                    ? <Loader2 className="w-6 h-6 animate-spin" />
+                    : camOn ? <Camera className="w-6 h-6" /> : <CameraOff className="w-6 h-6" />}
+                />
               </div>
               <p className="text-center text-[10px] text-slate-500 font-medium">
                 לשיפוט מדויק הראו את המשימה למצלמה.
