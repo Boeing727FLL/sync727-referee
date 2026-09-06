@@ -129,10 +129,11 @@ function LockGate() {
  * breathes while active; calm dark glass while off. Enabling locks every
  * other user out, so it demands a second confirming tap.
  */
-function WorkModeCard({ active, toggling, confirming, onToggle }: {
+function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
   active: boolean;
   toggling: boolean;
   confirming: boolean;
+  errorMsg: string | null;
   onToggle: () => void;
 }) {
   return (
@@ -199,10 +200,15 @@ function WorkModeCard({ active, toggling, confirming, onToggle }: {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={onToggle}
-          className="relative w-full px-3 py-3 text-[13px] font-black text-amber-200 bg-amber-400/10 border-t border-amber-400/30 hover:bg-amber-400/20 transition-colors cursor-pointer"
+          className="relative w-full px-3 py-2.5 text-[13px] font-black text-amber-200 bg-amber-400/10 border-t border-amber-400/30 hover:bg-amber-400/20 transition-colors cursor-pointer"
         >
           הפעלה מנתקת את כל המשתמשים. לחצו שוב לאישור.
         </motion.button>
+      )}
+      {errorMsg && (
+        <p className="px-4 py-2.5 text-[11px] font-bold text-red-300 bg-red-500/10 border-t border-red-500/25">
+          {errorMsg}
+        </p>
       )}
     </div>
   );
@@ -219,6 +225,7 @@ export default function SettingsModal({
   const [maintenance, setMaintenanceState] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [confirmWorkMode, setConfirmWorkMode] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [fbMsg, setFbMsg] = useState<string | null>(null);
@@ -230,6 +237,7 @@ export default function SettingsModal({
       setConfirmWorkMode(false);
       setConfirmReset(false);
       setFbMsg(null);
+      setToggleError(null);
       return;
     }
     return subscribeMaintenance(setMaintenanceState);
@@ -244,11 +252,14 @@ export default function SettingsModal({
       return;
     }
     setConfirmWorkMode(false);
+    setToggleError(null);
     setToggling(true);
     try {
       await setMaintenance(!maintenance);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('setMaintenance failed:', e);
+      const code = e?.code ? ` (${String(e.code)})` : '';
+      setToggleError(`שמירת מצב העבודה נכשלה${code}. בדוק חיבור והתחברות כבעלים ונסה שוב.`);
     }
     setToggling(false);
   };
@@ -346,6 +357,7 @@ export default function SettingsModal({
                     active={maintenance}
                     toggling={toggling}
                     confirming={confirmWorkMode}
+                    errorMsg={toggleError}
                     onToggle={handleWorkModeToggle}
                   />
 

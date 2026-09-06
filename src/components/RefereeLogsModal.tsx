@@ -375,6 +375,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorCode, setLoadErrorCode] = useState<string | null>(null);
 
   // -- view state (search, time filter, sort, expanded rows) ---------------------
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -413,6 +414,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     if (!unlocked) return;
     setLoading(true);
     setLoadError(false);
+    setLoadErrorCode(null);
     const unsub = onValue(
       logsQuery(LOG_LIMIT),
       (snap) => {
@@ -434,9 +436,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         setLogs(entries.reverse());
         setLoading(false);
       },
-      (err) => {
+      (err: any) => {
         console.error('referee logs snapshot failed:', err);
         setLoadError(true);
+        setLoadErrorCode(err?.code ? String(err.code) : null);
         setLoading(false);
       }
     );
@@ -714,7 +717,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                   )}
                   {loadError && (
                     <NoticeBanner tone="red">
-                      טעינת היומן מהשרת נכשלה — בדוק חיבור לאינטרנט והרשאות.
+                      טעינת היומן מהשרת נכשלה{loadErrorCode ? ` (${loadErrorCode})` : ''} — בדוק חיבור לאינטרנט והרשאות.
                     </NoticeBanner>
                   )}
                   {deleteError && (
