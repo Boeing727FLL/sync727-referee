@@ -42,7 +42,7 @@ import MaintenanceScreen from '../components/MaintenanceScreen';
 import LiveRefereeModal from '../components/LiveRefereeModal';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import { isCurrentUserOwner } from '../lib/owner';
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenance, setMaintenance } from '../lib/analytics';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -191,7 +191,7 @@ export default function PublicRulebookAI() {
   const [showLive, setShowLive] = useState<boolean>(false);
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
-    return subscribeMaintenance(setMaintenanceState);
+    return subscribeMaintenanceGate(setMaintenanceState);
   }, []);
   // In-site toast (replaces blocking alert() popups)
   const [toast, setToast] = useState<string | null>(null);
@@ -1425,7 +1425,10 @@ export default function PublicRulebookAI() {
                         </button>
                       </div>
                       <div className="px-3 py-2 bg-white/40 border-t border-white/50 text-center">
-                        <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+                        <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727 · גרסה {
+                          // @ts-ignore build-time define, may be absent in some environments
+                          typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '?'
+                        }</span>
                       </div>
                     </motion.div>
                   )}

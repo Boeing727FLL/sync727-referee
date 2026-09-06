@@ -466,3 +466,46 @@ export function subscribeMaintenance(callback: (on: boolean) => void): () => voi
     (err) => console.warn('maintenance snapshot failed:', err),
   );
 }
+
+/**
+ * Gate-grade subscription for the app shell and login page: retries a few
+ * times on failure, then FAILS CLOSED (reports maintenance ON) so a broken
+ * flag read can never leak the full app during work mode. Call sites still
+ * exempt the owner, who always passes through.
+ */
+export function subscribeMaintenanceGate(callback: (on: boolean) => void): () => void {
+  const MAX_FAILURES = 3;
+  const RETRY_MS = 2000;
+  let failures = 0;
+  let stopped = false;
+  let unsub: (() => void) | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const watch = () => {
+    if (stopped) return;
+    try { unsub?.(); } catch { /* noop */ }
+    unsub = onValue(
+      ref(rtdb, `${META_PATH}/maintenance`),
+      (snap: DataSnapshot) => {
+        failures = 0;
+        callback(snap.val() === true);
+      },
+      (err) => {
+        console.warn('maintenance gate snapshot failed:', err);
+        failures++;
+        if (failures >= MAX_FAILURES) {
+          callback(true);
+        } else {
+          retryTimer = setTimeout(watch, RETRY_MS);
+        }
+      },
+    );
+  };
+  watch();
+
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    try { unsub?.(); } catch { /* noop */ }
+  };
+}

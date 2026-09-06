@@ -21,7 +21,7 @@ import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
-import { subscribeMaintenance } from '../lib/analytics';
+import { subscribeMaintenanceGate } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 
@@ -102,7 +102,7 @@ export default function LoginPage() {
   const logoTapTimesRef = useRef<number[]>([]);
   const ownerHere = isCurrentUserOwner();
   useEffect(() => {
-    return subscribeMaintenance(setMaintenance);
+    return subscribeMaintenanceGate(setMaintenance);
   }, []);
 
   // Hidden owner bypass: 5 rapid taps on the maintenance logo reveal the form.
