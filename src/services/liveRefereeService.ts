@@ -19,6 +19,7 @@
 
 import { GoogleGenAI, Modality, MediaResolution, ThinkingLevel } from '@google/genai';
 import { getNextApiKey, getRefereeCorrections } from './geminiService';
+import { R2_PUBLIC_URL } from '../lib/r2Config';
 
 // ---------------------------------------------------------------------------
 // Model, media & tuning constants
@@ -35,7 +36,6 @@ const PROBE_BATCH_SIZE = 8;
 /** Consecutive 404s that mark "no more pages" for one rulebook file. */
 const PROBE_MAX_MISSES = 3;
 
-const R2_BASE = 'https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev';
 const JPEG_MIME = 'image/jpeg';
 const MIC_MIME = 'audio/pcm;rate=16000';
 const MIC_SAMPLE_RATE = 16000;
@@ -204,7 +204,7 @@ async function fetchRulebookPages(
       }
       const results = await Promise.all(batch.map(async (p) => {
         try {
-          const res = await fetch(`${R2_BASE}/fll-rules-images/${encoded}/page_${p}.jpg`);
+          const res = await fetch(`${R2_PUBLIC_URL}/fll-rules-images/${encoded}/page_${p}.jpg`);
           if (!res.ok) return null;
           const buf = await res.arrayBuffer();
           if (buf.byteLength < 500) return null;

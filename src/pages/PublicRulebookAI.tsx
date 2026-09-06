@@ -557,8 +557,6 @@ export default function PublicRulebookAI() {
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
-  const [tripleJudgeMode] = useState<boolean>(true);
-  const [thinkingConfigLevel] = useState<'HIGH' | 'OFF' | 'LOW'>('HIGH');
   const [isLearning, setIsLearning] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1077,17 +1075,14 @@ export default function PublicRulebookAI() {
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
-      let relevantMessages = messages;
-
-      let finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
+      const finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
       const response = await GeminiService.askRulebook(
         finalPrompt,
-        relevantMessages,
+        messages,
         activeRulebookFiles,
         seasonName,
         [], // no files - text only
-        undefined, // default model
         (chunkText) => {
           if (controller.signal.aborted) return;
           setMessages(prev => {
@@ -1105,8 +1100,6 @@ export default function PublicRulebookAI() {
             return newMessages;
           });
         },
-        tripleJudgeMode,
-        thinkingConfigLevel,
         language,
         controller.signal
       );

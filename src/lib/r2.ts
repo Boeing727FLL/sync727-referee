@@ -6,12 +6,13 @@
  * Used by rulebook listing, owner uploads, and AI page-image fetching.
  */
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { R2_PUBLIC_URL } from './r2Config';
 
 const R2_ACCOUNT_ID = '2d106fb460c2e5c4df4201020f56d44a';
 const R2_ACCESS_KEY_ID = 'f8a791f79723a888ed6f627144b6f3e0';
 const R2_SECRET_ACCESS_KEY = '54aecdc9c5ad3ef6c83a73acd772558b551115ad916d2f3f13d99d7c51711fc0';
 export const R2_BUCKET_NAME = 'sync727';
-export const R2_PUBLIC_URL = 'https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev';
+export { R2_PUBLIC_URL } from './r2Config';
 
 export const s3Client = new S3Client({
   region: 'auto',
