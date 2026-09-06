@@ -1,9 +1,67 @@
+/**
+ * Live Referee voice session (Gemini Live API: talk + show missions on camera).
+ *
+ * PIPELINE (see start()):
+ *   1. Rulebook pages load from R2 as visual reference (capped, best-effort).
+ *   2. A websocket session opens (API keys rotate on failure, up to 3 tries).
+ *   3. The microphone streams 16kHz PCM; the speaker plays 24kHz PCM back.
+ *   4. Optional camera frames flow about twice a second for visual judging.
+ *   5. stop() tears everything down: tracks, contexts, socket, timers.
+ *
+ * DESIGN NOTES for beginners:
+ * - The camera is AUXILIARY: if frames stop flowing, only the camera is
+ *   switched off and the voice call continues. The microphone is CORE: if
+ *   its socket dies, the whole session is dead and is torn down honestly.
+ * - Server answers arrive as events (audio chunks, transcripts, turn end,
+ *   interruptions). This file translates them into the LiveCallbacks the
+ *   modal renders; it never touches the screen itself.
+ */
+
 import { GoogleGenAI, Modality, MediaResolution, ThinkingLevel } from '@google/genai';
 import { getNextApiKey, getRefereeCorrections } from './geminiService';
 
+// ---------------------------------------------------------------------------
+// Model, media & tuning constants
+// ---------------------------------------------------------------------------
+
 export const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+
+/** Upper bound on rulebook pages injected as session context. */
 const MAX_RULEBOOK_PAGES = 40;
+
+/** R2 probe batch size when scanning pre-rendered page images. */
+const PROBE_BATCH_SIZE = 8;
+
+/** Consecutive 404s that mark "no more pages" for one rulebook file. */
+const PROBE_MAX_MISSES = 3;
+
 const R2_BASE = 'https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev';
+const JPEG_MIME = 'image/jpeg';
+const MIC_MIME = 'audio/pcm;rate=16000';
+const MIC_SAMPLE_RATE = 16000;
+const OUT_SAMPLE_RATE = 24000;
+
+/** Give up connecting if the socket is not open by then. */
+const CONNECT_TIMEOUT_MS = 20_000;
+
+/** API keys to try before reporting a connection failure. */
+const CONNECT_KEY_ATTEMPTS = 3;
+
+/** Camera frame size/quality/cadence: light enough to stream continuously. */
+const FRAME_WIDTH = 384;
+const FRAME_JPEG_QUALITY = 0.5;
+const FRAME_INTERVAL_MS = 2_000;
+const FIRST_FRAME_DELAY_MS = 600;
+
+/** Camera on but delivering no picture for this long => report it once. */
+const CAM_NO_SIGNAL_MS = 6_000;
+
+/** Consecutive failed frame sends that switch the camera off by itself. */
+const CAM_MAX_FAILURES = 3;
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
 
 export type LiveStatus = 'idle' | 'loading-book' | 'connecting' | 'live' | 'error';
 
@@ -23,8 +81,17 @@ export interface LiveCallbacks {
   onCameraLost?: (detail?: string) => void;
 }
 
-// ---------- small helpers ----------
+export interface LiveStartOptions {
+  seasonName: string;
+  rulebookFiles: { name: string; url: string }[];
+  callbacks: LiveCallbacks;
+}
 
+// ---------------------------------------------------------------------------
+// Small internal helpers
+// ---------------------------------------------------------------------------
+
+/** Base64-encode a buffer without blowing the call stack on big blobs. */
 function arrayBufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let s = '';
@@ -35,6 +102,7 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(s);
 }
 
+/** Read the `rate=` parameter from an audio MIME type, else the fallback. */
 function parsePcmRate(mimeType: string, fallback: number): number {
   try {
     for (const param of mimeType.split(';').map(p => p.trim())) {
@@ -44,13 +112,35 @@ function parsePcmRate(mimeType: string, fallback: number): number {
         if (!isNaN(n) && n > 0) return n;
       }
     }
-  } catch { /* ignore */ }
+  } catch { /* malformed type: use the fallback */ }
   return fallback;
 }
 
+/** Stop every track of a media stream, ignoring already-stopped ones. */
+function stopTracks(stream: MediaStream | null): void {
+  if (!stream) return;
+  stream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
+}
 
+/**
+ * Translate a getUserMedia rejection into a Hebrew message for the given
+ * device kind. Anything but an explicit denial means "not found".
+ */
+function friendlyMediaError(e: any, kind: 'mic' | 'cam'): Error {
+  const denied = e?.name === 'NotAllowedError';
+  if (kind === 'mic') {
+    return new Error(denied
+      ? 'הגישה למיקרופון נחסמה. אפשר גישה למיקרופון בדפדפן ונסה שוב.'
+      : 'לא נמצא מיקרופון. בדוק שהמכשיר מחובר ונסה שוב.');
+  }
+  return new Error(denied
+    ? 'הגישה למצלמה נחסמה. אפשר גישה למצלמה בדפדפן ונסה שוב.'
+    : 'לא נמצאה מצלמה. בדוק שהמכשיר מחובר ונסה שוב.');
+}
 
-// ---------- Hebrew live-judge system prompt ----------
+// ---------------------------------------------------------------------------
+// Hebrew live-judge system prompt
+// ---------------------------------------------------------------------------
 
 function buildSystemPrompt(seasonName: string, corrections: string): string {
   return `You are a live FIRST LEGO League referee judge. You talk with a team next to the competition table, by voice, in English only.
@@ -77,11 +167,16 @@ ${corrections ? `\nOfficial referee corrections that must be obeyed (they overri
 The full rulebook pages were attached as reference at the start of this call. Use them before your general knowledge.`;
 }
 
-// ---------- rulebook pages from R2 ----------
+// ---------------------------------------------------------------------------
+// Rulebook pages from R2 (pre-rendered image sets, same flow as text judge)
+// ---------------------------------------------------------------------------
 
-// Rulebook reference for the live judge: pre-rendered R2 image sets, same
-// flow as the text judge. 404s while probing are expected: they are how we
-// detect the last page (3 consecutive misses stop the scan).
+/**
+ * Fetch rulebook pages as base64 JPEGs. Files are probed page by page;
+ * 404s are EXPECTED — three consecutive misses simply mean "last page".
+ * Capped and fully skippable: an empty result just means the judge works
+ * from the rules brief instead.
+ */
 async function fetchRulebookPages(
   files: { name: string; url: string }[],
   onProgress: (loaded: number) => void,
@@ -100,11 +195,11 @@ async function fetchRulebookPages(
 
     let page = 1;
     let consecutiveMisses = 0;
-    while (consecutiveMisses < 3 && pages.length < MAX_RULEBOOK_PAGES) {
+    while (consecutiveMisses < PROBE_MAX_MISSES && pages.length < MAX_RULEBOOK_PAGES) {
       if (isCancelled()) break;
-      // Probe a batch in parallel, pages stay ordered by index.
+      // Probe one batch in parallel; pages stay ordered by index.
       const batch: number[] = [];
-      for (let k = 0; k < 8 && pages.length + batch.length < MAX_RULEBOOK_PAGES; k++) {
+      for (let k = 0; k < PROBE_BATCH_SIZE && pages.length + batch.length < MAX_RULEBOOK_PAGES; k++) {
         batch.push(page + k);
       }
       const results = await Promise.all(batch.map(async (p) => {
@@ -115,7 +210,7 @@ async function fetchRulebookPages(
           if (buf.byteLength < 500) return null;
           const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 100)));
           if (head.includes('<html')) return null;
-          return { page: p, data: arrayBufferToBase64(buf), mimeType: 'image/jpeg' };
+          return { data: arrayBufferToBase64(buf), mimeType: JPEG_MIME };
         } catch {
           return null;
         }
@@ -131,7 +226,7 @@ async function fetchRulebookPages(
         } else {
           consecutiveMisses++;
           batchMisses++;
-          if (consecutiveMisses >= 3) break;
+          if (consecutiveMisses >= PROBE_MAX_MISSES) break;
         }
       }
       page += batch.length;
@@ -141,47 +236,43 @@ async function fetchRulebookPages(
   return pages;
 }
 
-// ---------- live session ----------
-
-export interface LiveStartOptions {
-  seasonName: string;
-  rulebookFiles: { name: string; url: string }[];
-  callbacks: LiveCallbacks;
-}
+// ---------------------------------------------------------------------------
+// Live session: socket + mic + speaker + camera + captions
+// ---------------------------------------------------------------------------
 
 export class LiveRefereeSession {
+  // -- connection --
   private session: any = null;
   private cancelled = false;
-  private micStream: MediaStream | null = null;
-  private micCtx: AudioContext | null = null;
-  private micNode: AudioWorkletNode | null = null;
-  private micOn = true;
-  private outCtx: AudioContext | null = null;
-  private playQueue: Float32Array[] = [];
-  private playCursor = 0;
-  private playSources: AudioBufferSourceNode[] = [];
-  private camTimer: ReturnType<typeof setInterval> | null = null;
-  private camFailures = 0;
-  private camNoSignalSince: number | null = null;
-  private camStream: MediaStream | null = null;
-
-  private loseCamera(detail: string): void {
-    this.camFailures = 0;
-    this.camNoSignalSince = null;
-    void this.setCameraEnabled(false, null).catch(() => {});
-    try { this.opts.callbacks.onCameraLost?.(detail); } catch { /* noop */ }
-  }
-  private videoEl: HTMLVideoElement | null = null;
-  private modelPending = '';
-  private keyAttempts = 0;
   // Once a send fails with a dead socket, the session is unusable. Tear it
   // down once with an honest error instead of spamming a throw per frame.
   private transportDead = false;
 
+  // -- microphone --
+  private micStream: MediaStream | null = null;
+  private micCtx: AudioContext | null = null;
+  private micNode: AudioWorkletNode | null = null;
+  private micOn = true;
+
+  // -- speaker --
+  private outCtx: AudioContext | null = null;
+  private playQueue: Float32Array[] = [];
+  private playCursor = 0;
+  private playSources: AudioBufferSourceNode[] = [];
+
+  // -- camera --
+  private camTimer: ReturnType<typeof setInterval> | null = null;
+  private camFailures = 0;
+  private camNoSignalSince: number | null = null;
+  private camStream: MediaStream | null = null;
+  private videoEl: HTMLVideoElement | null = null;
+
+  // -- captions --
+  private modelPending = '';
+
   constructor(private opts: LiveStartOptions) {}
 
-  get micEnabled() { return this.micOn; }
-
+  /** A send failed on a dead socket: report once, then go quiet. */
   private handleTransportDead(): void {
     if (this.transportDead || this.cancelled) return;
     this.transportDead = true;
@@ -189,6 +280,19 @@ export class LiveRefereeSession {
     void this.cleanup();
   }
 
+  /** Camera gave up (no signal / repeated send failures): switch it off and
+   * let the voice call continue, telling the UI exactly what happened. */
+  private loseCamera(detail: string): void {
+    this.camFailures = 0;
+    this.camNoSignalSince = null;
+    void this.setCameraEnabled(false, null).catch(() => {});
+    try { this.opts.callbacks.onCameraLost?.(detail); } catch { /* noop */ }
+  }
+
+  /**
+   * Full startup: rulebook reference, socket connect, then microphone.
+   * Throws a Hebrew, user-ready error when the mic or the worklet fails.
+   */
   async start(): Promise<void> {
     const { callbacks, seasonName, rulebookFiles } = this.opts;
     this.cancelled = false;
@@ -199,12 +303,11 @@ export class LiveRefereeSession {
     if (this.cancelled) return;
     const systemPrompt = buildSystemPrompt(seasonName || 'BIOGLOW', corrections || '');
 
-    // Connect (rotates API keys on failure, up to 3 attempts).
+    // Connect (rotates API keys on failure, up to CONNECT_KEY_ATTEMPTS tries).
     callbacks.onStatus('connecting');
     let lastErr: any = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < CONNECT_KEY_ATTEMPTS; attempt++) {
       if (this.cancelled) return;
-      this.keyAttempts = attempt + 1;
       try {
         const apiKey = await getNextApiKey();
         if (this.cancelled) return;
@@ -251,13 +354,18 @@ export class LiveRefereeSession {
     callbacks.onStatus('live');
   }
 
+  /**
+   * Open one websocket, resolving when the server says hello and rejecting
+   * on error, server close, or timeout. The `settled` flag guarantees a
+   * single outcome even if a doomed attempt answers late.
+   */
   private connectOnce(apiKey: string, systemPrompt: string): Promise<void> {
     const { callbacks } = this.opts;
     return new Promise((resolve, reject) => {
       let settled = false;
       const timer = setTimeout(() => {
         if (!settled) { settled = true; reject(new Error('live connect timeout')); }
-      }, 20000);
+      }, CONNECT_TIMEOUT_MS);
       const done = (fn: () => void) => {
         if (settled) return;
         settled = true;
@@ -297,6 +405,8 @@ export class LiveRefereeSession {
               done(() => reject(new Error(e?.message || 'live error')));
             },
             onclose: (e: any) => {
+              // The close code/reason is the single best clue when a session
+              // dies in the field (quota, model access, network), so log it.
               console.warn('live socket closed:', e?.code, e?.reason);
               if (!settled) {
                 done(() => reject(new Error(e?.reason || 'live closed')));
@@ -318,6 +428,10 @@ export class LiveRefereeSession {
     });
   }
 
+  /**
+   * Translate one server event into callbacks: queued audio, live captions,
+   * interruptions (user talked over the judge), and finished turns.
+   */
   private handleMessage(message: any): void {
     const { callbacks } = this.opts;
     if (!message) return;
@@ -332,8 +446,11 @@ export class LiveRefereeSession {
         for (const part of parts) {
           const inline = part?.inlineData;
           if (inline?.data) {
-            const rate = parsePcmRate(inline.mimeType || '', 24000);
-            this.enqueueAudio(inline.data, rate);
+            // The rate is parsed (and documented) but playback always runs
+            // on the fixed 24kHz output context the model was asked for.
+            const rate = parsePcmRate(inline.mimeType || '', OUT_SAMPLE_RATE);
+            void rate;
+            this.enqueueAudio(inline.data);
           }
         }
       }
@@ -363,21 +480,19 @@ export class LiveRefereeSession {
     }
   }
 
-  // ---------- microphone ----------
+  // ===== microphone =====
 
+  /** Ask for the mic and start streaming 16kHz PCM frames to the socket. */
   private async startMic(): Promise<void> {
     try {
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
     } catch (e: any) {
-      const name = e?.name || '';
-      throw new Error(name === 'NotAllowedError'
-        ? 'הגישה למיקרופון נחסמה. אפשר גישה למיקרופון בדפדפן ונסה שוב.'
-        : 'לא נמצא מיקרופון. בדוק שהמכשיר מחובר ונסה שוב.');
+      throw friendlyMediaError(e, 'mic');
     }
     const AC = window.AudioContext || (window as any).webkitAudioContext;
-    this.micCtx = new AC({ sampleRate: 16000 });
+    this.micCtx = new AC({ sampleRate: MIC_SAMPLE_RATE });
     try {
       // Same-origin static file: allowed by the CSP (blob: workers are not).
       const base = (import.meta.env?.BASE_URL as string) || '/';
@@ -392,7 +507,7 @@ export class LiveRefereeSession {
       try {
         const b64 = arrayBufferToBase64(ev.data as ArrayBuffer);
         this.session.sendRealtimeInput({
-          audio: { data: b64, mimeType: 'audio/pcm;rate=16000' },
+          audio: { data: b64, mimeType: MIC_MIME },
         });
       } catch {
         this.handleTransportDead();
@@ -404,6 +519,7 @@ export class LiveRefereeSession {
     }
   }
 
+  /** Mute/unmute locally. Muting also ends the audio stream server-side. */
   setMicEnabled(on: boolean): void {
     this.micOn = on;
     if (!on && this.session) {
@@ -411,13 +527,14 @@ export class LiveRefereeSession {
     }
   }
 
-  // ---------- speaker ----------
+  // ===== speaker (model voice playback) =====
 
+  /** Lazily create the fixed-rate output context (24kHz, like the model). */
   private ensureOutCtx(): AudioContext | null {
     if (this.outCtx) return this.outCtx;
     try {
       const AC = window.AudioContext || (window as any).webkitAudioContext;
-      this.outCtx = new AC({ sampleRate: 24000 });
+      this.outCtx = new AC({ sampleRate: OUT_SAMPLE_RATE });
       if (this.outCtx.state === 'suspended') {
         void this.outCtx.resume().catch(() => {});
       }
@@ -428,7 +545,8 @@ export class LiveRefereeSession {
     }
   }
 
-  private enqueueAudio(b64: string, rate: number): void {
+  /** Decode one base64 PCM chunk and schedule it right after the previous one. */
+  private enqueueAudio(b64: string): void {
     const ctx = this.ensureOutCtx();
     if (!ctx) return;
     try {
@@ -440,7 +558,6 @@ export class LiveRefereeSession {
         const v = (raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8));
         float[i] = (v >= 0x8000 ? v - 0x10000 : v) / 0x8000;
       }
-      void rate;
       this.playQueue.push(float);
       this.pumpPlayback();
     } catch (e) {
@@ -448,6 +565,7 @@ export class LiveRefereeSession {
     }
   }
 
+  /** Drain the queue onto a gapless timeline of scheduled buffers. */
   private pumpPlayback(): void {
     const ctx = this.outCtx;
     if (!ctx || this.playQueue.length === 0) return;
@@ -473,6 +591,7 @@ export class LiveRefereeSession {
     }
   }
 
+  /** Stop everything audible immediately (used on interruption/teardown). */
   private clearPlayback(): void {
     this.playQueue = [];
     try {
@@ -485,8 +604,13 @@ export class LiveRefereeSession {
     this.playSources = [];
   }
 
-  // ---------- camera ----------
+  // ===== camera (auxiliary: never kills the voice call) =====
 
+  /**
+   * Turn the camera on/off. Frames flow on an interval; any persistent
+   * failure switches the camera back off with an explanation while the
+   * conversation continues by voice.
+   */
   async setCameraEnabled(on: boolean, videoEl: HTMLVideoElement | null): Promise<void> {
     if (on) {
       this.videoEl = videoEl;
@@ -495,10 +619,7 @@ export class LiveRefereeSession {
           video: { facingMode: 'environment', width: { ideal: 1280 } },
         });
       } catch (e: any) {
-        const name = e?.name || '';
-        throw new Error(name === 'NotAllowedError'
-          ? 'הגישה למצלמה נחסמה. אפשר גישה למצלמה בדפדפן ונסה שוב.'
-          : 'לא נמצאה מצלמה. בדוק שהמכשיר מחובר ונסה שוב.');
+        throw friendlyMediaError(e, 'cam');
       }
       if (videoEl) {
         videoEl.srcObject = this.camStream;
@@ -511,15 +632,13 @@ export class LiveRefereeSession {
       this.camFailures = 0;
       this.camNoSignalSince = null;
       if (this.camTimer) clearInterval(this.camTimer);
-      this.camTimer = setInterval(() => this.captureFrame(), 2000);
+      this.camTimer = setInterval(() => this.captureFrame(), FRAME_INTERVAL_MS);
       // Send one frame right away so the judge sees the field immediately.
-      setTimeout(() => this.captureFrame(), 600);
+      setTimeout(() => this.captureFrame(), FIRST_FRAME_DELAY_MS);
     } else {
       if (this.camTimer) { clearInterval(this.camTimer); this.camTimer = null; }
-      if (this.camStream) {
-        this.camStream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
-        this.camStream = null;
-      }
+      stopTracks(this.camStream);
+      this.camStream = null;
       if (this.videoEl) {
         try { this.videoEl.srcObject = null; } catch { /* noop */ }
         this.videoEl = null;
@@ -527,48 +646,52 @@ export class LiveRefereeSession {
     }
   }
 
+  /** Grab one small JPEG from the preview and stream it to the judge. */
   private captureFrame(): void {
     const video = this.videoEl;
     if (!video || this.cancelled || !this.session || this.transportDead) return;
     if (video.readyState < 2 || video.videoWidth === 0) {
-      // Camera is on but delivers no signal. Report once if stuck this way.
+      // Camera is on but delivers no picture. Report once if stuck this way
+      // (usually another app holds the camera).
       if (this.camNoSignalSince == null) {
         this.camNoSignalSince = Date.now();
-      } else if (Date.now() - this.camNoSignalSince > 6000) {
+      } else if (Date.now() - this.camNoSignalSince > CAM_NO_SIGNAL_MS) {
         this.loseCamera('לא מתקבל אות וידאו מהמצלמה. בדוק שהיא לא תפוסה באפליקציה אחרת.');
       }
       return;
     }
     let b64: string | null = null;
     try {
-      const targetW = 384;
-      const scale = targetW / video.videoWidth;
+      const scale = FRAME_WIDTH / video.videoWidth;
       const canvas = document.createElement('canvas');
-      canvas.width = targetW;
+      canvas.width = FRAME_WIDTH;
       canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
       const ctx2d = canvas.getContext('2d');
       if (!ctx2d) return;
       ctx2d.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      const dataUrl = canvas.toDataURL('image/jpeg', FRAME_JPEG_QUALITY);
       b64 = dataUrl.split(',')[1] || null;
     } catch { return; }
     if (!b64) return;
     this.camNoSignalSince = null;
     try {
-      this.session.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
+      // NOTE: the `media` field is deprecated server-side (the server closes
+      // the socket on mediaChunks). Video frames go through `video`.
+      this.session.sendRealtimeInput({ video: { data: b64, mimeType: JPEG_MIME } });
       this.camFailures = 0;
     } catch {
-      // Camera is auxiliary: after 3 consecutive failures switch it off and
-      // keep the voice session alive instead of tearing everything down.
+      // Camera is auxiliary: after a few consecutive failures switch it off
+      // and keep the voice session alive instead of tearing everything down.
       this.camFailures++;
-      if (this.camFailures >= 3) {
+      if (this.camFailures >= CAM_MAX_FAILURES) {
         this.loseCamera('שליחת תמונה נכשלה שוב ושוב. המצלמה כובתה, השיחה ממשיכה בקול.');
       }
     }
   }
 
-  // ---------- text ----------
+  // ===== typed messages (bypass voice) =====
 
+  /** Send a typed line into the live conversation (also echoed locally). */
   sendText(text: string): void {
     if (!this.session || !text.trim()) return;
     try {
@@ -581,8 +704,9 @@ export class LiveRefereeSession {
     }
   }
 
-  // ---------- teardown ----------
+  // ===== teardown (always safe to call twice) =====
 
+  /** End the call: stop hardware, close contexts, close the socket. */
   async stop(): Promise<void> {
     this.cancelled = true;
     await this.cleanup();
@@ -590,14 +714,10 @@ export class LiveRefereeSession {
 
   private async cleanup(): Promise<void> {
     if (this.camTimer) { clearInterval(this.camTimer); this.camTimer = null; }
-    if (this.camStream) {
-      this.camStream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
-      this.camStream = null;
-    }
-    if (this.micStream) {
-      this.micStream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
-      this.micStream = null;
-    }
+    stopTracks(this.camStream);
+    this.camStream = null;
+    stopTracks(this.micStream);
+    this.micStream = null;
     try { this.micNode?.disconnect(); } catch { /* noop */ }
     this.micNode = null;
     if (this.micCtx) {
