@@ -55,7 +55,7 @@ export default function TeamWorkspaceModal({ isOpen, onClose, currentUser, onTea
     if (!name.trim()) return;
     setBusy(true);
     try { openTeam(await createTeam(name, currentUser)); setName(''); }
-    catch { notify('לא הצלחתי ליצור את הקבוצה. נסו שוב.'); }
+    catch (error) { notify(error instanceof Error ? error.message : 'לא הצלחתי ליצור את הקבוצה. נסו שוב.'); }
     finally { setBusy(false); }
   };
 
@@ -66,7 +66,7 @@ export default function TeamWorkspaceModal({ isOpen, onClose, currentUser, onTea
       const joined = await joinTeam(code, currentUser);
       if (!joined) notify('לא נמצאה קבוצה עם הקוד הזה.');
       else { openTeam(joined); setCode(''); }
-    } catch { notify('לא הצלחתי להצטרף לקבוצה. נסו שוב.'); }
+    } catch (error) { notify(error instanceof Error ? error.message : 'לא הצלחתי להצטרף לקבוצה. נסו שוב.'); }
     finally { setBusy(false); }
   };
 
@@ -90,6 +90,7 @@ export default function TeamWorkspaceModal({ isOpen, onClose, currentUser, onTea
 
         {!team ? (
           <div className="grid gap-4 p-5 sm:grid-cols-2">
+            {notice && <p className="sm:col-span-2 rounded-xl border border-[#E1251B]/30 bg-[#E1251B]/10 px-3 py-2 text-center text-xs text-red-200">{notice}</p>}
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <h3 className="mb-1 font-black">יוצרים קבוצה</h3><p className="mb-4 text-xs text-slate-400">שתפו את הקוד עם חברי הקבוצה.</p>
               <input value={name} onChange={e => setName(e.target.value)} placeholder="שם הקבוצה" className="mb-3 w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm outline-none focus:border-[#0B6BCB]" />
