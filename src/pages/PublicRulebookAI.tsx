@@ -40,6 +40,8 @@ import PrivacyModal from '../components/PrivacyModal';
 import SettingsModal from '../components/SettingsModal';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
+import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
+import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -152,6 +154,15 @@ export default function PublicRulebookAI() {
     } catch {}
     return null;
   }, [user, hasGoogleToken]);
+  const currentTeamMember = useMemo(() => {
+    const firebaseUser = auth.currentUser;
+    if (!user && !firebaseUser) return null;
+    return {
+      uid: user?.uid || firebaseUser?.uid || '',
+      name: user?.name || firebaseUser?.displayName || displayUser?.name || 'חבר קבוצה',
+      email: user?.email || firebaseUser?.email || displayUser?.email || '',
+    };
+  }, [user, displayUser]);
   // Force reload when a new version is deployed so cached outdated clients get App Check
   useEffect(() => {
     // @ts-ignore
@@ -187,6 +198,8 @@ export default function PublicRulebookAI() {
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
+  const [showTeamWorkspace, setShowTeamWorkspace] = useState(false);
+  const [teamWorkspaceId, setTeamWorkspaceId] = useState(() => getActiveTeamId());
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
     return subscribeMaintenanceGate(setMaintenanceState);
@@ -1142,6 +1155,16 @@ export default function PublicRulebookAI() {
             ok: true,
           });
         }
+        if (teamWorkspaceId && currentTeamMember) {
+          void saveTeamQuestion(teamWorkspaceId, {
+            question: userMessage,
+            answer: stripThinkBlocks(response) || response || t('chat.commError'),
+            season: seasonName,
+            language,
+            authorUid: currentTeamMember.uid,
+            authorName: currentTeamMember.name || currentTeamMember.email,
+          }).catch(error => console.warn('Team question save failed:', error));
+        }
         requestFinishedRef.current = true;
         setRenderingResponse(true);
         setMessages(prev => {
@@ -1395,6 +1418,13 @@ export default function PublicRulebookAI() {
                             הגדרות
                           </button>
                         )}
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowTeamWorkspace(true); }}
+                          className={MENU_ROW_CLASS}
+                        >
+                          <Users className="w-4 h-4 text-[#0B6BCB]" />
+                          מרחב הקבוצה
+                        </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
@@ -1881,6 +1911,12 @@ export default function PublicRulebookAI() {
         onOpenPrivacy={() => setShowPrivacy(true)}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+      <TeamWorkspaceModal
+        isOpen={showTeamWorkspace}
+        onClose={() => setShowTeamWorkspace(false)}
+        onTeamChange={team => setTeamWorkspaceId(team?.id || '')}
+        currentUser={currentTeamMember || { uid: '', name: 'חבר קבוצה', email: '' }}
+      />
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
