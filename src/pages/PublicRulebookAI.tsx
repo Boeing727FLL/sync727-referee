@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, Share2 } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -42,18 +42,6 @@ import MaintenanceScreen from '../components/MaintenanceScreen';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
-import {
-  BOOKMARKLET_JS,
-  MAX_ASK_LEN,
-  isBareUrl,
-  peekPendingAsk,
-  readAskParam,
-  shareAppLink,
-  shareAskLink,
-  stashPendingAsk,
-  stripAskParam,
-  takePendingAsk,
-} from '../lib/share';
 import { isCurrentUserOwner } from '../lib/owner';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -212,10 +200,6 @@ export default function PublicRulebookAI() {
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
   const [showTeamWorkspace, setShowTeamWorkspace] = useState(false);
   const [teamWorkspaceId, setTeamWorkspaceId] = useState(() => getActiveTeamId());
-  const [showShareHelp, setShowShareHelp] = useState(false);
-  const [clipboardOffer, setClipboardOffer] = useState<string | null>(null);
-  const autoAskFiredRef = useRef(false);
-  const clipboardCheckedRef = useRef(false);
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
     return subscribeMaintenanceGate(setMaintenanceState);
@@ -368,17 +352,6 @@ export default function PublicRulebookAI() {
       })
       .catch(() => {});
   }, []);
-
-  // Shared-question links (?ask=): stash tab-locally, then strip from the URL
-  // so a refresh never re-sends. Session storage carries it through login.
-  // Declared before the enter-chat effect so nothing clears it first.
-  useEffect(() => {
-    const shared = readAskParam();
-    if (shared) {
-      stashPendingAsk(shared);
-      stripAskParam();
-    }
-  }, [location.search]);
 
   // Auto-enter chat after login — always show mandatory disclaimer before entering.
   // The intro is hidden right away so the disclaimer sits over the referee
@@ -681,38 +654,6 @@ export default function PublicRulebookAI() {
   useEffect(() => {
     if (!chatStarted) setTypewriterReady(false);
   }, [chatStarted]);
-
-  // Fire a stashed shared question once the gate opens and the referee is
-  // ready (rulebooks loaded). Bare links are prefilled, never answered blind.
-  useEffect(() => {
-    if (!chatStarted || !typewriterReady || loading || isLearning || autoAskFiredRef.current) return;
-    if (!peekPendingAsk()) return;
-    const pending = takePendingAsk();
-    if (!pending) return;
-    autoAskFiredRef.current = true;
-    if (isBareUrl(pending)) {
-      setInput(pending);
-      showToast(t('chat.urlPrefill'));
-    } else {
-      void handleSend(pending);
-    }
-  }, [chatStarted, typewriterReady, loading, isLearning]);
-
-  // One-time clipboard offer: copied text elsewhere + open site = ask it.
-  useEffect(() => {
-    if (!chatStarted || !typewriterReady || clipboardCheckedRef.current) return;
-    clipboardCheckedRef.current = true;
-    try {
-      const nav = navigator as Navigator & { clipboard?: { readText?: () => Promise<string> } };
-      if (typeof nav.clipboard?.readText !== 'function') return;
-      nav.clipboard.readText().then((text: string) => {
-        const clean = (text || '').trim();
-        if (clean.length < 5 || clean.length > MAX_ASK_LEN) return;
-        if (clean.includes('fllref.abrdns.com') || clean.includes('fllref.netlify.app')) return;
-        setClipboardOffer(clean);
-      }).catch(() => { /* permission denied — stay silent */ });
-    } catch { /* clipboard API unavailable */ }
-  }, [chatStarted, typewriterReady]);
 
   const isAiBusy = loading || renderingResponse;
 
@@ -1484,13 +1425,6 @@ export default function PublicRulebookAI() {
                           <Users className="w-4 h-4 text-[#0B6BCB]" />
                           מרחב הקבוצה
                         </button>
-                        <button
-                          onClick={() => { setShowUserMenu(false); setShowShareHelp(true); }}
-                          className={MENU_ROW_CLASS}
-                        >
-                          <Share2 className="w-4 h-4 text-[#0B6BCB]" />
-                          {t('chat.sharePhone')}
-                        </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
@@ -1763,19 +1697,7 @@ export default function PublicRulebookAI() {
                     >
                       {t('chat.copy')}
                     </button>
-                    <button
-                      onClick={async () => {
-                        const prevMsg = messages[idx - 1];
-                        const questionText = prevMsg?.role === 'user' ? prevMsg.text : finalRenderText;
-                        const outcome = await shareAskLink(questionText, t('app.title'), stripThinkBlocks(finalRenderText).slice(0, 900));
-                        if (outcome === 'copied') showToast(t('chat.linkCopied'));
-                        else if (outcome === 'failed') showToast(t('chat.commError'));
-                      }}
-                      className="flex items-center gap-1 text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-colors px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-white/25 cursor-pointer"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      {t('chat.share')}
-                    </button>
+
                   </div>
                 )}
               </div>
@@ -1805,36 +1727,6 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        {clipboardOffer && !isAiBusy && (
-          <button
-            onClick={() => {
-              const text = clipboardOffer;
-              setClipboardOffer(null);
-              if (isBareUrl(text)) {
-                setInput(text);
-                showToast(t('chat.urlPrefill'));
-              } else {
-                void handleSend(text);
-              }
-            }}
-            className="mb-2 flex w-full items-center justify-between gap-2 rounded-2xl border border-[#0B6BCB]/40 bg-[#0B6BCB]/15 px-4 py-2.5 text-right cursor-pointer"
-          >
-            <span className="truncate text-xs text-slate-200">{t('chat.clipboardAsk')}</span>
-            <span className="flex shrink-0 items-center gap-2">
-              <span className="rounded-lg bg-[#FFC400] px-2.5 py-1 text-[11px] font-black text-slate-950">{t('chat.askIt')}</span>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="סגור"
-                onClick={(e) => { e.stopPropagation(); setClipboardOffer(null); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setClipboardOffer(null); } }}
-                className="text-slate-400 hover:text-white text-sm leading-none cursor-pointer"
-              >
-                ✕
-              </span>
-            </span>
-          </button>
-        )}
         <div className="w-full flex items-center gap-2 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] transition-colors">
           <input
             type="text"
@@ -2025,60 +1917,6 @@ export default function PublicRulebookAI() {
         onTeamChange={team => setTeamWorkspaceId(team?.id || '')}
         currentUser={currentTeamMember || { uid: '', name: 'חבר קבוצה', email: '' }}
       />
-      <AnimatePresence>
-        {showShareHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowShareHelp(false)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
-            dir="rtl"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0E1628] p-5 text-white shadow-2xl"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-black">{t('chat.shareHelpTitle')}</h2>
-                <button onClick={() => setShowShareHelp(false)} aria-label="סגור" className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white">✕</button>
-              </div>
-              <p className="mb-4 text-xs leading-relaxed text-slate-400">{t('chat.shareHelpDesc')}</p>
-              <button
-                onClick={async () => {
-                  const outcome = await shareAppLink(t('app.title'), t('chat.shareHelpDesc'));
-                  if (outcome === 'copied') showToast(t('chat.linkCopied'));
-                }}
-                className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFC400] px-3 py-2.5 font-black text-slate-950"
-              >
-                <Share2 className="w-4 h-4" />
-                {t('chat.shareApp')}
-              </button>
-              <h3 className="mb-2 text-sm font-black">{t('chat.bookmarkletTitle')}</h3>
-              <code dir="ltr" className="mb-2 block max-h-20 overflow-y-auto break-all rounded-xl border border-white/10 bg-black/40 p-3 text-[10px] text-slate-300 select-all">{BOOKMARKLET_JS}</code>
-              <button
-                onClick={async () => {
-                  if (await copyTextWithFallback(BOOKMARKLET_JS)) showToast(t('chat.codeCopied'));
-                }}
-                className="mb-3 w-full rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-black text-slate-200"
-              >
-                {t('chat.copyCode')}
-              </button>
-              <ol className="mb-3 list-decimal space-y-1.5 pr-5 text-xs leading-relaxed text-slate-300">
-                <li>{t('chat.iphoneStep1')}</li>
-                <li>{t('chat.iphoneStep2')}</li>
-                <li>{t('chat.iphoneStep3')}</li>
-              </ol>
-              <p className="rounded-xl border border-[#0B6BCB]/30 bg-[#0B6BCB]/10 px-3 py-2 text-[11px] leading-relaxed text-slate-300">{t('chat.androidNote')}</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
