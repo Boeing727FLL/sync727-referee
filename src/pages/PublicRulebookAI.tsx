@@ -1499,11 +1499,6 @@ export default function PublicRulebookAI() {
         </div>
       </div>
 
-      {/* Boeing 727 watermark behind the chat */}
-      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center" aria-hidden>
-        <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="" className="w-[70vw] max-w-[560px] opacity-[0.03]" />
-      </div>
-
       {/* Golden reveal flash after login transition */}
       {enterFlash && (
         <motion.div
