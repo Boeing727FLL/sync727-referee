@@ -92,6 +92,10 @@ type ChatMessage = {
 /** Shared look for every row inside the user dropdown menu. */
 const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer';
 
+/** FLL field colors cycling on top of each hero card — yellow, blue, green,
+ *  red — the four standard FIRST LEGO League team accent colors. */
+const MISSION_ACCENTS = ['#FFC400', '#0B6BCB', '#7FB35E', '#E1251B'] as const;
+
 /** Saved login traces (written at login, cleared only by explicit logout/kick).
  * Used as offline session evidence: with no network Firebase reports no user,
  * which must never demote a logged-in user back to the login button. */
@@ -1519,46 +1523,57 @@ export default function PublicRulebookAI() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center text-center py-8 md:py-10"
+            className="relative flex flex-col items-center text-center max-w-2xl mx-auto"
           >
-            <div className="relative mb-4 md:mb-5">
-              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-white/25 overflow-hidden">
-                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
+            {/* Soft FIRST-color glow behind the hero (no boxes, no borders). */}
+            <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] rounded-full bg-[#0B6BCB]/12 blur-3xl" />
+            </div>
+
+            {/* Logo — bigger, sits on a soft halo */}
+            <div className="relative mb-5">
+              <div className="absolute inset-0 -m-2 rounded-full bg-[#FFC400]/[0.07] blur-xl" aria-hidden />
+              <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[24px] bg-white ring-1 ring-white/30 overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
               </div>
             </div>
-            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
+
+            <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC]" dir="ltr">
+              FIRST&nbsp;LEGO&nbsp;LEAGUE&nbsp;·&nbsp;VIRTUAL&nbsp;REFEREE
+            </p>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-2">
               {t('intro.subtitle')}
             </h2>
-            <p className="text-sm md:text-base text-slate-400 font-medium mt-3 max-w-xl leading-relaxed px-2">
+            <p className="text-sm md:text-base text-slate-300 font-medium mt-2 max-w-lg leading-relaxed px-2">
               {t('intro.descFull')}
             </p>
-            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2 rounded-full bg-white/[0.05] border border-white/15">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-7 w-auto object-contain" />
-              <span className="text-xs md:text-sm font-bold text-slate-200">
-                נבנה בהתנדבות על ידי קבוצת Boeing 727
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
+
+            {/* Mission cards: clean, each with a 3px FLL accent stripe at the top */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7 w-full">
               {quickQuestions.map((q, i) => {
                 const Icon = heroIcons[i % heroIcons.length];
+                const accent = MISSION_ACCENTS[i % MISSION_ACCENTS.length];
                 return (
                   <button
                     key={i}
                     onClick={() => handleSend(q)}
                     disabled={isAiBusy || isLearning}
-                    className="flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E1628] border border-white/10 border-r-2 border-r-[#0B6BCB] hover:border-[#0B6BCB]/60 transition-colors cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderTopColor: accent }}
+                    className="group relative flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E2238] border border-t-[3px] border-x-white/10 border-b-white/10 hover:bg-[#142a47] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <span className="shrink-0 w-11 h-11 rounded-xl bg-[#0B6BCB]/15 border border-[#0B6BCB]/25 flex items-center justify-center text-[#7FB8EC]">
-                      <Icon className="w-6 h-6 md:w-6 md:h-6" />
+                    <span
+                      style={{ color: accent }}
+                      className="shrink-0 w-11 h-11 rounded-xl bg-white/[0.06] border border-white/15 flex items-center justify-center"
+                    >
+                      <Icon className="w-6 h-6" />
                     </span>
-                    <span className="text-[15px] md:text-[15px] font-bold text-slate-100 leading-relaxed">
+                    <span className="text-[15px] md:text-base font-bold text-white leading-relaxed">
                       {q}
                     </span>
                   </button>
                 );
               })}
             </div>
-
           </motion.div>
         )}
         {messages.map((msg, idx) => {
