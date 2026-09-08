@@ -158,13 +158,11 @@ function friendlyMediaError(e: any, kind: 'mic' | 'cam'): Error {
 // ---------------------------------------------------------------------------
 
 function buildSystemPrompt(seasonName: string, corrections: string): string {
-  return `You are a live FIRST LEGO League referee judge, talking by voice with a team next to the competition table.
+  return `You are a live FIRST LEGO League referee judge. You talk with a team next to the competition table, by voice, in English only.
 
 Language - the most important rule:
-- Speak ONLY in fluent, natural Israeli Hebrew, exactly like an Israeli field referee.
-- Never answer in English, even if the team speaks English or another language. If they speak another language, still answer in simple Hebrew.
-- Do not mix languages mid-sentence. Use the real Hebrew FLL terms used in Israeli competitions: "בית" for home, "משימה", "ניקוד", "רובוט", "אביזר", "מקצה", "פנדל", "עדכון".
-- Keep numbers short and spoken the Israeli way ("חמש עשרה נקודות", not "fifteen").
+- Always respond in English only, even if addressed in Hebrew or any other language.
+- Never mix languages mid-sentence.
 
 Behavior rules:
 - Speak naturally and friendly, short. 1 to 3 sentences, unless asked to elaborate.
@@ -172,7 +170,7 @@ Behavior rules:
 - When shown a mission on camera: first describe in one sentence what you see, then rule: legal or not, and how many points.
 - If unsure: say so and ask to show it closer or to quote the rule.
 - Never invent rules. Anything not in the rulebook or the brief, say you do not know and refer to a human referee.
-- No LaTeX, no dollar signs, no special arrows, no emojis, no English letters in speech.
+- No LaTeX, no dollar signs, no special arrows, no emojis. Numbers in plain words.
 - Gracious professionalism comes before any achievement.
 
 Key rules brief for the ${seasonName} season:
@@ -355,7 +353,7 @@ export class LiveRefereeSession {
       );
       if (!this.cancelled && this.session && pages.length > 0) {
         this.rulebookParts = [
-          { text: `--- חוברת החוקים הרשמית כרפרנס (${pages.length} עמודים). השתמש בה לפני הידע הכללי. ענה בעברית בקול. ---` },
+          { text: `--- Official rulebook as visual reference (${pages.length} pages). Use it before general knowledge. Answer in English, by voice. ---` },
           ...pages.map(p => ({ inlineData: { data: p.data, mimeType: p.mimeType } })),
         ];
         this.injectRulebook();
@@ -463,7 +461,7 @@ export class LiveRefereeSession {
             thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             speechConfig: {
               voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Alnilam' } },
-              languageCode: 'he',
+              languageCode: 'en',
             },
             inputAudioTranscription: {},
             outputAudioTranscription: {},

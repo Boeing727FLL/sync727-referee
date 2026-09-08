@@ -1767,8 +1767,7 @@ export default function PublicRulebookAI() {
             title="שופט לייב — דיבור ומצלמה"
             className="relative w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-[#0B6BCB] hover:bg-[#0A5CAD] text-white active:scale-95 transition-colors cursor-pointer"
           >
-            <span className="absolute inset-0 rounded-full bg-[#0B6BCB]/40 animate-ping" style={{ animationDuration: '2.2s' }} aria-hidden />
-            <Mic className="relative w-4 h-4 md:w-5 md:h-5" />
+            <Mic className="w-4 h-4 md:w-5 md:h-5" />
           </motion.button>
           {isAiBusy ? (
             <button
