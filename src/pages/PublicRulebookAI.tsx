@@ -1302,18 +1302,19 @@ export default function PublicRulebookAI() {
       initial={false}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
-      {/* FLL backdrop: faint mat + fine grid, no glow blobs */}
+      {/* FLL field backdrop: the printed mat itself. */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
           src="/bioglow-table.jpg"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.07]"
-          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.18]"
+          loading="eager"
           decoding="async"
           draggable={false}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/95 to-slate-950" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        {/* Edge veils keep text readable without flattening the field */}
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-slate-950 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-950 to-transparent" />
       </div>
       {/* FLL identity strip: blue / yellow / red */}
       <div className="h-1 bg-gradient-to-l from-[#0B6BCB] via-[#FFC400] to-[#E1251B] w-full shrink-0 relative z-10" />
@@ -1522,7 +1523,7 @@ export default function PublicRulebookAI() {
           >
             {/* Soft FIRST-color glow behind the hero (no boxes, no borders). */}
             <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] rounded-full bg-[#0B6BCB]/12 blur-3xl" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full bg-[#FFC400]/10 blur-3xl" />
             </div>
 
             {/* Logo — bigger, sits on a soft halo */}
