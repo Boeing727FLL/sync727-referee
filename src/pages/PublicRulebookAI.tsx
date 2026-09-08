@@ -91,6 +91,16 @@ type ChatMessage = {
 /** Shared look for every row inside the user dropdown menu. */
 const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer';
 
+/** Saved login traces (written at login, cleared only by explicit logout/kick).
+ * Used as offline session evidence: with no network Firebase reports no user,
+ * which must never demote a logged-in user back to the login button. */
+function hasSavedRefereeSession(): boolean {
+  try {
+    return !!localStorage.getItem('google_access_token') ||
+      !!localStorage.getItem('auth_user');
+  } catch { return false; }
+}
+
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,16 +113,19 @@ export default function PublicRulebookAI() {
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(false);
   // Keep hasGoogleToken in sync with Firebase Auth so the
   // browserLocalPersistence session survives close/reopen the next day.
-  // If a stale localStorage entry exists from the old inMemory days
-  // (hasLocal true but no Firebase user), clear it silently.
+  // With no network Firebase reports no user because it cannot verify the
+  // session — that must NEVER delete the saved login traces (doing so demotes
+  // a logged-in user to the login button and wipes the session permanently).
+  // Stale-trace cleanup still runs when online (legacy inMemory entries,
+  // revoked sessions). Explicit logout/kick paths clear traces themselves.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
         setHasGoogleToken(true);
+      } else if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setHasGoogleToken(false);
       } else {
-        const hasLocal = !!localStorage.getItem('google_access_token') ||
-          !!localStorage.getItem('auth_user');
-        if (hasLocal) {
+        if (hasSavedRefereeSession()) {
           localStorage.removeItem('google_access_token');
           localStorage.removeItem('auth_user');
           localStorage.removeItem('user_picture');
@@ -123,6 +136,11 @@ export default function PublicRulebookAI() {
     });
     return () => unsub();
   }, []);
+
+  // Logged in = Firebase says so, Drive context has a user, or a saved login
+  // trace exists (the offline case above). Entry UI gates on this, never on
+  // Firebase alone — real enforcement stays server-side in security rules.
+  const sessionAlive = hasGoogleToken || !!user || hasSavedRefereeSession();
 
   const displayUser = useMemo(() => {
     if (user) return user;
@@ -283,8 +301,7 @@ export default function PublicRulebookAI() {
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.get('enter') !== 'chat') return false;
-      return !!localStorage.getItem('google_access_token') ||
-        !!localStorage.getItem('auth_user');
+      return hasSavedRefereeSession();
     } catch { return false; }
   });
   const [showIntro, setShowIntro] = useState<boolean>(() => !autoEnter);
@@ -360,14 +377,14 @@ export default function PublicRulebookAI() {
   // auth state can arrive after navigation, so re-check on every change.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.has('enter') && params.get('enter') === 'chat' && (hasGoogleToken || user)) {
+    if (params.has('enter') && params.get('enter') === 'chat' && sessionAlive) {
       window.history.replaceState({}, '', '/');
       setShowIntro(false);
       setChatStarted(true);
       setPendingEnterChat(true);
       setShowDisclaimer(true);
     }
-  }, [user, hasGoogleToken, location.search]);
+  }, [user, hasGoogleToken, sessionAlive, location.search]);
 
   const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
 
@@ -385,7 +402,7 @@ export default function PublicRulebookAI() {
   };
 
   const handleIntroContinue = () => {
-    if (hasGoogleToken || user) {
+    if (sessionAlive) {
       setShowDisclaimer(true);
     } else {
       navigate('/login');
@@ -1326,7 +1343,7 @@ export default function PublicRulebookAI() {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
-            {hasGoogleToken && displayUser ? (
+            {sessionAlive && displayUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
@@ -1457,10 +1474,10 @@ export default function PublicRulebookAI() {
               </div>
             ) : (
               <button
-                onClick={hasGoogleToken ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
+                onClick={sessionAlive ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
                 className="text-xs bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black px-3 py-2 md:px-3.5 rounded-xl transition-all shadow-[0_4px_16px_rgba(250,204,21,0.3)] active:scale-95 cursor-pointer flex items-center gap-1 whitespace-nowrap"
               >
-                <span>{hasGoogleToken ? t('auth.logout') : t('auth.login')}</span>
+                <span>{sessionAlive ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
             <div className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 select-none">
@@ -1891,7 +1908,7 @@ export default function PublicRulebookAI() {
       <AnimatePresence>
         {showIntro && (
           <IntroScreen
-            hasGoogleToken={hasGoogleToken}
+            hasGoogleToken={sessionAlive}
             user={user}
             onContinue={handleIntroContinue}
             t={t}
