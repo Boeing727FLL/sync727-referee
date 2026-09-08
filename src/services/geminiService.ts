@@ -383,7 +383,7 @@ export async function getNextApiKey(): Promise<string> {
   throw new Error("No API keys configured");
 }
 
-function markKeyUnhealthy(key: string): void {
+export function markKeyUnhealthy(key: string): void {
   if (key !== 'proxy-key') unhealthyKeys.add(key);
 }
 
