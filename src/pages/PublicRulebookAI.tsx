@@ -92,9 +92,6 @@ type ChatMessage = {
 /** Shared look for every row inside the user dropdown menu. */
 const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer';
 
-/** Flat FLL palette for the hero mission bricks (one accent per tile). */
-const MISSION_ACCENTS = ['#FFC400', '#7FB8EC', '#4CD08D', '#FF6A63'] as const;
-
 /** Saved login traces (written at login, cleared only by explicit logout/kick).
  * Used as offline session evidence: with no network Firebase reports no user,
  * which must never demote a logged-in user back to the login button. */
@@ -1330,8 +1327,8 @@ export default function PublicRulebookAI() {
                   {t('app.title')}
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
-                <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isLearning ? 'bg-[#0A1626]/60 animate-pulse' : 'bg-emerald-700'}`} />
-                <span className="text-[10px] font-black text-[#0A1626] bg-[#FFC400] rounded-md px-2 py-px whitespace-nowrap">
+                <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse' : 'bg-emerald-400'}`} />
+                <span className="text-[10px] font-bold text-slate-200 bg-white/[0.06] border border-white/15 rounded-full px-2 py-px whitespace-nowrap">
                   {isLearning ? t('chat.updating') : seasonName}
                 </span>
               </div>
@@ -1339,9 +1336,9 @@ export default function PublicRulebookAI() {
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <div className="flex items-center gap-2 px-3.5 py-1 rounded-lg bg-[#FFC400] whitespace-nowrap">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-[#0A1626]/60 animate-pulse' : 'bg-emerald-700'}`} />
-              <span className="text-sm font-black text-[#0A1626] tracking-wide">
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/15 whitespace-nowrap">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse' : 'bg-emerald-400'}`} />
+              <span className="text-sm font-bold text-slate-200 tracking-wide">
                 {isLearning ? t('chat.updating') : seasonName}
               </span>
             </div>
@@ -1522,80 +1519,46 @@ export default function PublicRulebookAI() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-3xl mx-auto"
+            className="flex flex-col items-center text-center py-8 md:py-10"
           >
-            {/* The FLL mat: flat blue board, printed grid, corner zones */}
-            <div className="relative rounded-[28px] bg-[#0C2340] overflow-hidden">
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:44px_44px]" aria-hidden />
-              <div className="absolute inset-x-0 top-[34%] h-px bg-white/10" aria-hidden />
-              <div className="absolute top-5 left-5 w-16 h-16 rounded-2xl border-2 border-[#FFC400]/40 bg-[#FFC400]/[0.06]" aria-hidden />
-              <div className="absolute bottom-5 right-5 w-16 h-16 rounded-2xl border-2 border-[#E1251B]/40 bg-[#E1251B]/[0.06]" aria-hidden />
-
-              <div className="relative flex flex-col items-center text-center px-5 md:px-10 py-9 md:py-12">
-                {/* Referee emblem as a white LEGO plate with studs */}
-                <div className="relative mb-6">
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex gap-2" aria-hidden>
-                    <span className="w-4 h-2.5 rounded-t-[5px] bg-white/90" />
-                    <span className="w-4 h-2.5 rounded-t-[5px] bg-white/90" />
-                    <span className="w-4 h-2.5 rounded-t-[5px] bg-white/90" />
-                  </div>
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-[20px] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden">
-                    <img src="/logoref.png" alt="שופט וירטואלי" className="w-[86%] h-[86%] object-contain" />
-                  </div>
-                </div>
-
-                <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC] mb-2" dir="ltr">
-                  FIRST&nbsp;LEGO&nbsp;LEAGUE
-                </p>
-                <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-                  {t('intro.subtitle')}
-                </h2>
-                <p className="text-sm md:text-base text-slate-300 font-medium mt-3 max-w-xl leading-relaxed px-2">
-                  {t('intro.descFull')}
-                </p>
-                <div className="inline-flex items-center gap-2.5 mt-5 px-4 py-2 rounded-xl bg-white/[0.07] border border-white/20">
-                  <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-7 w-auto object-contain" />
-                  <span className="text-xs md:text-sm font-bold text-slate-100">
-                    נבנה בהתנדבות על ידי קבוצת Boeing 727
-                  </span>
-                </div>
-
-                {/* Mission bricks: one LEGO-style tile per quick question */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-8 w-full">
-                  {quickQuestions.map((q, i) => {
-                    const Icon = heroIcons[i % heroIcons.length];
-                    const accent = MISSION_ACCENTS[i % MISSION_ACCENTS.length];
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => handleSend(q)}
-                        disabled={isAiBusy || isLearning}
-                        className="group relative flex items-center gap-4 text-right rounded-2xl bg-[#103358] px-5 py-4 transition-colors hover:bg-[#14406E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {/* brick studs */}
-                        <span className="absolute top-2 right-5 flex gap-1.5" aria-hidden>
-                          <span className="w-3 h-3 rounded-full bg-white/10 group-hover:bg-white/20 transition-colors" />
-                          <span className="w-3 h-3 rounded-full bg-white/10 group-hover:bg-white/20 transition-colors" />
-                        </span>
-                        {/* mission number */}
-                        <span className="absolute bottom-3 left-3 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black text-[#0A1626]" style={{ background: accent }} aria-hidden>
-                          {i + 1}
-                        </span>
-                        <span className="shrink-0 w-11 h-11 rounded-xl bg-white/[0.08] border border-white/15 flex items-center justify-center" style={{ color: accent }}>
-                          <Icon className="w-6 h-6" />
-                        </span>
-                        <span className="pr-6 text-[14px] md:text-[15px] font-bold text-white leading-snug">
-                          {q}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-6 text-[11px] font-bold text-slate-400">
-                  כל שאלה נענית לפי ספר החוקים והעדכונים הרשמיים של העונה
-                </p>
+            <div className="relative mb-4 md:mb-5">
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-white/25 overflow-hidden">
+                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
               </div>
             </div>
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
+              {t('intro.subtitle')}
+            </h2>
+            <p className="text-sm md:text-base text-slate-400 font-medium mt-3 max-w-xl leading-relaxed px-2">
+              {t('intro.descFull')}
+            </p>
+            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2 rounded-full bg-white/[0.05] border border-white/15">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-7 w-auto object-contain" />
+              <span className="text-xs md:text-sm font-bold text-slate-200">
+                נבנה בהתנדבות על ידי קבוצת Boeing 727
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
+              {quickQuestions.map((q, i) => {
+                const Icon = heroIcons[i % heroIcons.length];
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(q)}
+                    disabled={isAiBusy || isLearning}
+                    className="flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E1628] border border-white/10 border-r-2 border-r-[#0B6BCB] hover:border-[#0B6BCB]/60 transition-colors cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="shrink-0 w-11 h-11 rounded-xl bg-[#0B6BCB]/15 border border-[#0B6BCB]/25 flex items-center justify-center text-[#7FB8EC]">
+                      <Icon className="w-6 h-6 md:w-6 md:h-6" />
+                    </span>
+                    <span className="text-[15px] md:text-[15px] font-bold text-slate-100 leading-relaxed">
+                      {q}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
           </motion.div>
         )}
         {messages.map((msg, idx) => {
@@ -1686,14 +1649,14 @@ export default function PublicRulebookAI() {
               <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
                 <div className={`relative overflow-hidden ${
                   msg.role === 'user'
-                    ? 'bg-[#FFC400] text-[#0A1626] rounded-2xl rounded-tl-md px-3.5 py-2.5 md:px-4 md:py-3'
-                    : 'bg-[#0E1628] border border-white/10 border-r-[3px] border-r-[#FFC400] text-slate-100 rounded-2xl rounded-tr-md px-4 py-3 md:px-5 md:py-4'
+                    ? 'bg-[#0B6BCB] text-white rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
+                    : 'bg-[#0E1628] border border-white/10 border-r-2 border-r-[#E1251B] text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4'
                 }`}>
 
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
-                      <span className="text-[10px] md:text-[11px] font-black text-[#0A1626] bg-[#FFC400] px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-[10px] md:text-[11px] font-black text-slate-200 bg-white/[0.06] border border-white/15 px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
@@ -1783,7 +1746,7 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="w-full flex items-center gap-2 bg-[#0C2340] border border-white/20 rounded-2xl p-2 md:p-2.5 focus-within:border-[#FFC400]/70 transition-colors">
+        <div className="w-full flex items-center gap-2 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] transition-colors">
           <input
             type="text"
             value={input}
