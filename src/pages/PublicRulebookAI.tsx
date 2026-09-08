@@ -1308,11 +1308,8 @@ export default function PublicRulebookAI() {
           decoding="async"
           draggable={false}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050c1a] via-[#071120]/95 to-slate-950" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        {/* field-mat center circles, like the FLL board */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full border border-[#0B6BCB]/10" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[440px] h-[440px] rounded-full border border-white/[0.06]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/95 to-slate-950" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
       {/* FLL identity strip: blue / yellow / red */}
       <div className="h-1 bg-gradient-to-l from-[#0B6BCB] via-[#FFC400] to-[#E1251B] w-full shrink-0 relative z-10" />
@@ -1522,62 +1519,46 @@ export default function PublicRulebookAI() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-3xl mx-auto"
+            className="flex flex-col items-center text-center py-8 md:py-10"
           >
-            {/* FLL field: outer rail carries the three FIRST colors */}
-            <div className="relative rounded-[30px] p-[3px] bg-gradient-to-br from-[#0B6BCB]/70 via-[#FFC400]/45 to-[#E1251B]/55 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
-              <div className="relative rounded-[27px] bg-[#0B1B33] px-5 py-8 md:px-10 md:py-10 overflow-hidden">
-                {/* mat grid */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:44px_44px]" aria-hidden />
-                {/* center circles of the board */}
-                <div className="absolute -bottom-28 left-1/2 -translate-x-1/2 w-[460px] h-[460px] rounded-full border border-[#0B6BCB]/30" aria-hidden />
-                <div className="absolute -bottom-36 left-1/2 -translate-x-1/2 w-[620px] h-[620px] rounded-full border border-white/10" aria-hidden />
-
-                <div className="relative flex flex-col items-center text-center">
-                  {/* Referee emblem sitting on a dashed launch pad */}
-                  <div className="relative mb-5 md:mb-6">
-                    <div className="absolute -inset-3.5 rounded-full border-2 border-dashed border-[#FFC400]/50" aria-hidden />
-                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-white/70 overflow-hidden shadow-[0_0_44px_rgba(11,107,203,0.4)]">
-                      <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
-                    </div>
-                  </div>
-                  <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
-                    {t('intro.subtitle')}
-                  </h2>
-                  <p className="text-sm md:text-base text-slate-300/90 font-medium mt-3 max-w-xl leading-relaxed px-2">
-                    {t('intro.descFull')}
-                  </p>
-                  <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2 rounded-full bg-white/[0.06] border border-white/20">
-                    <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-7 w-auto object-contain" />
-                    <span className="text-xs md:text-sm font-bold text-slate-100">
-                      נבנה בהתנדבות על ידי קבוצת Boeing 727
-                    </span>
-                  </div>
-
-                  {/* Quick questions: the original icon+text cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
-                    {quickQuestions.map((q, i) => {
-                      const Icon = heroIcons[i % heroIcons.length];
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleSend(q)}
-                          disabled={isAiBusy || isLearning}
-                          className="flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E1628] border border-white/10 border-r-2 border-r-[#0B6BCB] hover:border-[#0B6BCB]/60 transition-colors cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <span className="shrink-0 w-11 h-11 rounded-xl bg-[#0B6BCB]/15 border border-[#0B6BCB]/25 flex items-center justify-center text-[#7FB8EC]">
-                            <Icon className="w-6 h-6" />
-                          </span>
-                          <span className="text-[15px] font-bold text-slate-100 leading-relaxed">
-                            {q}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+            <div className="relative mb-4 md:mb-5">
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-white ring-2 ring-white/25 overflow-hidden">
+                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
               </div>
             </div>
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">
+              {t('intro.subtitle')}
+            </h2>
+            <p className="text-sm md:text-base text-slate-400 font-medium mt-3 max-w-xl leading-relaxed px-2">
+              {t('intro.descFull')}
+            </p>
+            <div className="inline-flex items-center gap-2.5 mt-4 px-5 py-2 rounded-full bg-white/[0.05] border border-white/15">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-7 w-auto object-contain" />
+              <span className="text-xs md:text-sm font-bold text-slate-200">
+                נבנה בהתנדבות על ידי קבוצת Boeing 727
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-3.5 mt-7 md:mt-8 w-full max-w-2xl">
+              {quickQuestions.map((q, i) => {
+                const Icon = heroIcons[i % heroIcons.length];
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(q)}
+                    disabled={isAiBusy || isLearning}
+                    className="flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E1628] border border-white/10 border-r-2 border-r-[#0B6BCB] hover:border-[#0B6BCB]/60 transition-colors cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="shrink-0 w-11 h-11 rounded-xl bg-[#0B6BCB]/15 border border-[#0B6BCB]/25 flex items-center justify-center text-[#7FB8EC]">
+                      <Icon className="w-6 h-6 md:w-6 md:h-6" />
+                    </span>
+                    <span className="text-[15px] md:text-[15px] font-bold text-slate-100 leading-relaxed">
+                      {q}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
           </motion.div>
         )}
         {messages.map((msg, idx) => {
@@ -1765,9 +1746,7 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - floating AI pill */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="relative w-full flex items-center gap-2 overflow-hidden bg-[#0B1B33] border-2 border-white/25 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] transition-colors">
-          {/* the colored edge line of the FLL table */}
-          <span className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-l from-[#0B6BCB] via-[#FFC400] to-[#E1251B]" aria-hidden />
+        <div className="w-full flex items-center gap-2 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] transition-colors">
           <input
             type="text"
             value={input}
