@@ -95,6 +95,38 @@ const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ho
  *  red — the four standard FIRST LEGO League team accent colors. */
 const MISSION_ACCENTS = ['#FFC400', '#0B6BCB', '#7FB35E', '#E1251B'] as const;
 
+/** An abstract FLL competition mat drawn as inline SVG: table outline,
+ *  perimeter mission tiles, HOME base, launch pad, and labeled positions.
+ *  No raster image — scales cleanly and stays in the FLL brand palette. */
+const FLL_FIELD_BG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'>` +
+    `<defs><radialGradient id='focus' cx='50%25' cy='50%25' r='50%25'>` +
+    `<stop offset='0%25' stop-color='rgba(255,196,0,0.20)'/>` +
+    `<stop offset='55%25' stop-color='rgba(11,107,203,0.07)'/>` +
+    `<stop offset='100%25' stop-color='rgba(0,0,0,0)'/></radialGradient></defs>` +
+    `<rect width='100' height='100' fill='url(%23focus)'/>` +
+    `<rect x='2' y='8' width='96' height='78' rx='1' fill='none' stroke='rgba(255,255,255,0.10)' stroke-width='0.25'/>` +
+    `<g stroke='rgba(255,255,255,0.07)' stroke-width='0.15' fill='none'>` +
+    `<rect x='6' y='12' width='11' height='11' rx='0.3'/><rect x='18' y='12' width='11' height='11' rx='0.3'/>` +
+    `<rect x='30' y='12' width='11' height='11' rx='0.3'/><rect x='42' y='12' width='11' height='11' rx='0.3'/>` +
+    `<rect x='54' y='12' width='11' height='11' rx='0.3'/><rect x='66' y='12' width='11' height='11' rx='0.3'/>` +
+    `<rect x='84' y='24' width='11' height='11' rx='0.3'/><rect x='84' y='38' width='11' height='11' rx='0.3'/>` +
+    `<rect x='6' y='65' width='11' height='11' rx='0.3'/><rect x='18' y='65' width='11' height='11' rx='0.3'/>` +
+    `<rect x='30' y='65' width='11' height='11' rx='0.3'/><rect x='42' y='65' width='11' height='11' rx='0.3'/>` +
+    `<rect x='54' y='65' width='11' height='11' rx='0.3'/><rect x='66' y='65' width='11' height='11' rx='0.3'/></g>` +
+    `<rect x='4' y='49' width='22' height='13' rx='0.6' fill='rgba(255,196,0,0.07)' stroke='%23FFC400' stroke-width='0.25' opacity='0.85'/>` +
+    `<text x='15' y='56.7' fill='%23FFC400' font-size='2.5' font-weight='700' text-anchor='middle' font-family='ui-sans-serif,system-ui' letter-spacing='0.6' opacity='0.85'>HOME</text>` +
+    `<rect x='74' y='49' width='10' height='13' rx='0.6' fill='rgba(11,107,203,0.05)' stroke='rgba(11,107,203,0.45)' stroke-width='0.2' opacity='0.85'/>` +
+    `<g font-family='ui-sans-serif,system-ui' font-size='1.5' font-weight='700' fill='rgba(255,255,255,0.20)' text-anchor='middle'>` +
+    `<text x='11.5' y='18.5'>M01</text><text x='23.5' y='18.5'>M02</text><text x='35.5' y='18.5'>M03</text>` +
+    `<text x='47.5' y='18.5'>M04</text><text x='59.5' y='18.5'>M05</text><text x='71.5' y='18.5'>M06</text>` +
+    `<text x='89.5' y='30.5'>M07</text><text x='89.5' y='44.5'>M08</text>` +
+    `<text x='11.5' y='71.5'>M09</text><text x='23.5' y='71.5'>M10</text><text x='35.5' y='71.5'>M11</text>` +
+    `<text x='47.5' y='71.5'>M12</text><text x='59.5' y='71.5'>M13</text><text x='71.5' y='71.5'>M14</text></g></svg>`
+  );
+
 /** Saved login traces (written at login, cleared only by explicit logout/kick).
  * Used as offline session evidence: with no network Firebase reports no user,
  * which must never demote a logged-in user back to the login button. */
@@ -1300,20 +1332,17 @@ export default function PublicRulebookAI() {
       initial={false}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
-      {/* FLL field backdrop: the printed mat itself. */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <img
-          src="/bioglow-table.jpg"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.18]"
-          loading="eager"
-          decoding="async"
-          draggable={false}
-        />
-        {/* Edge veils keep text readable without flattening the field */}
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-slate-950 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-950 to-transparent" />
-      </div>
+      {/* FLL field backdrop: inline SVG with perimeter mission tiles. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ backgroundImage: `url("${FLL_FIELD_BG}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        aria-hidden
+      />
+      {/* A faint dark wash on top so the chat cards on top remain readable. */}
+      <div className="absolute inset-0 bg-slate-950/[0.55]" aria-hidden />
+      {/* Subtle veils at top + bottom so the field fades into the UI chrome. */}
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 to-transparent" />
       {/* FLL identity strip: blue / yellow / red */}
       <div className="h-1 bg-gradient-to-l from-[#0B6BCB] via-[#FFC400] to-[#E1251B] w-full shrink-0 relative z-10" />
 
