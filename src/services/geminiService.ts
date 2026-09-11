@@ -321,9 +321,10 @@ async function ensureKeysLoaded(): Promise<void> {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      const keys = Array.isArray(data.gemini_keys) ? data.gemini_keys : Object.values(data).filter(
-        (value): value is string => typeof value === 'string' && value.startsWith('AIza'),
-      );
+      const values = (Array.isArray(data.gemini_keys) ? data.gemini_keys : Object.values(data)) as unknown[];
+      // Pool entries may be plaintext (legacy) or ENC1 vault envelopes — see src/lib/keyVault.ts.
+      const { decryptPoolEntries } = await import('../lib/keyVault');
+      const keys = await decryptPoolEntries(values);
       if (keys.length) GEMINI_KEYS = keys;
       console.log("Gemini key pool loaded.");
     }
