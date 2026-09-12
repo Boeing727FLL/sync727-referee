@@ -60,10 +60,9 @@ isSupported().then((supported) => {
 
 export const googleProvider = new GoogleAuthProvider();
 
-// Add Drive scope
-googleProvider.addScope('https://www.googleapis.com/auth/drive');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+// No Drive scopes: the app only needs the basic Google profile (name, email,
+// picture), which Firebase Auth already provides. Requesting Drive access
+// would hand every XSS or token leak full Drive power for zero benefit.
 googleProvider.setCustomParameters({
   prompt: 'consent'
 });

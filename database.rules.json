@@ -4,31 +4,32 @@
       "meta": {
         ".read": "auth != null",
         "feedbackResetAt": {
-          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
           ".validate": "newData.isNumber()"
         },
         "maintenance": {
           ".read": true,
-          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+          ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
           ".validate": "newData.isBoolean()"
         }
       },
       "stats": {
-        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
+        ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
         "totalQuestions": {
           ".write": "auth != null",
-          ".validate": "newData.isNumber() && newData.val() >= 0"
+          ".validate": "newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || newData.val() === data.val() + 1)"
         },
         "perUser": {
           "$uid": {
-            ".write": "auth != null",
-            ".validate": "newData.isNumber() && newData.val() >= 0"
+            ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+            ".validate": "newData.val() === null || (newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || newData.val() === data.val() + 1))"
           }
         },
         "refereeUsers": {
           "$uid": {
-            ".write": "auth != null",
-            ".validate": "newData.isNumber() && newData.val() > 0"
+            ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+            ".validate": "newData.val() === null || newData.isNumber()"
           }
         }
       },
@@ -36,29 +37,29 @@
         ".read": "auth != null",
         ".indexOn": ["createdAt"],
         "$logId": {
-          ".write": "auth != null && ((!data.exists() && newData.exists()) || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
-          ".validate": "newData.hasChildren(['question', 'uid', 'createdAt']) && newData.child('question').isString() && newData.child('question').val().length > 0 && newData.child('question').val().length < 2000 && (!newData.hasChild('answer') || (newData.child('answer').isString() && newData.child('answer').val().length < 20000))"
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
+          ".validate": "newData.val() === null || (newData.hasChildren(['question', 'uid', 'createdAt']) && newData.child('question').isString() && newData.child('question').val().length > 0 && newData.child('question').val().length < 2000 && (!newData.hasChild('answer') || (newData.child('answer').isString() && newData.child('answer').val().length < 20000)) && (!newData.hasChild('uid') || newData.child('uid').val() === auth.uid || newData.child('uid').val() === 'anon'))"
         }
       },
       "feedback": {
-        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
         ".indexOn": ["createdAt"],
         "$fbId": {
-          ".write": "auth != null && ((!data.exists() && newData.exists()) || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
-          ".validate": "newData.hasChildren(['rating', 'uid', 'createdAt']) && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5"
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
+          ".validate": "newData.val() === null || (newData.hasChildren(['rating', 'uid', 'createdAt']) && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5 && (!newData.hasChild('improvements') || (newData.child('improvements').isString() && newData.child('improvements').val().length < 2000)) && (!newData.hasChild('uid') || newData.child('uid').val() === auth.uid || newData.child('uid').val() === 'anon'))"
         }
       },
-      "presence": {
-        ".read": "auth != null",
+      "presence": {        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
         "$sessionId": {
-          ".write": "auth != null"
+          ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
+          ".validate": "newData.val() === null || (newData.hasChildren(['uid']) && newData.child('uid').val() === auth.uid && (!newData.hasChild('onlineAt') || newData.child('onlineAt').isNumber()) && (!newData.hasChild('deviceId') || newData.child('deviceId').isString()))"
         }
       },
       "sessions": {
-        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com'",
+        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
         "$uid": {
-          ".read": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
-          ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')"
+          ".read": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
+          ".write": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))"
         }
       }
     }

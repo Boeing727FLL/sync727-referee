@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -43,6 +43,7 @@ import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
+import { consumeChatQuota } from '../lib/chatQuota';
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -1117,6 +1118,19 @@ export default function PublicRulebookAI() {
       localStorage.setItem('referee_hour_bucket', JSON.stringify({ hour, count: count + 1 }));
     } catch { /* storage unavailable, continue without limits */ }
 
+    // Server-enforced daily budget: consumes one unit from chat_quota/{uid}.
+    // Rules enforce strictly-+1 inside a rolling 24h window with a hard cap,
+    // so clearing localStorage or switching devices cannot dodge it.
+    const quotaUid = resolveRefereeUid();
+    if (quotaUid) {
+      try {
+        await consumeChatQuota(quotaUid);
+      } catch (error) {
+        setMessages(prev => [...prev, { role: 'model', text: error instanceof Error ? error.message : 'הגעתם למכסת השאלות היומית. נסו שוב מחר.' }]);
+        return;
+      }
+    }
+
     const userMessage = textToSend.trim();
 
     setInput('');
@@ -1465,6 +1479,27 @@ export default function PublicRulebookAI() {
                           <Users className="w-4 h-4 text-[#0B6BCB]" />
                           מרחב הקבוצה
                         </button>
+                        {auth.currentUser && !auth.currentUser.emailVerified && isCurrentUserOwner() && (
+                          <button
+                            onClick={async () => {
+                              setShowUserMenu(false);
+                              try {
+                                const { sendEmailVerification } = await import('firebase/auth');
+                                const fbUser = auth.currentUser;
+                                if (fbUser) {
+                                  await sendEmailVerification(fbUser);
+                                  showToast('קישור אימות נשלח לאימייל הבעלים. לחצו עליו לפני פריסת החוקים.');
+                                }
+                              } catch {
+                                showToast('לא הצלחתי לשלוח. נסו שוב מאוחר יותר.');
+                              }
+                            }}
+                            className={MENU_ROW_CLASS}
+                          >
+                            <MailCheck className="w-4 h-4 text-amber-500" />
+                            <span className="flex-1">שלח קישור אימות לבעלים</span>
+                          </button>
+                        )}
                         <div className="h-px bg-white/60 my-1" />
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}

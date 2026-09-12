@@ -110,22 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(updatedUser);
 
-        const res = await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, user: {
-            name: result.user.displayName,
-            picture: result.user.photoURL,
-            email: result.user.email
-          }}),
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("Server rejected session:", errText);
-          // Don't return early - user state is already set
-        }
-
         // We do not save team_user to localStorage so it resets on refresh
         return { success: true };
       } else {

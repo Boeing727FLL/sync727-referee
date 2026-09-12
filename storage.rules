@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Firebase Storage is not used by the referee app (rulebooks live in R2).
+// Default deny so nothing can ever be uploaded or read here.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
