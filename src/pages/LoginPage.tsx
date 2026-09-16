@@ -15,14 +15,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
 import { subscribeMaintenanceGate } from '../lib/analytics';
-import { isCurrentUserOwner } from '../lib/owner';
+import { isCurrentUserOwner, isOwnerEmail } from '../lib/owner';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 
 // ---------------------------------------------------------------------------
@@ -167,6 +167,13 @@ export default function LoginPage() {
         } catch {
           displayName = emailVal.split('@')[0];
         }
+      }
+
+      // Owner email verification: every login from this page (re)sends the
+      // Firebase verification email to the owner account. Best-effort and
+      // never blocks login (Firebase throttles repeated sends on its own).
+      if (isOwnerEmail(userEmail) && auth.currentUser) {
+        try { await sendEmailVerification(auth.currentUser); } catch {}
       }
 
       localStorage.setItem('auth_user', JSON.stringify({

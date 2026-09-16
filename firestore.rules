@@ -70,7 +70,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['count', 'windowStart'])
         && request.resource.data.count is int
         && request.resource.data.count >= 1
-        && request.resource.data.count <= 100
+        && request.resource.data.count <= 80
         && (
           ((request.time - resource.data.windowStart) < duration.value(24, 'h')
             && request.resource.data.count == resource.data.count + 1

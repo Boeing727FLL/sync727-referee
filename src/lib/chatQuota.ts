@@ -11,7 +11,7 @@ import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore
 import { db } from './firebase';
 
 /** Max answered questions per user per rolling 24h window. */
-export const DAILY_CHAT_LIMIT = 100;
+export const DAILY_CHAT_LIMIT = 80;
 
 const DAY_MS = 24 * 3600 * 1000;
 
