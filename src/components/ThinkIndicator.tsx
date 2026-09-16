@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ThinkingOrb } from 'thinking-orbs';
 import type { OrbState } from 'thinking-orbs';
 import { useLanguage } from '../hooks/useLanguage';
+import { hasConnectedOnce } from '../lib/refereeConnection';
 
 /**
  * ThinkIndicator — the referee's thinking animation. Cycles through six
@@ -25,14 +26,19 @@ const PHASE_MS = 2400;
 
 export default function ThinkIndicator() {
   const { t } = useLanguage();
+  // The connecting state shows only until the first successful answer —
+  // afterwards the cycle runs the ruling states exactly.
+  const [activePhases] = useState(() =>
+    hasConnectedOnce() ? PHASES.filter(p => p.orb !== 'connecting') : PHASES
+  );
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setPhase(p => (p + 1) % PHASES.length), PHASE_MS);
+    const id = setInterval(() => setPhase(p => (p + 1) % activePhases.length), PHASE_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [activePhases.length]);
 
-  const current = PHASES[phase];
+  const current = activePhases[phase];
   return (
     <>
       <div className="grid">
