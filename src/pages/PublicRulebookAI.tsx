@@ -29,6 +29,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkIndicator from '../components/ThinkIndicator';
 import { resetThinkCycle } from '../lib/thinkCycle';
+import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -392,6 +393,28 @@ export default function PublicRulebookAI() {
       }
     } catch {}
   }, [displayUser]);
+  const [gravatarPic, setGravatarPic] = useState('');
+
+  // Email+password logins carry no Google photo: use the account's Gravatar
+  // when nothing else is available (a missing Gravatar keeps the initial).
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      if ((displayUser as any)?.picture || localStorage.getItem('user_picture') || gravatarPic) return;
+      const email = String((displayUser as any)?.email || '');
+      if (!email.includes('@')) return;
+      (async () => {
+        const url = await gravatarUrlForEmail(email);
+        if (!url || cancelled) return;
+        if (await probeImage(url)) {
+          if (cancelled) return;
+          try { localStorage.setItem('user_picture', url); } catch {}
+          setGravatarPic(url);
+        }
+      })();
+    } catch {}
+    return () => { cancelled = true; };
+  }, [displayUser, gravatarPic]);
 
   useEffect(() => {
     const token = localStorage.getItem('google_access_token');
@@ -1428,9 +1451,9 @@ export default function PublicRulebookAI() {
                       {displayUser.email}
                     </span>
                   </div>
-                  {displayUser.picture ? (
+                  {displayUser.picture || gravatarPic ? (
                     <img
-                      src={displayUser.picture}
+                      src={displayUser.picture || gravatarPic}
                       alt=""
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
                     />
@@ -1453,8 +1476,8 @@ export default function PublicRulebookAI() {
                       className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden z-50"
                     >
                       <div className="p-3 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center gap-3">
-                        {displayUser.picture ? (
-                          <img src={displayUser.picture} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
+                        {displayUser.picture || gravatarPic ? (
+                          <img src={displayUser.picture || gravatarPic} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
                         ) : (
                           <div className="w-10 h-10 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center">
                             <span className="text-sm font-black text-slate-950">{(displayUser.name || 'U').trim().charAt(0)}</span>
@@ -1724,8 +1747,8 @@ export default function PublicRulebookAI() {
               {/* Referee or User Avatar */}
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
                 {msg.role === 'user' ? (
-                  (user?.picture || displayUser?.picture || localStorage.getItem('user_picture')) ? (
-                    <img src={user?.picture || displayUser?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
+                  (user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture')) ? (
+                    <img src={user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
                   ) : (
                     <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center">
                       <span className="text-xs md:text-sm font-black text-white">
