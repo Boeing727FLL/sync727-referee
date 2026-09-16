@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -90,6 +90,8 @@ type ChatMessage = {
   text: string;
   files?: ChatFile[];
   isProgress?: boolean;
+  /** WhatsApp-style quoted context attached to a follow-up question. */
+  quote?: string;
 };
 
 /** Shared look for every row inside the user dropdown menu. */
@@ -645,6 +647,8 @@ export default function PublicRulebookAI() {
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  // WhatsApp-style reply: quoted answer context for a follow-up question.
+  const [replyTo, setReplyTo] = useState<{ text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
@@ -1191,13 +1195,22 @@ export default function PublicRulebookAI() {
 
     const userMessage = textToSend.trim();
 
+    // WhatsApp-style reply: quoted answer travels as prompt context and as
+    // a visible quote on the sent bubble. Captured here, cleared on send.
+    const replyContext = replyTo
+      ? `(הקשר: המשתמש ממשיך ושואל שאלת המשך על התשובה הקודמת הבאה: "${replyTo.text.slice(0, 800)}")\n\n`
+      : null;
+    const replyQuote = replyTo ? replyTo.text.slice(0, 220) : undefined;
+
     setInput('');
+    setReplyTo(null);
 
     setMessages(prev => [
       ...prev,
       {
         role: 'user',
-        text: userMessage
+        text: userMessage,
+        ...(replyQuote ? { quote: replyQuote } : {})
       }
     ]);
     
@@ -1211,7 +1224,7 @@ export default function PublicRulebookAI() {
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
     try {
-      const finalPrompt = userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
+      const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
       const response = await GeminiService.askRulebook(
         finalPrompt,
@@ -1826,7 +1839,14 @@ export default function PublicRulebookAI() {
 
                   <div className={`text-[15px] md:text-[16px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
                     {msg.role === 'user' ? (
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                      <div className="whitespace-pre-wrap">
+                        {msg.quote && (
+                          <div className="mb-1.5 rounded-lg border-r-2 border-white/60 bg-black/25 px-2.5 py-1.5 text-xs text-blue-100/90 line-clamp-3 text-right">
+                            {msg.quote}
+                          </div>
+                        )}
+                        {msg.text}
+                      </div>
                     ) : (
                       <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
                         <ReactMarkdown 
@@ -1858,6 +1878,18 @@ export default function PublicRulebookAI() {
                       <Copy className="w-3.5 h-3.5" />
                       {t('chat.copy')}
                     </button>
+                    {!isLiveAnswer && (
+                      <button
+                        onClick={() => {
+                          setReplyTo({ text: finalRenderText.slice(0, 800) });
+                          composerRef.current?.focus();
+                        }}
+                        className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#0B6BCB]/60 hover:bg-[#0B6BCB]/15 hover:shadow-[0_0_12px_rgba(11,107,203,0.3)] cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Reply className="w-3.5 h-3.5" />
+                        {t('chat.reply')}
+                      </button>
+                    )}
 
                   </div>
                 )}
@@ -1881,6 +1913,21 @@ export default function PublicRulebookAI() {
 
       {/* Input Area - AI composer */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
+        {replyTo && (
+          <div className="w-full max-w-3xl mx-auto mb-2 flex items-center gap-2 rounded-xl border border-[#0B6BCB]/50 bg-[#0B6BCB]/10 px-3 py-2">
+            <div className="flex-1 min-w-0 text-right">
+              <div className="text-[10px] font-black text-[#7FB8EC]">{t('chat.replyTo')}</div>
+              <div className="truncate text-xs text-slate-300">{replyTo.text}</div>
+            </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              aria-label="בטל תגובה"
+              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
           <textarea
             ref={composerRef}
