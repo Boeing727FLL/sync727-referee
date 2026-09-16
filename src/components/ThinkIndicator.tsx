@@ -47,9 +47,10 @@ export default function ThinkIndicator() {
   }, [activePhases.length, wrapTo]);
 
   const current = activePhases[phase];
-  // No static caption at all — only the orb animations. The connecting
-  // phase (once per question) keeps its own caption.
+  // Animated "thinking" caption (letter wave + bouncing dots) — never
+  // static. The connecting phase (once per question) keeps its own caption.
   const isConnecting = current.orb === 'connecting';
+  const thinkingBase = t('chat.thinking2').replace(/[.…]+$/u, '');
   return (
     <>
       <div className="grid">
@@ -66,9 +67,9 @@ export default function ThinkIndicator() {
           </motion.div>
         </AnimatePresence>
       </div>
-      <div className="grid w-full">
+      <div className="grid w-full justify-items-center">
         <AnimatePresence initial={false}>
-          {isConnecting && (
+          {isConnecting ? (
             <motion.span
               key="label-connecting"
               className="col-start-1 row-start-1 text-xs font-bold text-slate-300 text-center"
@@ -78,6 +79,32 @@ export default function ThinkIndicator() {
               transition={{ duration: 0.35, ease: 'easeInOut' }}
             >
               {t('chat.phase_connecting')}
+            </motion.span>
+          ) : (
+            <motion.span
+              key="label-thinking"
+              className="col-start-1 row-start-1 flex items-center gap-1.5 text-xs font-bold text-slate-300"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+            >
+              <span aria-hidden={false}>
+                {thinkingBase.split('').map((ch, i) => (
+                  <span
+                    key={i}
+                    className="thinking-letter"
+                    style={{ animationDelay: `${i * 0.07}s` }}
+                  >
+                    {ch === ' ' ? '\u00A0' : ch}
+                  </span>
+                ))}
+              </span>
+              <span className="flex items-center gap-1" aria-hidden>
+                <span className="thinking-dot" />
+                <span className="thinking-dot" />
+                <span className="thinking-dot" />
+              </span>
             </motion.span>
           )}
         </AnimatePresence>
