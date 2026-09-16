@@ -1421,21 +1421,31 @@ export default function PublicRulebookAI() {
                   {t('app.title')}
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
-                <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse' : 'bg-emerald-400'}`} />
-                <span className="text-[10px] font-bold text-slate-200 bg-white/[0.06] border border-white/15 rounded-full px-2 py-px whitespace-nowrap">
-                  {isLearning ? t('chat.updating') : seasonName}
-                </span>
+                {(!isLearning && seasonName === 'UNKNOWN') ? null : (
+                  <span className="rounded-full p-px bg-gradient-to-l from-emerald-300/70 via-teal-400/25 to-cyan-300/70 shadow-[0_0_12px_rgba(45,212,191,0.3)] whitespace-nowrap">
+                    <span className="flex items-center gap-1.5 rounded-full bg-[#0B1526] px-2 py-px">
+                      <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse shadow-[0_0_6px_rgba(250,204,21,0.9)]' : 'bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,231,183,0.9)]'}`} />
+                      <span className="text-[10px] font-black text-slate-100">
+                        {isLearning ? t('chat.updating') : seasonName}
+                      </span>
+                    </span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/15 whitespace-nowrap">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse' : 'bg-emerald-400'}`} />
-              <span className="text-sm font-bold text-slate-200 tracking-wide">
-                {isLearning ? t('chat.updating') : seasonName}
-              </span>
-            </div>
+            {(!isLearning && seasonName === 'UNKNOWN') ? null : (
+              <div className="rounded-full p-px bg-gradient-to-l from-emerald-300/70 via-teal-400/25 to-cyan-300/70 shadow-[0_0_18px_rgba(45,212,191,0.28)] whitespace-nowrap">
+                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B1526]">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.9)]' : 'bg-emerald-300 animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.9)]'}`} />
+                  <span className={`text-sm font-black text-slate-100 ${isLearning ? '' : 'tracking-[0.18em]'}`} dir="ltr">
+                    {isLearning ? t('chat.updating') : seasonName}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
