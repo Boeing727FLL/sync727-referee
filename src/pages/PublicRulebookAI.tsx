@@ -27,7 +27,6 @@ import { ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@a
 import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ThinkingOrb } from 'thinking-orbs';
 import ThinkIndicator from '../components/ThinkIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
@@ -1784,11 +1783,8 @@ export default function PublicRulebookAI() {
             <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-3">
-              <ThinkingOrb state="connecting" size={64} theme="dark" />
-              <span className="text-xs md:text-sm font-bold text-slate-300">
-                {t('chat.thinking2')}
-              </span>
+            <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2">
+              <ThinkIndicator />
             </div>
           </motion.div>
         )}
