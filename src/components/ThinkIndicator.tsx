@@ -89,7 +89,7 @@ export default function ThinkIndicator() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.35, ease: 'easeInOut' }}
             >
-              <span aria-hidden={false}>
+              <span className="tracking-[0.15em]">
                 {thinkingBase.split('').map((ch, i) => (
                   <span
                     key={i}
@@ -99,11 +99,6 @@ export default function ThinkIndicator() {
                     {ch === ' ' ? '\u00A0' : ch}
                   </span>
                 ))}
-              </span>
-              <span className="flex items-center gap-1" aria-hidden>
-                <span className="thinking-dot" />
-                <span className="thinking-dot" />
-                <span className="thinking-dot" />
               </span>
             </motion.span>
           )}
