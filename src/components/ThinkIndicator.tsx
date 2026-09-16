@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ThinkingOrb } from 'thinking-orbs';
 import type { OrbState } from 'thinking-orbs';
 import { useLanguage } from '../hooks/useLanguage';
-import { hasConnectedOnce } from '../lib/refereeConnection';
+import { claimConnectingPhase } from '../lib/thinkCycle';
 
 /**
  * ThinkIndicator — the referee's thinking animation. Cycles through six
@@ -26,10 +26,11 @@ const PHASE_MS = 2400;
 
 export default function ThinkIndicator() {
   const { t } = useLanguage();
-  // The connecting state shows only until the first successful answer —
-  // afterwards the cycle runs the ruling states exactly.
+  // The connecting state is claimed by the first indicator of a request —
+  // later mounts for the same answer skip it, so it shows exactly once
+  // per answer and the cycle then runs the ruling states.
   const [activePhases] = useState(() =>
-    hasConnectedOnce() ? PHASES.filter(p => p.orb !== 'connecting') : PHASES
+    claimConnectingPhase() ? PHASES : PHASES.filter(p => p.orb !== 'connecting')
   );
   const [phase, setPhase] = useState(0);
 

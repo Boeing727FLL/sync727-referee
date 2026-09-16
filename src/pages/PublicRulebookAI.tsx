@@ -28,7 +28,7 @@ import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkIndicator from '../components/ThinkIndicator';
-import { markConnectedOnce } from '../lib/refereeConnection';
+import { resetThinkCycle } from '../lib/thinkCycle';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -1146,6 +1146,7 @@ export default function PublicRulebookAI() {
     ]);
     
     setLoading(true);
+    resetThinkCycle();
     const controller = new AbortController();
     abortControllerRef.current = controller;
     requestFinishedRef.current = false;
@@ -1212,7 +1213,6 @@ export default function PublicRulebookAI() {
           }).catch(error => console.warn('Team question save failed:', error));
         }
         requestFinishedRef.current = true;
-        markConnectedOnce();
         setRenderingResponse(true);
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
