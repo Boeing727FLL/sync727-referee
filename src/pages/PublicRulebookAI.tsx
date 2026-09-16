@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -1723,6 +1723,8 @@ export default function PublicRulebookAI() {
             typewriterTargetRef.current = finalRenderText.length;
           }
           const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterReady && typewriterCount < typewriterTargetRef.current;
+          // Live-answer glow: bubble, glow bar and avatar light up while text streams.
+          const isLiveAnswer = isTypewriting;
           if (isTypewriting) {
             finalRenderText = finalRenderText.substring(0, typewriterCount);
           }
@@ -1771,23 +1773,31 @@ export default function PublicRulebookAI() {
                     </div>
                   )
                 ) : (
-                  <div className="w-full h-full rounded-full bg-white ring-1 ring-white/25 overflow-hidden">
+                  <div className={`w-full h-full rounded-full bg-white overflow-hidden transition-all duration-500 ${isLiveAnswer ? 'ring-2 ring-[#E1251B]/80 shadow-[0_0_18px_rgba(225,37,27,0.55)]' : 'ring-1 ring-white/25'}`}>
                     <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
 
               <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
-                <div className={`relative overflow-hidden ${
+                <div className={`relative overflow-hidden transition-all duration-500 ${
                   msg.role === 'user'
                     ? 'bg-[#0B6BCB] text-white rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
-                    : 'bg-[#0E1628] border border-white/10 border-r-2 border-r-[#E1251B] text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4'
+                    : `bg-gradient-to-b from-[#111f38] to-[#0E1628] border text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 ${
+                        isLiveAnswer
+                          ? 'border-[#E1251B]/40 shadow-[0_0_36px_rgba(225,37,27,0.22)]'
+                          : 'border-white/10 shadow-[0_10px_32px_rgba(0,0,0,0.45)]'
+                      }`
                 }`}>
+                  {/* Referee glow bar */}
+                  {msg.role !== 'user' && (
+                    <span aria-hidden className={`absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-[#E1251B] via-[#ff6b5e] to-[#E1251B]/30 transition-all duration-500 ${isLiveAnswer ? 'shadow-[0_0_16px_rgba(225,37,27,0.95)]' : 'shadow-[0_0_8px_rgba(225,37,27,0.5)]'}`} />
+                  )}
 
                   {/* Referee Tag */}
                   {msg.role !== 'user' && (
                     <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
-                      <span className="text-[10px] md:text-[11px] font-black text-slate-200 bg-white/[0.06] border border-white/15 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-[10px] md:text-[11px] font-black text-red-100 bg-[#E1251B]/15 border border-[#E1251B]/40 shadow-[0_0_12px_rgba(225,37,27,0.25)] px-2 py-0.5 rounded-full flex items-center gap-1">
                          {t('chat.refereeTag')}
                       </span>
                       {finalRenderText.includes("שריקה") && (
@@ -1818,7 +1828,7 @@ export default function PublicRulebookAI() {
                     {msg.role === 'user' ? (
                       <div className="whitespace-pre-wrap">{msg.text}</div>
                     ) : (
-                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-white prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
+                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -1843,8 +1853,9 @@ export default function PublicRulebookAI() {
                           showToast(t('chat.copied'));
                         }
                       }}
-                      className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-colors px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-white/25 cursor-pointer"
+                      className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#E1251B]/50 hover:bg-[#E1251B]/10 hover:shadow-[0_0_12px_rgba(225,37,27,0.25)] cursor-pointer flex items-center gap-1.5"
                     >
+                      <Copy className="w-3.5 h-3.5" />
                       {t('chat.copy')}
                     </button>
 
