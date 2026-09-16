@@ -28,7 +28,7 @@ import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ThinkingOrb } from 'thinking-orbs';
-import { thinkingOrbState } from '../lib/thinkingOrb';
+import ThinkIndicator from '../components/ThinkIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -1663,10 +1663,7 @@ export default function PublicRulebookAI() {
                   <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
                 </div>
                 <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2 max-w-[85%] md:max-w-[75%]">
-                  <ThinkingOrb state={thinkingOrbState(thinkContent)} size={64} theme="dark" />
-                  <span className="text-xs font-bold text-slate-300">
-                    {t('chat.thinking')}
-                  </span>
+                  <ThinkIndicator />
                   {thinkContent && (
                     <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {thinkContent}
