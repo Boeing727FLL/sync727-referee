@@ -27,6 +27,8 @@ import { ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@a
 import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ThinkingOrb } from 'thinking-orbs';
+import { thinkingOrbState } from '../lib/thinkingOrb';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -1662,13 +1664,9 @@ export default function PublicRulebookAI() {
                 </div>
                 <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
                   <div className="flex items-center gap-2">
+                    <ThinkingOrb state={thinkingOrbState(thinkContent)} size={20} theme="dark" />
                     <span className="text-xs font-bold text-slate-300">
                       {t('chat.thinking')}
-                    </span>
-                    <span className="flex items-center gap-1" aria-hidden>
-                      <span className="thinking-dot" />
-                      <span className="thinking-dot" />
-                      <span className="thinking-dot" />
                     </span>
                   </div>
                   {thinkContent && (
@@ -1792,13 +1790,9 @@ export default function PublicRulebookAI() {
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
             <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-2">
+              <ThinkingOrb state="connecting" size={20} theme="dark" />
               <span className="text-xs md:text-sm font-bold text-slate-300">
                 {t('chat.thinking2')}
-              </span>
-              <span className="flex items-center gap-1" aria-hidden>
-                <span className="thinking-dot" />
-                <span className="thinking-dot" />
-                <span className="thinking-dot" />
               </span>
             </div>
           </motion.div>
