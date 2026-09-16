@@ -1363,17 +1363,18 @@ export default function PublicRulebookAI() {
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
 
-  // Proactive feature announcements: on a fresh chat entry, surface the
-  // first unseen tutorial (once per session, never over other modals).
+  // Feature announcements play automatically on load: first unseen
+  // tutorial opens by itself once logged in and no other modal covers
+  // the screen (once per session; X stays closed until next load).
   useEffect(() => {
-    if (!heroActive || !sessionAlive || showIntro || showDisclaimer) return;
+    if (!sessionAlive || showIntro || showDisclaimer) return;
     if (tutorialAutoShownRef.current || activeTutorial || showTutorialList) return;
     const pending = TUTORIAL_ORDER.find(id => TUTORIALS[id] && !isTutorialDone(id));
     if (!pending) return;
     tutorialAutoShownRef.current = true;
-    const timer = setTimeout(() => setActiveTutorial(current => current ?? pending), 1600);
+    const timer = setTimeout(() => setActiveTutorial(current => current ?? pending), 1200);
     return () => clearTimeout(timer);
-  }, [heroActive, sessionAlive, showIntro, showDisclaimer, activeTutorial, showTutorialList]);  const heroIcons = [ListOrdered, Hand, Cog, Users];
+  }, [sessionAlive, showIntro, showDisclaimer, activeTutorial, showTutorialList]);  const heroIcons = [ListOrdered, Hand, Cog, Users];
 
   const playWhistleSound = () => {
     try {
