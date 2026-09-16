@@ -1720,13 +1720,13 @@ export default function PublicRulebookAI() {
           }
 
           if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0 && typewriterReady) {
-            typewriterTargetRef.current = finalRenderText.length;
+            typewriterTargetRef.current = finalRenderText.split(/(\s+)/).length;
           }
           const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterReady && typewriterCount < typewriterTargetRef.current;
           // Live-answer glow: bubble, glow bar and avatar light up while text streams.
           const isLiveAnswer = isTypewriting;
           if (isTypewriting) {
-            finalRenderText = finalRenderText.substring(0, typewriterCount);
+            finalRenderText = finalRenderText.split(/(\s+)/).slice(0, typewriterCount).join('');
           }
           // Before the gate opens, hide the last model message entirely so the
           // greeting never flashes fully before typing from the start.
