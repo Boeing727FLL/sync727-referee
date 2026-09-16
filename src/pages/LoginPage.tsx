@@ -160,7 +160,13 @@ export default function LoginPage() {
         const result = await signInWithEmailAndPassword(auth, emailVal, passwordVal);
         uid = result.user.uid;
         userEmail = result.user.email || emailVal;
-        displayName = (await getDoc(doc(db, 'users', uid))).data()?.name || emailVal.split('@')[0];
+        try {
+          // Fail-open: auth already succeeded — a Firestore denial here
+          // (outage, App Check) must not masquerade as a login failure.
+          displayName = (await getDoc(doc(db, 'users', uid))).data()?.name || emailVal.split('@')[0];
+        } catch {
+          displayName = emailVal.split('@')[0];
+        }
       }
 
       localStorage.setItem('auth_user', JSON.stringify({
