@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -649,6 +649,10 @@ export default function PublicRulebookAI() {
   const [input, setInput] = useState('');
   // WhatsApp-style reply: quoted answer context for a follow-up question.
   const [replyTo, setReplyTo] = useState<{ text: string } | null>(null);
+  // Attached user photos (max 3, images only, sent full-resolution).
+  // Preview URLs stay alive for the session so sent bubbles keep showing them.
+  const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
+  const attachInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
@@ -1132,6 +1136,31 @@ export default function PublicRulebookAI() {
   };
 
   /**
+   * Attach user photos (images only, max 3, full resolution — no downscale).
+   * Preview URLs are created here and live for the session (sent bubbles
+   * reuse them; nothing is revoked mid-session).
+   */
+  const MAX_ATTACHED_IMAGES = 3;
+  const handleAttachImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!picked.length) return;
+    const images = picked.filter(f => f.type.startsWith('image/'));
+    if (images.length < picked.length) showToast(t('chat.imagesOnly'));
+    if (!images.length) return;
+    if (attachedImages.length + images.length > MAX_ATTACHED_IMAGES) {
+      showToast(t('chat.maxImages'));
+    }
+    setAttachedImages(prev => {
+      const room = Math.max(0, MAX_ATTACHED_IMAGES - prev.length);
+      return [...prev, ...images.slice(0, room).map(file => ({ file, url: URL.createObjectURL(file) }))];
+    });
+  };
+  const removeAttachedImage = (url: string) => {
+    setAttachedImages(prev => prev.filter(a => a.url !== url));
+  };
+
+  /**
    * Send the input (or a tapped suggestion) to the referee: input guards,
    * anti-spam rate limits, then a streamed answer appended chunk by chunk.
    * On success the question is counted, logged, and may trigger the feedback
@@ -1140,7 +1169,7 @@ export default function PublicRulebookAI() {
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
 
-    if (!textToSend.trim() || isAiBusy) return;
+    if ((!textToSend.trim() && !attachedImages.length) || isAiBusy) return;
 
     // Never answer blind: with no rulebook files loaded at all, the model
     // would fabricate. Tell the user instead of guessing.
@@ -1202,6 +1231,11 @@ export default function PublicRulebookAI() {
       : null;
     const replyQuote = replyTo ? replyTo.text.slice(0, 220) : undefined;
 
+    // Attached photos travel to the model full-resolution and stay visible
+    // on the sent bubble via their session preview URLs.
+    const photosToSend = attachedImages;
+    setAttachedImages([]);
+
     setInput('');
     setReplyTo(null);
 
@@ -1210,7 +1244,8 @@ export default function PublicRulebookAI() {
       {
         role: 'user',
         text: userMessage,
-        ...(replyQuote ? { quote: replyQuote } : {})
+        ...(replyQuote ? { quote: replyQuote } : {}),
+        ...(photosToSend.length ? { files: photosToSend.map(a => ({ url: a.url, key: a.file.name })) } : {})
       }
     ]);
     
@@ -1231,7 +1266,7 @@ export default function PublicRulebookAI() {
         messages,
         activeRulebookFiles,
         seasonName,
-        [], // no files - text only
+        photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
         (chunkText) => {
           if (controller.signal.aborted) return;
           setMessages(prev => {
@@ -1940,6 +1975,42 @@ export default function PublicRulebookAI() {
           )}
         </AnimatePresence>
         <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
+          <AnimatePresence>
+            {attachedImages.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }}
+                exit={{ opacity: 0, height: 0, filter: 'blur(8px)' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+                className="overflow-hidden"
+              >
+                <div className="flex gap-2 px-1 pt-1 pb-1">
+                  <AnimatePresence>
+                    {attachedImages.map(a => (
+                      <motion.div
+                        key={a.url}
+                        layout
+                        initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }}
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                        className="relative w-16 h-16 shrink-0"
+                      >
+                        <img src={a.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/25 shadow-[0_4px_14px_rgba(0,0,0,0.45)]" />
+                        <button
+                          onClick={() => removeAttachedImage(a.url)}
+                          aria-label="הסר תמונה"
+                          className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-slate-950/90 border border-white/25 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <textarea
             ref={composerRef}
             rows={1}
@@ -1961,22 +2032,39 @@ export default function PublicRulebookAI() {
             <span className="hidden md:block text-[11px] text-slate-600 font-medium select-none">
               {t('chat.shiftHint')}
             </span>
+            <button
+              onClick={() => attachInputRef.current?.click()}
+              disabled={isAiBusy || isLearning}
+              aria-label={t('chat.attachImage')}
+              title={t('chat.attachImage')}
+              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ImagePlus className="w-5 h-5" />
+            </button>
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleAttachImages}
+            />
 
           {isAiBusy ? (
             <button
               onClick={handleStop}
               aria-label="עצור"
               title="עצור"
-              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#E1251B] hover:bg-[#C11E16] text-white active:scale-90 transition-all cursor-pointer"
+              className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#E1251B] hover:bg-[#C11E16] text-white active:scale-90 transition-all cursor-pointer"
             >
               <Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
             </button>
           ) : (
             <button
               onClick={() => handleSend()}
-              disabled={isAiBusy || isLearning || !input.trim()}
+              disabled={isAiBusy || isLearning || (!input.trim() && !attachedImages.length)}
               aria-label={t('chat.send')}
-              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_16px_rgba(250,204,21,0.35)] disabled:shadow-none"
+              className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_16px_rgba(250,204,21,0.35)] disabled:shadow-none"
             >
               <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
             </button>

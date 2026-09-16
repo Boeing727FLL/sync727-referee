@@ -33,6 +33,9 @@ type StreamEvent = {
 };
 
 const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' };
+// When user photos are attached, the self-critique re-sees them so visual
+// claims in the draft get verified against the actual photo.
+const PHOTO_CRITIQUE_ADDENDUM = '\n[ביקורת חזותית: צורפה תמונת משתמש (ראה מעלה, USER PHOTO). בדוק שהזיהוי החזותי בטיוטה — משימה, מיקום, מגע, ניקוד — תואם את מה שבאמת רואים בתמונה. אם לא, תקן.]';
 const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.6-flash', kind: 'interactions', config: INTERACTION_CONFIG },
   { name: 'gemini-3.5-flash', kind: 'interactions', config: INTERACTION_CONFIG },
@@ -461,6 +464,9 @@ export const GeminiService = {
       };
 
       let attachedRulebookImages = 0;
+      // User-photo parts (tracked separately so the critique can re-see them
+      // without resending the whole rulebook).
+      const userPhotoParts: LegacyPart[] = [];
       if (allFiles.length) {
         currentParts.push({ text: `Below are all the rulebook pages and user photos loaded into your context.
 They are structured in sequence:
@@ -474,6 +480,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         
         for (const file of allFiles) {
           if (signal?.aborted) return '';
+          const partsBefore = currentParts.length;
           const rawFileName = file.actualFile?.name || file.key || 'file';
           const fileName = rawFileName.split('/').pop() || rawFileName;
           const isPdf = file.actualFile?.type === 'application/pdf' || /\.pdf$/i.test(fileName) || file.url?.toLowerCase().endsWith('.pdf');
@@ -561,6 +568,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               if (file.isRulebook) attachedRulebookImages++;
             }
           }
+          if (isUserPhoto) userPhotoParts.push(...currentParts.slice(partsBefore));
         }
         currentParts.push({ text: "\n--- END OF FILES ---\n\n" });
       }
@@ -674,10 +682,19 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             const draftText = await callModel(client, modelEntry, interactionInput, false);
 
             let finalAnswer = draftText;
+            // The critique re-sees the user's photos (rulebook images stay
+            // out to avoid resending them) so visual claims get verified.
+            const critiquePhotoSteps: InteractionStep[] = userPhotoParts.length
+              ? [{ type: 'user_input', content: userPhotoParts.flatMap(toInteractionParts) }]
+              : [];
+            const critiquePrompt = userPhotoParts.length
+              ? CRITIQUE_PROMPT + PHOTO_CRITIQUE_ADDENDUM
+              : CRITIQUE_PROMPT;
             const critiqueInput: InteractionStep[] = [
               ...textOnlyInput,
+              ...critiquePhotoSteps,
               ...(draftText.trim() ? [textStep('model_output', draftText)] : []),
-              textStep('user_input', CRITIQUE_PROMPT),
+              textStep('user_input', critiquePrompt),
             ];
             const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
             const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
