@@ -169,11 +169,20 @@ export default function LoginPage() {
         }
       }
 
-      // Owner email verification: every login from this page (re)sends the
-      // Firebase verification email to the owner account. Best-effort and
-      // never blocks login (Firebase throttles repeated sends on its own).
+      // Owner gate: the owner account must verify its email. An unverified
+      // owner login is blocked with a verify prompt (the Firebase
+      // verification email is re-sent), and the session is signed out so
+      // no partial login persists. Regular accounts are unaffected.
       if (isOwnerEmail(userEmail) && auth.currentUser) {
-        try { await sendEmailVerification(auth.currentUser); } catch {}
+        try { await auth.currentUser.reload(); } catch {}
+        if (!auth.currentUser.emailVerified) {
+          try { await sendEmailVerification(auth.currentUser); } catch {}
+          try { await auth.signOut(); } catch {}
+          try { localStorage.removeItem('auth_user'); } catch {}
+          setLoading(false);
+          setError('חשבון הבעלים חייב אימות אימייל. נשלח אליך מייל אימות — אמת את האימייל ואז התחבר שוב.');
+          return false;
+        }
       }
 
       localStorage.setItem('auth_user', JSON.stringify({
