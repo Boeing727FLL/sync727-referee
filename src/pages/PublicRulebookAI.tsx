@@ -1659,12 +1659,11 @@ export default function PublicRulebookAI() {
           if (isThinking) {
             return (
               <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-                <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
-                  <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
+                <div className="w-16 h-16 md:w-[72px] md:h-[72px] shrink-0 flex items-center justify-center">
+                  <ThinkingOrb state={thinkingOrbState(thinkContent)} size={64} theme="dark" />
                 </div>
                 <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col gap-2.5 max-w-[85%] md:max-w-[75%]">
                   <div className="flex items-center gap-2">
-                    <ThinkingOrb state={thinkingOrbState(thinkContent)} size={20} theme="dark" />
                     <span className="text-xs font-bold text-slate-300">
                       {t('chat.thinking')}
                     </span>
@@ -1786,11 +1785,10 @@ export default function PublicRulebookAI() {
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
-              <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
+            <div className="w-16 h-16 md:w-[72px] md:h-[72px] shrink-0 flex items-center justify-center">
+              <ThinkingOrb state="connecting" size={64} theme="dark" />
             </div>
             <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex items-center gap-2">
-              <ThinkingOrb state="connecting" size={20} theme="dark" />
               <span className="text-xs md:text-sm font-bold text-slate-300">
                 {t('chat.thinking2')}
               </span>
