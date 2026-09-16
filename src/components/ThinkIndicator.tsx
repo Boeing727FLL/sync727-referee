@@ -33,11 +33,18 @@ export default function ThinkIndicator() {
     claimConnectingPhase() ? PHASES : PHASES.filter(p => p.orb !== 'connecting')
   );
   const [phase, setPhase] = useState(0);
+  // After the first pass, wrap to index 1 (not 0): the connecting phase is
+  // shown once when the question is sent and never loops back until the
+  // next question (which remounts with a fresh cycle).
+  const wrapTo = activePhases[0].orb === 'connecting' ? 1 : 0;
 
   useEffect(() => {
-    const id = setInterval(() => setPhase(p => (p + 1) % activePhases.length), PHASE_MS);
+    const id = setInterval(
+      () => setPhase(p => (p + 1 >= activePhases.length ? wrapTo : p + 1)),
+      PHASE_MS
+    );
     return () => clearInterval(id);
-  }, [activePhases.length]);
+  }, [activePhases.length, wrapTo]);
 
   const current = activePhases[phase];
   return (
