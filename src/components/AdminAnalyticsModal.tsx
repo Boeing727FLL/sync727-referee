@@ -2,9 +2,9 @@
  * AdminAnalyticsModal — owner-only floating dashboard (floating window).
  *
  * WHAT: four live tiles (questions asked, registered users, online now,
- * per-user average) plus two actions: open the feedback viewer and reset
- * the question counters. Opens from Settings; the feedback viewer opens
- * on top of it. The chat underneath never unmounts.
+ * per-user average) plus resetting the question counters. Opens from
+ * Settings. The feedback viewer lives in Settings (owner user menu).
+ * The chat underneath never unmounts.
  *
  * ACCESS: the whole body gates on the owner account. Everyone else sees
  * the lock screen. Counter resets additionally need a second tap.
@@ -15,10 +15,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck, MessageSquareHeart } from 'lucide-react';
+import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
 import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
-import FeedbackAdminModal from './FeedbackAdminModal';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,14 +115,12 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [showFeedbackAdmin, setShowFeedbackAdmin] = useState(false);
 
   // Fresh gate on every opening; online presence streams regardless.
   useEffect(() => {
     if (!isOpen) {
       setUnlocked(false);
       setConfirmReset(false);
-      setShowFeedbackAdmin(false);
       return;
     }
     setUnlocked(isCurrentUserOwner());
@@ -205,10 +202,6 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                     />
                   </div>
                   <div className="flex gap-2.5">
-                    <ActionButton tone="green" onClick={() => setShowFeedbackAdmin(true)}>
-                      <MessageSquareHeart className="w-4 h-4" />
-                      פידבקים
-                    </ActionButton>
                     <ActionButton tone="red" onClick={handleReset} disabled={resetting}>
                       <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
                       {confirmReset ? 'לחצו שוב לאישור' : 'איפוס ספירה'}
@@ -221,7 +214,6 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
         </motion.div>
       )}
     </AnimatePresence>
-    <FeedbackAdminModal isOpen={showFeedbackAdmin} onClose={() => setShowFeedbackAdmin(false)} />
     </>
   );
 }
