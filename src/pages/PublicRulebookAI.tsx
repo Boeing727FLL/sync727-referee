@@ -188,8 +188,19 @@ export default function PublicRulebookAI() {
     } catch {}
     return null;
   }, [user, hasGoogleToken]);
-  const currentTeamMember = useMemo(() => {
-    const firebaseUser = auth.currentUser;
+  // Personal time-of-day greeting for the hero. Shown only with a real
+  // name — generic fallbacks ('משתמש', email fragments) stay silent.
+  const heroGreeting = useMemo(() => {
+    const raw = (displayUser as any)?.name || '';
+    const first = String(raw).trim().split(/\s+/)[0] || '';
+    if (!first || first === 'משתמש' || first === 'חבר קבוצה' || /[@.]/.test(first)) return null;
+    const h = new Date().getHours();
+    const key = h >= 5 && h < 12 ? 'chat.greet_morning'
+      : h >= 12 && h < 17 ? 'chat.greet_afternoon'
+      : h >= 17 && h < 23 ? 'chat.greet_evening' : 'chat.greet_night';
+    return t(key).replace('{name}', first);
+  }, [displayUser, t, language]);
+  const currentTeamMember = useMemo(() => {    const firebaseUser = auth.currentUser;
     if (!user && !firebaseUser) return null;
     return {
       uid: user?.uid || firebaseUser?.uid || '',
@@ -611,6 +622,15 @@ export default function PublicRulebookAI() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestFinishedRef = useRef(false);
   const stopHandledRef = useRef(false);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  // Grow the composer with its content (up to 5 lines), shrink back on send.
+  const autoresizeComposer = () => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 132) + 'px';
+  };
+  useEffect(() => { autoresizeComposer(); }, [input]);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -1591,6 +1611,11 @@ export default function PublicRulebookAI() {
             <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC]" dir="ltr">
               FIRST&nbsp;LEGO&nbsp;LEAGUE&nbsp;·&nbsp;VIRTUAL&nbsp;REFEREE
             </p>
+            {heroGreeting && (
+              <p className="text-sm md:text-base font-bold text-amber-300/90 mt-3">
+                {heroGreeting}
+              </p>
+            )}
             <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-2">
               {t('intro.subtitle')}
             </h2>
@@ -1793,28 +1818,37 @@ export default function PublicRulebookAI() {
         </div>
       </div>
 
-      {/* Input Area - floating AI pill */}
+      {/* Input Area - AI composer */}
       <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <div className="w-full flex items-center gap-2 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] transition-colors">
-          <input
-            type="text"
+        <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
+          <textarea
+            ref={composerRef}
+            rows={1}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onChange={(e) => { setInput(e.target.value); autoresizeComposer(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !(e.nativeEvent as any).isComposing) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
             disabled={isAiBusy || isLearning}
-            style={{ flex: 1, minWidth: 0 }}
-            className="bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium transition-all disabled:opacity-50"
+            aria-label={t('chat.placeholder2')}
+            className="w-full bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium disabled:opacity-50 resize-none overflow-y-auto"
+            style={{ minHeight: 44, maxHeight: 132 }}
           />
-
+          <div className="flex items-center gap-2 px-1 pb-0.5">
+            <span className="hidden md:block text-[11px] text-slate-600 font-medium select-none">
+              {t('chat.shiftHint')}
+            </span>
 
           {isAiBusy ? (
             <button
               onClick={handleStop}
-              style={{ flexShrink: 0 }}
               aria-label="עצור"
               title="עצור"
-              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-[#E1251B] hover:bg-[#C11E16] text-white active:scale-95 transition-colors cursor-pointer"
+              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#E1251B] hover:bg-[#C11E16] text-white active:scale-90 transition-all cursor-pointer"
             >
               <Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
             </button>
@@ -1822,13 +1856,13 @@ export default function PublicRulebookAI() {
             <button
               onClick={() => handleSend()}
               disabled={isAiBusy || isLearning || !input.trim()}
-              style={{ flexShrink: 0 }}
               aria-label={t('chat.send')}
-              className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-95 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_16px_rgba(250,204,21,0.35)] disabled:shadow-none"
             >
               <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
             </button>
           )}
+          </div>
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-2">
           <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
