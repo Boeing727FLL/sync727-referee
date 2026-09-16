@@ -1422,11 +1422,13 @@ export default function PublicRulebookAI() {
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
                 {(!isLearning && seasonName === 'UNKNOWN') ? null : (
-                  <span className="rounded-full p-px bg-gradient-to-l from-emerald-300/70 via-teal-400/25 to-cyan-300/70 shadow-[0_0_12px_rgba(45,212,191,0.3)] whitespace-nowrap">
-                    <span className="flex items-center gap-1.5 rounded-full bg-[#0B1526] px-2 py-px">
-                      <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse shadow-[0_0_6px_rgba(250,204,21,0.9)]' : 'bg-emerald-300 animate-pulse shadow-[0_0_6px_rgba(110,231,183,0.9)]'}`} />
-                      <span className="text-[10px] font-black text-slate-100">
-                        {isLearning ? t('chat.updating') : seasonName}
+                  <span className="relative whitespace-nowrap">
+                    <span aria-hidden className={`absolute -inset-1 rounded-full blur-md ${isLearning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40'}`} />
+                    <span className={`relative block rounded-full p-px ${isLearning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80'}`}>
+                      <span className="block rounded-full bg-[#0B1526] px-2 py-px">
+                        <span className="text-[10px] font-black text-slate-100">
+                          {isLearning ? t('chat.updating') : seasonName}
+                        </span>
                       </span>
                     </span>
                   </span>
@@ -1437,12 +1439,14 @@ export default function PublicRulebookAI() {
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
             {(!isLearning && seasonName === 'UNKNOWN') ? null : (
-              <div className="rounded-full p-px bg-gradient-to-l from-emerald-300/70 via-teal-400/25 to-cyan-300/70 shadow-[0_0_18px_rgba(45,212,191,0.28)] whitespace-nowrap">
-                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B1526]">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${isLearning ? 'bg-[#FFC400] animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.9)]' : 'bg-emerald-300 animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.9)]'}`} />
-                  <span className={`text-sm font-black text-slate-100 ${isLearning ? '' : 'tracking-[0.18em]'}`} dir="ltr">
-                    {isLearning ? t('chat.updating') : seasonName}
-                  </span>
+              <div className="relative whitespace-nowrap">
+                <div aria-hidden className={`absolute -inset-1 rounded-full blur-md ${isLearning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40'}`} />
+                <div className={`relative rounded-full p-px ${isLearning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80'}`}>
+                  <div className="rounded-full bg-[#0B1526] px-4 py-1.5">
+                    <span className={`text-sm font-black text-slate-100 ${isLearning ? '' : 'tracking-[0.18em]'}`} dir="ltr">
+                      {isLearning ? t('chat.updating') : seasonName}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
