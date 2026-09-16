@@ -9,11 +9,14 @@
  * storage is unavailable (it simply shows again).
  */
 export interface TutorialStepDef {
-  icon: 'photo' | 'tips' | 'terms';
+  icon: 'photo' | 'tips' | 'terms' | 'team';
   titleKey: string;
-  bodyKey: string;
+  bodyKey?: string;
   /** Last step doubles as the T&C gate: only "accept" completes it. */
   terms?: boolean;
+  /** Interactive step: primary button runs a named in-app action. */
+  ctaKey?: string;
+  ctaAction?: 'open-team';
 }
 
 export interface TutorialDef {
@@ -32,7 +35,19 @@ export const TUTORIALS: Record<string, TutorialDef> = {
       { icon: 'terms', titleKey: 'tut.photo.title3', bodyKey: 'tut.photo.tc', terms: true },
     ],
   },
+  'team-space': {
+    id: 'team-space',
+    version: 1,
+    steps: [
+      { icon: 'team', titleKey: 'tut.team.title1', bodyKey: 'tut.team.body1' },
+      { icon: 'tips', titleKey: 'tut.team.title2', bodyKey: 'tut.team.body2' },
+      { icon: 'team', titleKey: 'tut.team.title3', ctaKey: 'tut.team.cta', ctaAction: 'open-team' },
+    ],
+  },
 };
+
+/** Proactive order: first unseen tutorial wins. */
+export const TUTORIAL_ORDER = ['photo-questions', 'team-space'];
 
 const KEY = 'referee_tutorials_v1';
 

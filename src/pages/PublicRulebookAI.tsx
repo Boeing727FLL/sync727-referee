@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus, GraduationCap } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -29,7 +29,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkIndicator from '../components/ThinkIndicator';
 import TutorialModal from '../components/TutorialModal';
-import { TUTORIALS, isTutorialDone, completeTutorial, resetTutorials } from '../lib/tutorials';
+import TutorialListModal from '../components/TutorialListModal';
+import { TUTORIALS, TUTORIAL_ORDER, isTutorialDone, completeTutorial, resetTutorials } from '../lib/tutorials';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import { useAuth } from '../hooks/useAuth';
@@ -657,6 +658,8 @@ export default function PublicRulebookAI() {
   const attachInputRef = useRef<HTMLInputElement | null>(null);
   // Active feature-tutorial overlay (null when none open).
   const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
+  const [showTutorialList, setShowTutorialList] = useState(false);
+  const tutorialAutoShownRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
@@ -1359,7 +1362,18 @@ export default function PublicRulebookAI() {
     t('chat.suggestion4')
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
-  const heroIcons = [ListOrdered, Hand, Cog, Users];
+
+  // Proactive feature announcements: on a fresh chat entry, surface the
+  // first unseen tutorial (once per session, never over other modals).
+  useEffect(() => {
+    if (!heroActive || !sessionAlive || showIntro || showDisclaimer) return;
+    if (tutorialAutoShownRef.current || activeTutorial || showTutorialList) return;
+    const pending = TUTORIAL_ORDER.find(id => TUTORIALS[id] && !isTutorialDone(id));
+    if (!pending) return;
+    tutorialAutoShownRef.current = true;
+    const timer = setTimeout(() => setActiveTutorial(current => current ?? pending), 1600);
+    return () => clearTimeout(timer);
+  }, [heroActive, sessionAlive, showIntro, showDisclaimer, activeTutorial, showTutorialList]);  const heroIcons = [ListOrdered, Hand, Cog, Users];
 
   const playWhistleSound = () => {
     try {
@@ -1632,6 +1646,13 @@ export default function PublicRulebookAI() {
                         >
                           <ScrollText className="w-4 h-4 text-slate-500" />
                           יומן שופטים
+                        </button>
+                        <button
+                          onClick={() => { setShowUserMenu(false); setShowTutorialList(true); }}
+                          className={MENU_ROW_CLASS}
+                        >
+                          <GraduationCap className="w-4 h-4 text-slate-500" />
+                          <span className="flex-1">{t('tut.menu')}</span>
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
@@ -2231,6 +2252,11 @@ export default function PublicRulebookAI() {
         onResetTutorials={() => { resetTutorials(); showToast('המדריכים אופסו ויוצגו שוב'); }}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+      <TutorialListModal
+        isOpen={showTutorialList}
+        onClose={() => setShowTutorialList(false)}
+        onWatch={(id) => { setShowTutorialList(false); setActiveTutorial(id); }}
+      />
       <AnimatePresence>
         {activeTutorial && TUTORIALS[activeTutorial] && (
           <TutorialModal
@@ -2239,6 +2265,13 @@ export default function PublicRulebookAI() {
               completeTutorial(activeTutorial);
               setActiveTutorial(null);
               if (activeTutorial === 'photo-questions') attachInputRef.current?.click();
+            }}
+            onAction={(action) => {
+              if (action === 'open-team') {
+                completeTutorial(activeTutorial);
+                setActiveTutorial(null);
+                setShowTeamWorkspace(true);
+              }
             }}
             onClose={() => setActiveTutorial(null)}
           />

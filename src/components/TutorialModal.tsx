@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ImagePlus, Lightbulb, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, ImagePlus, Lightbulb, ShieldCheck, Users, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import type { TutorialDef } from '../lib/tutorials';
 
@@ -14,15 +14,17 @@ const STEP_ICONS = {
   photo: ImagePlus,
   tips: Lightbulb,
   terms: ShieldCheck,
+  team: Users,
 } as const;
 
 interface TutorialModalProps {
   tutorial: TutorialDef;
   onDone: () => void;
   onClose: () => void;
+  onAction?: (action: 'open-team') => void;
 }
 
-export default function TutorialModal({ tutorial, onDone, onClose }: TutorialModalProps) {
+export default function TutorialModal({ tutorial, onDone, onClose, onAction }: TutorialModalProps) {
   const { t, isRTL } = useLanguage();
   const [step, setStep] = useState(0);
   const total = tutorial.steps.length;
@@ -81,9 +83,11 @@ export default function TutorialModal({ tutorial, onDone, onClose }: TutorialMod
                 <Icon className="w-7 h-7 text-[#FFC400]" />
               </span>
               <h3 className="text-lg font-black text-white mt-3">{t(current.titleKey)}</h3>
-              <p className="text-sm text-slate-300 font-medium leading-relaxed mt-1.5 whitespace-pre-wrap">
-                {t(current.bodyKey)}
-              </p>
+              {current.bodyKey && (
+                <p className="text-sm text-slate-300 font-medium leading-relaxed mt-1.5 whitespace-pre-wrap">
+                  {t(current.bodyKey)}
+                </p>
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -98,11 +102,15 @@ export default function TutorialModal({ tutorial, onDone, onClose }: TutorialMod
               </button>
             )}
             <button
-              onClick={() => (last ? onDone() : setStep(s => s + 1))}
+              onClick={() => {
+                if (current.ctaKey && current.ctaAction && onAction) onAction(current.ctaAction);
+                else if (last) onDone();
+                else setStep(s => s + 1);
+              }}
               className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black text-sm transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_4px_16px_rgba(250,204,21,0.3)]"
             >
-              {last ? t('tut.accept') : t('tut.next')}
-              {!last && <NextIcon className="w-4 h-4" />}
+              {current.ctaKey ? t(current.ctaKey) : last ? t('tut.accept') : t('tut.next')}
+              {!last && !current.ctaKey && <NextIcon className="w-4 h-4" />}
             </button>
           </div>
         </div>
