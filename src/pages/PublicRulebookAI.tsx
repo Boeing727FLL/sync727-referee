@@ -380,6 +380,19 @@ export default function PublicRulebookAI() {
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
   
+  // Persist the Firebase-restored profile photo: the chat bubbles read
+  // localStorage, which doesn't roam across devices — without this sync a
+  // Google photo visible in the user menu never reaches the bubbles on a
+  // fresh device.
+  useEffect(() => {
+    try {
+      const pic = (displayUser as any)?.picture || '';
+      if (pic && localStorage.getItem('user_picture') !== pic) {
+        localStorage.setItem('user_picture', pic);
+      }
+    } catch {}
+  }, [displayUser]);
+
   useEffect(() => {
     const token = localStorage.getItem('google_access_token');
     if (!token) return;
@@ -1711,8 +1724,8 @@ export default function PublicRulebookAI() {
               {/* Referee or User Avatar */}
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
                 {msg.role === 'user' ? (
-                  (user?.picture || localStorage.getItem('user_picture')) ? (
-                    <img src={user?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
+                  (user?.picture || displayUser?.picture || localStorage.getItem('user_picture')) ? (
+                    <img src={user?.picture || displayUser?.picture || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
                   ) : (
                     <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center">
                       <span className="text-xs md:text-sm font-black text-white">
