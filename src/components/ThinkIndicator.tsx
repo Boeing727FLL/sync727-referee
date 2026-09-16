@@ -47,9 +47,9 @@ export default function ThinkIndicator() {
   }, [activePhases.length, wrapTo]);
 
   const current = activePhases[phase];
-  // The label is always plain "thinking" — only the connecting phase keeps
-  // its own caption. The orb animations still cycle through all states.
-  const label = current.orb === 'connecting' ? t('chat.phase_connecting') : t('chat.thinking2');
+  // No static caption at all — only the orb animations. The connecting
+  // phase (once per question) keeps its own caption.
+  const isConnecting = current.orb === 'connecting';
   return (
     <>
       <div className="grid">
@@ -68,16 +68,18 @@ export default function ThinkIndicator() {
       </div>
       <div className="grid w-full">
         <AnimatePresence initial={false}>
-          <motion.span
-            key={current.orb === 'connecting' ? 'label-connecting' : 'label-thinking'}
-            className="col-start-1 row-start-1 text-xs font-bold text-slate-300 text-center"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.35, ease: 'easeInOut' }}
-          >
-            {label}
-          </motion.span>
+          {isConnecting && (
+            <motion.span
+              key="label-connecting"
+              className="col-start-1 row-start-1 text-xs font-bold text-slate-300 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+            >
+              {t('chat.phase_connecting')}
+            </motion.span>
+          )}
         </AnimatePresence>
       </div>
     </>
