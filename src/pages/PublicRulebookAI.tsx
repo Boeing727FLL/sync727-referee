@@ -28,6 +28,8 @@ import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkIndicator from '../components/ThinkIndicator';
+import TutorialModal from '../components/TutorialModal';
+import { TUTORIALS, isTutorialDone, completeTutorial, resetTutorials } from '../lib/tutorials';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import { useAuth } from '../hooks/useAuth';
@@ -653,6 +655,8 @@ export default function PublicRulebookAI() {
   // Preview URLs stay alive for the session so sent bubbles keep showing them.
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
+  // Active feature-tutorial overlay (null when none open).
+  const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
@@ -2033,7 +2037,12 @@ export default function PublicRulebookAI() {
               {t('chat.shiftHint')}
             </span>
             <button
-              onClick={() => attachInputRef.current?.click()}
+              onClick={() => {
+                // First-timers get the photo tutorial (with T&C); afterwards
+                // the picker opens directly.
+                if (!isTutorialDone('photo-questions')) setActiveTutorial('photo-questions');
+                else attachInputRef.current?.click();
+              }}
               disabled={isAiBusy || isLearning}
               aria-label={t('chat.attachImage')}
               title={t('chat.attachImage')}
@@ -2219,8 +2228,22 @@ export default function PublicRulebookAI() {
         onOpenCorrections={() => setShowJudgeCorrections(true)}
         onOpenFeedback={() => setShowSettingsFeedback(true)}
         onOpenPrivacy={() => setShowPrivacy(true)}
+        onResetTutorials={() => { resetTutorials(); showToast('המדריכים אופסו ויוצגו שוב'); }}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+      <AnimatePresence>
+        {activeTutorial && TUTORIALS[activeTutorial] && (
+          <TutorialModal
+            tutorial={TUTORIALS[activeTutorial]}
+            onDone={() => {
+              completeTutorial(activeTutorial);
+              setActiveTutorial(null);
+              if (activeTutorial === 'photo-questions') attachInputRef.current?.click();
+            }}
+            onClose={() => setActiveTutorial(null)}
+          />
+        )}
+      </AnimatePresence>
       <TeamWorkspaceModal
         isOpen={showTeamWorkspace}
         onClose={() => setShowTeamWorkspace(false)}

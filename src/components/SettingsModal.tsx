@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Settings, Wrench, Upload, BarChart3, Database,
-  MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft,
+  MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft, GraduationCap,
 } from 'lucide-react';
 import {
   subscribeMaintenance, setMaintenance, resetQuestions, resetFeedbackForAll,
@@ -44,6 +44,7 @@ interface SettingsModalProps {
   onOpenCorrections: () => void;
   onOpenFeedback: () => void;
   onOpenPrivacy: () => void;
+  onResetTutorials: () => void;
 }
 
 /** Accent color of a row's icon chip. */
@@ -219,7 +220,7 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
 // ---------------------------------------------------------------------------
 
 export default function SettingsModal({
-  isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenCorrections, onOpenFeedback, onOpenPrivacy,
+  isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenCorrections, onOpenFeedback, onOpenPrivacy, onResetTutorials,
 }: SettingsModalProps) {
   const [owner] = useState(() => isCurrentUserOwner());
   const [maintenance, setMaintenanceState] = useState(false);
@@ -393,6 +394,13 @@ export default function SettingsModal({
                         label={fbWorking ? 'מאפס...' : 'איפוס טיימר פידבק לכולם'}
                         sub={fbMsg || 'הטופס יקפוץ שוב אצל כולם'}
                         onClick={handleResetFeedbackTimer}
+                      />
+                      <RowButton
+                        icon={<GraduationCap className="w-4 h-4" />}
+                        tint="slate"
+                        label="איפוס מדריכים"
+                        sub="מדריכי הפיצ׳רים יוצגו שוב"
+                        onClick={onResetTutorials}
                       />
                     </div>
                   </div>
