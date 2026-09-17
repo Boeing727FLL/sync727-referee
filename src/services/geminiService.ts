@@ -283,29 +283,47 @@ function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: st
 }
 
 async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<PageImage[]> {
-  const pages: PageImage[] = [];
-
+  let pageNumbers: number[] = [];
   try {
-    const pageNumbers = await listRulebookImagePages(fileName);
-    for (const pageIndex of pageNumbers) {
-      if (signal?.aborted) break;
+    pageNumbers = await listRulebookImagePages(fileName);
+  } catch (error) {
+    console.warn('Could not list rendered R2 pages; using PDF fallback:', error);
+    return [];
+  }
+  // Bounded parallel fetch (order preserved) — much faster than serial.
+  const results = await mapPool(pageNumbers, 6, async (pageIndex) => {
+    if (signal?.aborted) return null;
+    try {
       const encodedFileName = encodeURIComponent(fileName);
       const imageUrl = `${R2_PUBLIC_URL}/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
       const response = await fetch(imageUrl, { signal });
-      if (!response.ok) continue;
+      if (!response.ok) return null;
       const imageData = await response.arrayBuffer();
       const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
         new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
-      if (isHtmlError) continue;
+      if (isHtmlError) return null;
 
       const blob = new Blob([imageData], { type: 'image/jpeg' });
-      pages.push({ pageIndex, data: await fileToBase64(blob) });
+      return { pageIndex, data: await fileToBase64(blob) };
+    } catch {
+      return null;
     }
-  } catch (error) {
-    console.warn('Could not list rendered R2 pages; using PDF fallback:', error);
-  }
+  });
+  return results.filter((p): p is PageImage => p !== null);
+}
 
-  return pages;
+/** Bounded-concurrency map that preserves input order. */
+async function mapPool<T, R>(items: T[], size: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = new Array(Math.min(Math.max(size, 1), Math.max(items.length, 1))).fill(0).map(async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
 }
 
 // --- Live referee rulebook context ---
@@ -325,7 +343,9 @@ export async function getRulebookLiveParts(files: RulebookFile[]): Promise<LiveC
   parts.push({ text: `Below are the official rulebook pages loaded into your context for this voice session.
 Official page images are prefixed with '--- RULEBOOK PAGE ... ---' (or '--- UPDATES PAGE ... ---' for the official updates document, which overrides the base rulebook). Do NOT judge these as the user's query! Use them ONLY as a dictionary of rules.\n\n` });
   let img = 1;
-  for (const file of files) {
+  // Load every file's pages in parallel (bounded); assemble serially in
+  // file order so numbering and prefixes stay deterministic.
+  const perFile = await mapPool(files, 3, async (file) => {
     const raw = file.name || file.url || 'file';
     const fileName = raw.split('/').pop() || raw;
     let pages = await fetchR2ImageSet(fileName);
@@ -343,6 +363,9 @@ Official page images are prefixed with '--- RULEBOOK PAGE ... ---' (or '--- UPDA
         console.error(`Live rulebook fallback failed for ${fileName}:`, err);
       }
     }
+    return { fileName, pages };
+  });
+  for (const { fileName, pages } of perFile) {
     for (const page of pages) {
       const prefix = /update/i.test(fileName)
         ? `Image ${img++}:\n--- UPDATES PAGE (Official updates document - overrides the base rulebook) | FILE: ${fileName} | PAGE: ${page.pageIndex} ---\n`

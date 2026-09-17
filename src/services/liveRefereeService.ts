@@ -287,16 +287,16 @@ export class LiveRefereeSession {
       for (let i = 0; i < parts.length; i += CHUNK_PARTS) {
         if (this.stopped || !this.session) return;
         const slice = parts.slice(i, i + CHUNK_PARTS);
-        const liveParts = [];
-        for (const p of slice) {
+        // Downscale the whole chunk in parallel, then send as one turn.
+        const liveParts = await Promise.all(slice.map(async (p) => {
           if (p.inlineData) {
-            liveParts.push({
+            return {
               inlineData: { data: await downscaleJpegBase64(p.inlineData.data), mimeType: p.inlineData.mimeType },
-            });
-          } else if (p.text) {
-            liveParts.push({ text: p.text });
+            };
           }
-        }
+          return { text: p.text ?? '' };
+        }));
+        if (this.stopped || !this.session) return;
         try {
           this.session.sendClientContent({ turns: [{ role: 'user', parts: liveParts }] });
         } catch {
