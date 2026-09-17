@@ -22,6 +22,8 @@ import {
 interface LiveRefereeModalProps {
   isOpen: boolean;
   uid: string;
+  files: Array<{ name: string; url: string }>;
+  season: string;
   onClose: () => void;
 }
 
@@ -34,6 +36,7 @@ function fmtClock(ms: number): string {
 
 const STATUS_DOT: Record<LiveStatus, string> = {
   connecting: 'bg-amber-300',
+  'loading-rules': 'bg-amber-300',
   live: 'bg-emerald-300',
   listening: 'bg-sky-300',
   speaking: 'bg-[#FFC400]',
@@ -41,7 +44,7 @@ const STATUS_DOT: Record<LiveStatus, string> = {
   ended: 'bg-slate-500',
 };
 
-export default function LiveRefereeModal({ isOpen, uid, onClose }: LiveRefereeModalProps) {
+export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }: LiveRefereeModalProps) {
   const { t, isRTL } = useLanguage();
   const [phase, setPhase] = useState<Phase>('intro');
   const [status, setStatus] = useState<LiveStatus>('connecting');
@@ -136,7 +139,7 @@ export default function LiveRefereeModal({ isOpen, uid, onClose }: LiveRefereeMo
     });
     sessionRef.current = session;
     try {
-      await session.start();
+      await session.start({ files, season });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -166,6 +169,7 @@ export default function LiveRefereeModal({ isOpen, uid, onClose }: LiveRefereeMo
 
   const statusKey: Record<LiveStatus, string> = {
     connecting: 'live.connecting',
+    'loading-rules': 'live.loadingRules',
     live: 'live.live',
     listening: 'live.listening',
     speaking: 'live.speaking',
@@ -258,6 +262,7 @@ export default function LiveRefereeModal({ isOpen, uid, onClose }: LiveRefereeMo
                     <span className="text-xs font-black text-slate-200 flex items-center gap-1.5">
                       {status === 'speaking' && <Volume2 className="w-3.5 h-3.5" />}
                       {status === 'thinking' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {status === 'loading-rules' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                       {status === 'live' && <Radio className="w-3.5 h-3.5" />}
                       {status === 'listening' && <Mic className="w-3.5 h-3.5" />}
                       {t(statusKey[status])}

@@ -24,8 +24,16 @@ import {
   type LiveServerMessage,
   type Session,
 } from '@google/genai';
-import { getNextApiKey } from './geminiService';
+import { getNextApiKey, getRefereeCorrections, getRulebookLiveParts } from './geminiService';
 import { LIVE_MAX_SESSION_MS } from '../lib/liveQuota';
+
+/** Rulebook files the main chat loaded (passed in from the page). */
+export interface LiveRulebookFile { name: string; url: string; }
+
+export interface LiveStartOptions {
+  files?: LiveRulebookFile[];
+  season?: string;
+}
 
 /** Live voice model with background reasoning. */
 export const LIVE_MODEL = 'models/gemini-3.8-live-extended-thinking';
@@ -45,10 +53,18 @@ const REFEREE_SYSTEM_INSTRUCTION = [
 ].join('\n');
 
 /** Single config object: locked into the token AND used on connect. */
-function buildLiveConfig(): LiveConnectConfig {
+function buildLiveConfig(season?: string, corrections?: string): LiveConnectConfig {
+  let instruction = REFEREE_SYSTEM_INSTRUCTION;
+  if (season && season !== 'UNKNOWN') {
+    instruction += `\n\nCurrent season: ${season}. Prefer its missions and scoring.`;
+  }
+  if (corrections && corrections.trim()) {
+    instruction += `\n\nOwner corrections (override everything above):\n${corrections.trim()}`;
+  }
+  instruction += '\n\nThe official rulebook page images arrive as your first turn, marked --- RULEBOOK PAGE --- / --- UPDATES PAGE ---. Treat them as your rule dictionary.';
   return {
     responseModalities: [Modality.AUDIO],
-    systemInstruction: REFEREE_SYSTEM_INSTRUCTION,
+    systemInstruction: instruction,
     mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
     thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
     speechConfig: {
@@ -60,7 +76,7 @@ function buildLiveConfig(): LiveConnectConfig {
 }
 
 /** Mint a single-use ephemeral Live token from one vault key. */
-async function mintLiveToken(): Promise<string> {
+async function mintLiveToken(lockedConfig: LiveConnectConfig): Promise<string> {
   let vaultKey: string;
   try {
     vaultKey = await getNextApiKey();
@@ -73,11 +89,44 @@ async function mintLiveToken(): Promise<string> {
       uses: 1,
       expireTime: new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
       newSessionExpireTime: new Date(Date.now() + TOKEN_CONNECT_WINDOW_MS).toISOString(),
-      liveConnectConstraints: { model: LIVE_MODEL, config: buildLiveConfig() },
+      liveConnectConstraints: { model: LIVE_MODEL, config: lockedConfig },
     },
   });
   if (!token?.name) throw new Error('יצירת חיבור הלייב נכשלה. נסו שוב.');
   return token.name;
+}
+
+/**
+ * Downscale a rulebook JPEG so the opening turn stays light on the wire.
+ * At MEDIUM media resolution (256 tokens/image) anything above ~1024px is
+ * wasted bytes; readability of rules text is preserved.
+ */
+function downscaleJpegBase64(b64: string, maxDim = 1024, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          if (scale >= 1) { resolve(b64); return; }
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(b64); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const url = canvas.toDataURL('image/jpeg', quality);
+          resolve(url.includes(',') ? url.split(',')[1] : b64);
+        } catch {
+          resolve(b64);
+        }
+      };
+      img.onerror = () => resolve(b64);
+      img.src = `data:image/jpeg;base64,${b64}`;
+    } catch {
+      resolve(b64);
+    }
+  });
 }
 
 function b64encode(bytes: Uint8Array): string {
@@ -106,7 +155,7 @@ function downsampleTo16k(input: Float32Array, inputRate: number): Int16Array {
   return out;
 }
 
-export type LiveStatus = 'connecting' | 'live' | 'listening' | 'speaking' | 'thinking' | 'ended';
+export type LiveStatus = 'connecting' | 'loading-rules' | 'live' | 'listening' | 'speaking' | 'thinking' | 'ended';
 export type LiveEndReason = 'user' | 'timeout' | 'error' | 'closed';
 
 export interface LiveCallbacks {
@@ -148,6 +197,8 @@ export class LiveRefereeSession {
   private speakResetTimer: ReturnType<typeof setTimeout> | null = null;
   private levelRaf = 0;
   private lastStatus: LiveStatus = 'connecting';
+  private startOpts: LiveStartOptions = {};
+  private liveConfig: LiveConnectConfig | null = null;
 
   constructor(cb: LiveCallbacks) {
     this.cb = cb;
@@ -159,8 +210,9 @@ export class LiveRefereeSession {
     this.cb.onStatus(s);
   }
 
-  /** Open mic + mint token + connect. Must be called from a user gesture. */
-  async start(): Promise<void> {
+  /** Open mic + lock config + mint token + connect. Must be called from a user gesture. */
+  async start(opts: LiveStartOptions = {}): Promise<void> {
+    this.startOpts = opts;
     this.setStatus('connecting');
     // 1. Microphone first (needs the user gesture + permission).
     let stream: MediaStream;
@@ -172,16 +224,22 @@ export class LiveRefereeSession {
       throw new Error(friendlyError(err));
     }
     this.micStream = stream;
-    // 2. Mint single-use token, then connect Live with it.
-    const tokenName = await mintLiveToken();
+    // 2. Build the locked referee config (season + owner corrections baked in).
+    let corrections = '';
+    try {
+      corrections = (await getRefereeCorrections()).trim();
+    } catch { /* corrections are best-effort */ }
+    this.liveConfig = buildLiveConfig(opts.season, corrections);
+    // 3. Mint single-use token, then connect Live with it.
+    const tokenName = await mintLiveToken(this.liveConfig);
     if (this.stopped) { stream.getTracks().forEach(t => t.stop()); return; }
     const ai = new GoogleGenAI({ apiKey: tokenName, httpOptions: { apiVersion: 'v1alpha' } });
     try {
       this.session = await ai.live.connect({
         model: LIVE_MODEL,
-        config: buildLiveConfig(),
+        config: this.liveConfig,
         callbacks: {
-          onopen: () => this.handleOpen(),
+          onopen: () => void this.handleOpen(),
           onmessage: (msg: LiveServerMessage) => this.handleMessage(msg),
           onerror: () => this.fail('החיבור ללייב נקטע. נסו שוב.'),
           onclose: () => {
@@ -195,17 +253,59 @@ export class LiveRefereeSession {
     }
   }
 
-  private handleOpen(): void {
+  private async handleOpen(): Promise<void> {
     if (this.stopped) return;
     this.startMicPipe();
     this.startPlaybackCtx();
     this.startLevelLoop();
+    // Rulebook context first (same page images the text chat uses),
+    // then the greeting nudge — and only then is the session "live".
+    await this.sendRulebookContext();
+    if (this.stopped) return;
     this.setStatus('live');
     // Nudge the referee to greet in Hebrew so users instantly hear it works.
     try {
       this.session?.sendClientContent({ turns: ['הצג את עצמך במשפט אחד בעברית'] });
     } catch { /* greeting is best-effort */ }
     this.maxTimer = setTimeout(() => this.finish('timeout'), LIVE_MAX_SESSION_MS);
+  }
+
+  /**
+   * Send the rulebook page images as opening turns (chunked per ~10 pages
+   * so no single WebSocket message gets unwieldy). Best-effort: a session
+   * without rulebook context is still useful.
+   */
+  private async sendRulebookContext(): Promise<void> {
+    const files = this.startOpts.files ?? [];
+    if (!files.length || !this.session) return;
+    this.setStatus('loading-rules');
+    try {
+      const parts = await getRulebookLiveParts(files);
+      if (this.stopped || !this.session || parts.length <= 2) return;
+      // Split into chunks of ~10 images (20 parts) + keep texts with images.
+      const CHUNK_PARTS = 20;
+      for (let i = 0; i < parts.length; i += CHUNK_PARTS) {
+        if (this.stopped || !this.session) return;
+        const slice = parts.slice(i, i + CHUNK_PARTS);
+        const liveParts = [];
+        for (const p of slice) {
+          if (p.inlineData) {
+            liveParts.push({
+              inlineData: { data: await downscaleJpegBase64(p.inlineData.data), mimeType: p.inlineData.mimeType },
+            });
+          } else if (p.text) {
+            liveParts.push({ text: p.text });
+          }
+        }
+        try {
+          this.session.sendClientContent({ turns: [{ role: 'user', parts: liveParts }] });
+        } catch {
+          return; // transport hiccup — continue without the rest
+        }
+      }
+    } catch (err) {
+      console.warn('Live rulebook context failed, continuing without it:', err);
+    }
   }
 
   private startMicPipe(): void {

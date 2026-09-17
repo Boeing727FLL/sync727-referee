@@ -10,6 +10,7 @@ const HTML_PROBE_BYTES = 100;
 const MODEL_MAX_OUTPUT_TOKENS = 65536;
 
 type RulebookFile = { name: string; url: string };
+export type { RulebookFile };
 type UserFile = { url: string; key: string; base64?: string; actualFile?: File };
 type ChatHistoryMessage = { role: 'user' | 'model'; text: string; files?: unknown[] };
 type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent'; config: Record<string, unknown> };
@@ -305,6 +306,53 @@ async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<
   }
 
   return pages;
+}
+
+// --- Live referee rulebook context ---
+export interface LiveContentPart {
+  text?: string;
+  inlineData?: { data: string; mimeType: string };
+}
+
+/**
+ * Build the same rulebook page-image context the text chat uses, as plain
+ * content parts for a Live session's opening turn: pre-rendered R2 page
+ * images with RULEBOOK/UPDATES prefixes, PDF-render fallback when missing.
+ */
+export async function getRulebookLiveParts(files: RulebookFile[]): Promise<LiveContentPart[]> {
+  const parts: LiveContentPart[] = [];
+  if (!files?.length) return parts;
+  parts.push({ text: `Below are the official rulebook pages loaded into your context for this voice session.
+Official page images are prefixed with '--- RULEBOOK PAGE ... ---' (or '--- UPDATES PAGE ... ---' for the official updates document, which overrides the base rulebook). Do NOT judge these as the user's query! Use them ONLY as a dictionary of rules.\n\n` });
+  let img = 1;
+  for (const file of files) {
+    const raw = file.name || file.url || 'file';
+    const fileName = raw.split('/').pop() || raw;
+    let pages = await fetchR2ImageSet(fileName);
+    if (!pages.length && file.url) {
+      try {
+        const fetched = await fetchBlob(file.url);
+        if (fetched) {
+          const rendered = await convertPdfToImages(fetched.data);
+          pages = [];
+          for (let i = 0; i < rendered.length; i++) {
+            pages.push({ pageIndex: i + 1, data: await fileToBase64(rendered[i].data) });
+          }
+        }
+      } catch (err) {
+        console.error(`Live rulebook fallback failed for ${fileName}:`, err);
+      }
+    }
+    for (const page of pages) {
+      const prefix = /update/i.test(fileName)
+        ? `Image ${img++}:\n--- UPDATES PAGE (Official updates document - overrides the base rulebook) | FILE: ${fileName} | PAGE: ${page.pageIndex} ---\n`
+        : `Image ${img++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName} | PAGE: ${page.pageIndex} ---\n`;
+      parts.push({ text: prefix });
+      parts.push({ inlineData: { data: page.data, mimeType: 'image/jpeg' } });
+    }
+  }
+  parts.push({ text: '\n--- END OF RULEBOOK FILES ---\nUse the pages above as your rule dictionary for this voice session.\n\n' });
+  return parts;
 }
 
 // --- API key pool ---

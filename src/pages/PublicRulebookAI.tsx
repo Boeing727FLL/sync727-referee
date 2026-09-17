@@ -2242,6 +2242,8 @@ export default function PublicRulebookAI() {
       <LiveRefereeModal
         isOpen={showLive}
         uid={resolveRefereeUid() ?? ''}
+        files={activeRulebookFiles}
+        season={seasonName}
         onClose={() => setShowLive(false)}
       />
       <TeamWorkspaceModal
