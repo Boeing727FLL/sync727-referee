@@ -15,6 +15,7 @@
  */
 import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { isCurrentUserOwner } from './owner';
 
 /** Max Live sessions per user per rolling 24h window. */
 export const DAILY_LIVE_LIMIT = 3;
@@ -73,9 +74,10 @@ function exhaustedMsg(): string {
 /**
  * Remaining Live sessions today (Firestore when rules are deployed,
  * otherwise the local counter). Used for the UI badge only.
+ * The owner is unlimited — returns the full budget as a formality.
  */
 export async function getLiveRemaining(uid: string): Promise<number> {
-  if (!uid) return DAILY_LIVE_LIMIT;
+  if (!uid || isCurrentUserOwner()) return DAILY_LIVE_LIMIT;
   try {
     const snap = await getDoc(doc(db, 'live_quota', uid));
     if (snap.exists()) {
@@ -96,6 +98,8 @@ export async function getLiveRemaining(uid: string): Promise<number> {
  * session actually opened, so failed connects cost nothing.
  */
 export async function consumeLiveQuota(uid: string): Promise<void> {
+  // The owner account is exempt from every Live limit.
+  if (isCurrentUserOwner()) return;
   const cooldown = liveCooldownRemainingSec();
   if (cooldown > 0) {
     const mm = Math.floor(cooldown / 60);

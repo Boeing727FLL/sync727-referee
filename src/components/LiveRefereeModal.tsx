@@ -13,6 +13,8 @@ import {
   consumeLiveQuota,
   getLiveRemaining,
 } from '../lib/liveQuota';
+import { trackLiveSession, logLiveSession } from '../lib/analytics';
+import { isCurrentUserOwner } from '../lib/owner';
 
 /**
  * LiveRefereeModal — voice chat with the Live referee.
@@ -22,6 +24,7 @@ import {
 interface LiveRefereeModalProps {
   isOpen: boolean;
   uid: string;
+  userName: string;
   files: Array<{ name: string; url: string }>;
   season: string;
   onClose: () => void;
@@ -44,7 +47,7 @@ const STATUS_DOT: Record<LiveStatus, string> = {
   ended: 'bg-slate-500',
 };
 
-export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }: LiveRefereeModalProps) {
+export default function LiveRefereeModal({ isOpen, uid, userName, files, season, onClose }: LiveRefereeModalProps) {
   const { t, isRTL } = useLanguage();
   const [phase, setPhase] = useState<Phase>('intro');
   const [status, setStatus] = useState<LiveStatus>('connecting');
@@ -58,7 +61,9 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
   const sessionRef = useRef<LiveRefereeSession | null>(null);
   const liveSinceRef = useRef(0);
   const consumedRef = useRef(false);
+  const linesRef = useRef<Array<{ who: 'you' | 'referee'; text: string }>>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const owner = isCurrentUserOwner();
 
   // Fresh state on every open.
   useEffect(() => {
@@ -73,6 +78,7 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
     setDraft('');
     consumedRef.current = false;
     liveSinceRef.current = 0;
+    linesRef.current = [];
     void getLiveRemaining(uid).then(setRemaining).catch(() => undefined);
     return () => {
       try { sessionRef.current?.stop(); } catch { /* ignore */ }
@@ -96,7 +102,8 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
   const appendLine = (who: 'you' | 'referee', text: string) => {
     const clean = text.trim();
     if (!clean) return;
-    setLines(prev => {
+    const next = (() => {
+      const prev = linesRef.current;
       const last = prev[prev.length - 1];
       if (last && last.who === who) {
         const merged = [...prev];
@@ -104,7 +111,9 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
         return merged;
       }
       return [...prev, { who, text: clean }];
-    });
+    })();
+    linesRef.current = next;
+    setLines(next);
   };
 
   const handleStart = async () => {
@@ -135,6 +144,19 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
       onEnd: (reason) => {
         setEndReason(reason);
         setPhase('ended');
+        // Journal every opened session (owner included) — silent analytics.
+        if (consumedRef.current && liveSinceRef.current) {
+          const secs = Math.round((Date.now() - liveSinceRef.current) / 1000);
+          void trackLiveSession(uid, secs);
+          void logLiveSession({
+            uid,
+            userName,
+            season,
+            durationSec: secs,
+            endReason: reason,
+            turns: linesRef.current.map(l => ({ w: l.who, t: l.text })),
+          });
+        }
       },
     });
     sessionRef.current = session;
@@ -234,12 +256,14 @@ export default function LiveRefereeModal({ isOpen, uid, files, season, onClose }
                     <p className="text-xs text-amber-100 font-bold">• {t('live.limitCooldown')}</p>
                   </div>
                   <p className="text-xs text-slate-300 font-bold">
-                    {t('live.remaining').replace('{n}', String(remaining)).replace('{total}', String(DAILY_LIVE_LIMIT))}
+                    {owner
+                      ? t('live.unlimited')
+                      : t('live.remaining').replace('{n}', String(remaining)).replace('{total}', String(DAILY_LIVE_LIMIT))}
                   </p>
                   {error && <p className="text-xs text-red-300 font-bold">{error}</p>}
                   <button
                     onClick={handleStart}
-                    disabled={remaining <= 0}
+                    disabled={!owner && remaining <= 0}
                     className="w-full px-4 py-3 rounded-2xl bg-gradient-to-b from-red-400 to-red-600 hover:from-red-300 hover:to-red-500 text-white font-black text-sm transition-all active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(239,68,68,0.35)]"
                   >
                     <Mic className="w-4 h-4" />

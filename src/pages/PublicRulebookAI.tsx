@@ -45,6 +45,7 @@ import MaintenanceScreen from '../components/MaintenanceScreen';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
 import LiveRefereeModal from '../components/LiveRefereeModal';
+import LiveAnalyticsModal from '../components/LiveAnalyticsModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
@@ -249,6 +250,7 @@ export default function PublicRulebookAI() {
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
   const [showTeamWorkspace, setShowTeamWorkspace] = useState(false);
   const [showLive, setShowLive] = useState(false);
+  const [showLiveAnalytics, setShowLiveAnalytics] = useState(false);
   const [teamWorkspaceId, setTeamWorkspaceId] = useState(() => getActiveTeamId());
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
@@ -1611,6 +1613,15 @@ export default function PublicRulebookAI() {
                             הגדרות
                           </button>
                         )}
+                        {isCurrentUserOwner() && (
+                          <button
+                            onClick={() => { setShowUserMenu(false); setShowLiveAnalytics(true); }}
+                            className={MENU_ROW_CLASS}
+                          >
+                            <Radio className="w-4 h-4 text-red-500" />
+                            <span className="flex-1">{t('live.menu')}</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => { setShowUserMenu(false); setShowTeamWorkspace(true); }}
                           className={MENU_ROW_CLASS}
@@ -2242,9 +2253,14 @@ export default function PublicRulebookAI() {
       <LiveRefereeModal
         isOpen={showLive}
         uid={resolveRefereeUid() ?? ''}
+        userName={displayUser?.name || ''}
         files={activeRulebookFiles}
         season={seasonName}
         onClose={() => setShowLive(false)}
+      />
+      <LiveAnalyticsModal
+        isOpen={showLiveAnalytics}
+        onClose={() => setShowLiveAnalytics(false)}
       />
       <TeamWorkspaceModal
         isOpen={showTeamWorkspace}

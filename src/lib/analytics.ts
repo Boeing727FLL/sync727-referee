@@ -235,6 +235,102 @@ export function logsQuery(limit = 200) {
   return rtdbQuery(logsRef(), orderByChild('createdAt'), limitToLast(limit));
 }
 
+// ---------------------------------------------------------------------------
+// Live referee sessions (voice) — counters + journal for the owner
+// ---------------------------------------------------------------------------
+
+const LIVE_STATS_PATH = 'referee/live_stats';
+const LIVE_LOGS_PATH = 'referee/live_logs';
+
+/** Cap stored transcripts so one long session can't bloat the journal. */
+const LIVE_LOG_MAX_TURNS = 40;
+const LIVE_LOG_MAX_CHARS = 6000;
+
+export type LiveSessionLog = {
+  uid?: string | null;
+  userName?: string;
+  season?: string;
+  durationSec?: number;
+  endReason?: string;
+  turns?: Array<{ w: 'you' | 'referee'; t: string }>;
+};
+
+const liveStatsRef = () => ref(rtdb, LIVE_STATS_PATH);
+const liveLogsRef = () => ref(rtdb, LIVE_LOGS_PATH);
+
+/** Bump Live counters (sessions + seconds, global and per-user). */
+export async function trackLiveSession(uid: string, seconds: number): Promise<void> {
+  const safeUid = uid || 'anon';
+  const secs = Math.max(0, Math.min(600, Math.round(seconds) || 0));
+  await guard('trackLiveSession', () =>
+    update(liveStatsRef(), {
+      totalSessions: increment(1),
+      totalSeconds: increment(secs),
+      [`perUser/${safeUid}/sessions`]: increment(1),
+      [`perUser/${safeUid}/seconds`]: increment(secs),
+    }),
+  );
+}
+
+/** Append one Live voice session (with capped transcript) to the journal. */
+export async function logLiveSession(payload: LiveSessionLog): Promise<void> {
+  await guard('logLiveSession', () => {
+    const turns = (payload.turns || []).slice(0, LIVE_LOG_MAX_TURNS).map(t => ({
+      w: t.w === 'referee' ? 'referee' : 'you',
+      t: String(t.t || '').slice(0, 500),
+    }));
+    let chars = 0;
+    const capped = turns.filter(t => {
+      chars += t.t.length;
+      return chars <= LIVE_LOG_MAX_CHARS;
+    });
+    return push(liveLogsRef(), {
+      uid: payload.uid || 'anon',
+      userName: String(payload.userName || '').slice(0, 80),
+      season: String(payload.season || '').slice(0, 40),
+      durationSec: Math.max(0, Math.min(3600, Math.round(payload.durationSec) || 0)),
+      endReason: String(payload.endReason || '').slice(0, 20),
+      turns: capped,
+      createdAt: rtdbTimestamp(),
+    });
+  });
+}
+
+/** Newest-first Live journal query for the owner's viewer. */
+export function liveLogsQuery(limit = 200) {
+  return rtdbQuery(liveLogsRef(), orderByChild('createdAt'), limitToLast(limit));
+}
+
+export type LiveStats = {
+  totalSessions: number;
+  totalSeconds: number;
+  uniqueUsers: number;
+};
+
+/** Live subscription for the owner's Live analytics modal. */
+export function subscribeLiveStats(cb: (s: LiveStats) => void): () => void {
+  return onValue(
+    liveStatsRef(),
+    (snap: DataSnapshot) => {
+      try {
+        const raw = (snap.val() || {}) as {
+          totalSessions?: unknown;
+          totalSeconds?: unknown;
+          perUser?: Record<string, unknown>;
+        };
+        cb({
+          totalSessions: Number(raw.totalSessions) || 0,
+          totalSeconds: Number(raw.totalSeconds) || 0,
+          uniqueUsers: raw.perUser ? Object.keys(raw.perUser).length : 0,
+        });
+      } catch {
+        cb({ totalSessions: 0, totalSeconds: 0, uniqueUsers: 0 });
+      }
+    },
+    () => cb({ totalSessions: 0, totalSeconds: 0, uniqueUsers: 0 }),
+  );
+}
+
 export function feedbackQuery(limit = 300) {
   return rtdbQuery(feedbackRef(), orderByChild('createdAt'), limitToLast(limit));
 }
