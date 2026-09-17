@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus, GraduationCap } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -28,9 +28,6 @@ import { convertPdfToImages } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ThinkIndicator from '../components/ThinkIndicator';
-import TutorialModal from '../components/TutorialModal';
-import TutorialListModal from '../components/TutorialListModal';
-import { TUTORIALS, TUTORIAL_ORDER, isTutorialDone, completeTutorial, resetTutorials } from '../lib/tutorials';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import { useAuth } from '../hooks/useAuth';
@@ -656,10 +653,6 @@ export default function PublicRulebookAI() {
   // Preview URLs stay alive for the session so sent bubbles keep showing them.
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
-  // Active feature-tutorial overlay (null when none open).
-  const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
-  const [showTutorialList, setShowTutorialList] = useState(false);
-  const tutorialAutoShownRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
 
@@ -1363,18 +1356,7 @@ export default function PublicRulebookAI() {
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
 
-  // Feature announcements play automatically on load: first unseen
-  // tutorial opens by itself once logged in and no other modal covers
-  // the screen (once per session; X stays closed until next load).
-  useEffect(() => {
-    if (!sessionAlive || showIntro || showDisclaimer) return;
-    if (tutorialAutoShownRef.current || activeTutorial || showTutorialList) return;
-    const pending = TUTORIAL_ORDER.find(id => TUTORIALS[id] && !isTutorialDone(id));
-    if (!pending) return;
-    tutorialAutoShownRef.current = true;
-    const timer = setTimeout(() => setActiveTutorial(current => current ?? pending), 1200);
-    return () => clearTimeout(timer);
-  }, [sessionAlive, showIntro, showDisclaimer, activeTutorial, showTutorialList]);  const heroIcons = [ListOrdered, Hand, Cog, Users];
+  const heroIcons = [ListOrdered, Hand, Cog, Users];
 
   const playWhistleSound = () => {
     try {
@@ -1647,13 +1629,6 @@ export default function PublicRulebookAI() {
                         >
                           <ScrollText className="w-4 h-4 text-slate-500" />
                           יומן שופטים
-                        </button>
-                        <button
-                          onClick={() => { setShowUserMenu(false); setShowTutorialList(true); }}
-                          className={MENU_ROW_CLASS}
-                        >
-                          <GraduationCap className="w-4 h-4 text-slate-500" />
-                          <span className="flex-1">{t('tut.menu')}</span>
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
@@ -2059,12 +2034,7 @@ export default function PublicRulebookAI() {
               {t('chat.shiftHint')}
             </span>
             <button
-              onClick={() => {
-                // First-timers get the photo tutorial (with T&C); afterwards
-                // the picker opens directly.
-                if (!isTutorialDone('photo-questions')) setActiveTutorial('photo-questions');
-                else attachInputRef.current?.click();
-              }}
+              onClick={() => attachInputRef.current?.click()}
               disabled={isAiBusy || isLearning}
               aria-label={t('chat.attachImage')}
               title={t('chat.attachImage')}
@@ -2250,34 +2220,8 @@ export default function PublicRulebookAI() {
         onOpenCorrections={() => setShowJudgeCorrections(true)}
         onOpenFeedback={() => setShowSettingsFeedback(true)}
         onOpenPrivacy={() => setShowPrivacy(true)}
-        onResetTutorials={() => { resetTutorials(); showToast('המדריכים אופסו ויוצגו שוב'); }}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
-      <TutorialListModal
-        isOpen={showTutorialList}
-        onClose={() => setShowTutorialList(false)}
-        onWatch={(id) => { setShowTutorialList(false); setActiveTutorial(id); }}
-      />
-      <AnimatePresence>
-        {activeTutorial && TUTORIALS[activeTutorial] && (
-          <TutorialModal
-            tutorial={TUTORIALS[activeTutorial]}
-            onDone={() => {
-              completeTutorial(activeTutorial);
-              setActiveTutorial(null);
-              if (activeTutorial === 'photo-questions') attachInputRef.current?.click();
-            }}
-            onAction={(action) => {
-              if (action === 'open-team') {
-                completeTutorial(activeTutorial);
-                setActiveTutorial(null);
-                setShowTeamWorkspace(true);
-              }
-            }}
-            onClose={() => setActiveTutorial(null)}
-          />
-        )}
-      </AnimatePresence>
       <TeamWorkspaceModal
         isOpen={showTeamWorkspace}
         onClose={() => setShowTeamWorkspace(false)}
