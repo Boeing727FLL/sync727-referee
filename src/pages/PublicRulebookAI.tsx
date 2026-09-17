@@ -16,7 +16,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus, Radio } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -44,6 +44,7 @@ import SettingsModal from '../components/SettingsModal';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import FeedbackAdminModal from '../components/FeedbackAdminModal';
 import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
+import LiveRefereeModal from '../components/LiveRefereeModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
@@ -247,6 +248,7 @@ export default function PublicRulebookAI() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
   const [showTeamWorkspace, setShowTeamWorkspace] = useState(false);
+  const [showLive, setShowLive] = useState(false);
   const [teamWorkspaceId, setTeamWorkspaceId] = useState(() => getActiveTeamId());
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
@@ -1502,6 +1504,21 @@ export default function PublicRulebookAI() {
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
+            <button
+              onClick={() => {
+                if (!sessionAlive) { showToast(t('live.loginRequired')); return; }
+                setShowLive(true);
+              }}
+              title={t('live.title')}
+              className="flex items-center gap-1.5 px-2.5 md:px-3 py-2 rounded-xl bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white text-xs font-black transition-all active:scale-95 cursor-pointer shadow-[0_4px_16px_rgba(239,68,68,0.35)] whitespace-nowrap"
+            >
+              <span className="relative flex w-2 h-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              </span>
+              <Radio className="w-3.5 h-3.5" />
+              <span>{t('live.short')}</span>
+            </button>
             {sessionAlive && displayUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -2222,6 +2239,11 @@ export default function PublicRulebookAI() {
         onOpenPrivacy={() => setShowPrivacy(true)}
       />
       <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
+      <LiveRefereeModal
+        isOpen={showLive}
+        uid={resolveRefereeUid() ?? ''}
+        onClose={() => setShowLive(false)}
+      />
       <TeamWorkspaceModal
         isOpen={showTeamWorkspace}
         onClose={() => setShowTeamWorkspace(false)}

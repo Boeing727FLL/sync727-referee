@@ -83,6 +83,34 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Per-user daily LIVE quota (server-enforced, much stricter than chat):
+    // self-only, strictly +1 per opened voice session inside a rolling 24h
+    // window, capped at 3. See src/lib/liveQuota.ts. Until this block is
+    // deployed, the client enforces the same limits fail-closed in localStorage.
+    match /live_quota/{userId} {
+      allow get: if isSelf(userId) || isOwner();
+      allow list: if false;
+      allow create: if isSelf(userId)
+        && request.resource.data.keys().hasOnly(['count', 'windowStart'])
+        && request.resource.data.count == 1
+        && request.resource.data.windowStart == request.time;
+      allow update: if isSelf(userId)
+        && request.resource.data.keys().hasOnly(['count', 'windowStart'])
+        && request.resource.data.count is int
+        && request.resource.data.count >= 1
+        && request.resource.data.count <= 3
+        && (
+          ((request.time - resource.data.windowStart) < duration.value(24, 'h')
+            && request.resource.data.count == resource.data.count + 1
+            && request.resource.data.windowStart == resource.data.windowStart)
+          ||
+          ((request.time - resource.data.windowStart) >= duration.value(24, 'h')
+            && request.resource.data.count == 1
+            && request.resource.data.windowStart == request.time)
+        );
+      allow delete: if false;
+    }
+
     // Password collections: owner only, no public access at all.
     match /app_passwords/{docId} {
       allow read, write: if isOwner();
