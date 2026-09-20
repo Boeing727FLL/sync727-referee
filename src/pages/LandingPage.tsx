@@ -2,7 +2,7 @@
 import IntroScreen from '../components/IntroScreen';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 
-function hasSavedSession() {
+export function hasSavedSession() {
   try {
     return Boolean(
       localStorage.getItem('auth_user') ||
@@ -15,19 +15,25 @@ function hasSavedSession() {
   }
 }
 
-function LandingContent() {
+interface LandingPageProps {
+  onNavigate?: (to: string) => void;
+  onWarmRoute?: (to: string) => void;
+}
+
+function LandingContent({ onNavigate, onWarmRoute }: LandingPageProps) {
   const { t } = useLandingLanguage();
   const signedIn = hasSavedSession();
 
   return (
     <IntroScreen
       isLoggedIn={signedIn}
-      onContinue={() => window.location.assign(signedIn ? '/app?enter=chat' : '/login')}
+      onContinue={() => (onNavigate ?? window.location.assign.bind(window.location))(signedIn ? '/app?enter=chat' : '/login')}
+      onWarm={() => onWarmRoute?.(signedIn ? '/app?enter=chat' : '/login')}
       t={t}
     />
   );
 }
 
-export default function LandingPage() {
-  return <LandingLanguageProvider><LandingContent /></LandingLanguageProvider>;
+export default function LandingPage(props: LandingPageProps) {
+  return <LandingLanguageProvider><LandingContent {...props} /></LandingLanguageProvider>;
 }

@@ -46,6 +46,7 @@ function enterStyle(part: IntroPart, duration: number, extraDelay = 0): React.CS
 interface IntroScreenProps {
   isLoggedIn: boolean;
   onContinue: () => void;
+  onWarm?: () => void;
   t: (key: string) => string;
 }
 
@@ -195,10 +196,13 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
 }
 
 /** The entry button: solid gold, steady, professional. No glow games. */
-function EntryButton({ label, onContinue }: { label: string; onContinue: () => void }) {
+function EntryButton({ label, onContinue, onWarm }: { label: string; onContinue: () => void; onWarm?: () => void }) {
   return (
     <button
       onClick={onContinue}
+      onPointerEnter={onWarm}
+      onFocus={onWarm}
+      onTouchStart={onWarm}
       className="w-full bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-4 px-6 rounded-2xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer text-base md:text-lg shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
     >
       <span>{label}</span>
@@ -213,7 +217,7 @@ function EntryButton({ label, onContinue }: { label: string; onContinue: () => v
 // The screen: brand bar + hero stack (logo, badge, title, promise, proof, CTA)
 // ---------------------------------------------------------------------------
 
-export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenProps) {
+export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: IntroScreenProps) {
   const features = buildFeatures(t);
 
   return (
@@ -288,6 +292,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
             <EntryButton
               label={isLoggedIn ? t('intro.continue') : t('intro.continueLogin')}
               onContinue={onContinue}
+              onWarm={onWarm}
             />
             <p className="mt-3 text-[11px] text-white/45 font-medium">
               {t('intro.notOfficial')}

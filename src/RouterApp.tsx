@@ -6,14 +6,14 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 
-function LoadingScreen() {
-  return <main className="grid h-full place-items-center bg-slate-950 text-sm text-slate-300">טוען…</main>;
+function RouteFrame() {
+  return <main className="h-full bg-slate-950" aria-hidden />;
 }
 
 export default function RouterApp() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<LoadingScreen />}>
+      <Suspense fallback={<RouteFrame />}>
         <Routes>
           <Route path="/app" element={<RefereeApp />} />
           <Route path="/login" element={<LoginPage />} />
