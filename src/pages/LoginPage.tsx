@@ -226,7 +226,7 @@ export default function LoginPage() {
         setAuthOverlay('success');
         later(() => {
           setAuthLeaving(true);
-          later(() => navigate('/?enter=chat'), NAVIGATE_AFTER_LEAVE_MS);
+          later(() => navigate('/app?enter=chat'), NAVIGATE_AFTER_LEAVE_MS);
         }, SUCCESS_HOLD_MS);
       } else {
         setAuthOverlay(null);

@@ -5,8 +5,8 @@ This guide explains where behavior lives and what must stay off the startup path
 ## Request flow
 
 1. `index.html` loads the small browser entry in `src/main-app.tsx`.
-2. `src/App.tsx` installs language/auth providers, then lazy-loads the active route.
-3. `src/pages/PublicRulebookAI.tsx` owns the referee screen and coordinates chat, entry gates, session state and optional tools.
+2. `src/App.tsx` lazy-loads a route. `/` renders `LandingPage` with only language state; it deliberately does not initialize Firebase.
+3. `/app` renders `RefereeApp`, which installs language/auth providers, then `PublicRulebookAI` owns the referee screen and coordinates chat, entry gates, session state and optional tools.
 4. A submitted question dynamically loads `src/services/geminiService.ts`. That service reads the active rulebook pages and streams the Gemini answer.
 5. PDF conversion (`mupdf`, including its 10 MB WASM file), R2's S3 SDK, Markdown rendering and admin modals are loaded only when that feature is used.
 
@@ -26,7 +26,8 @@ This guide explains where behavior lives and what must stay off the startup path
 ## Performance rules
 
 - Do not add static imports of AI, PDF, AWS/R2 or admin modules to `App.tsx`, `main-app.tsx` or the top of `PublicRulebookAI.tsx`.
-- Keep route screens behind `React.lazy`.
+- Keep route screens behind `React.lazy`. Keep Firebase imports out of `LandingPage`, `IntroScreen`, and the shared route shell.
+- The landing route uses 40 KB/107 KB responsive backgrounds and 6 KB/3 KB WebP logos with explicit dimensions.
 - Hash-named `/assets/*` and self-hosted fonts are immutable; HTML and `version.json` are never cached.
 - Do not add a service worker without an explicit offline/update design. The entry removes stale workers left by older releases.
 - Measure both raw and gzip bundle sizes with `npm run build` before merging.

@@ -561,7 +561,7 @@ export default function PublicRulebookAI() {
     setMessages([]);
     setChatStarted(false);
     setTypewriterReady(false);
-    setShowIntro(true);
+    navigate('/');
   };
 
   // ===== 4. Account deletion (password re-auth, then wipe everything).
@@ -629,6 +629,7 @@ export default function PublicRulebookAI() {
     setDeleteError(null);
     setShowIntro(true);
     setChatStarted(false);
+    navigate('/');
   };
 
   const [sessionKicked, setSessionKicked] = useState(false);
@@ -2212,8 +2213,7 @@ export default function PublicRulebookAI() {
       <AnimatePresence>
         {showIntro && (
           <IntroScreen
-            hasGoogleToken={sessionAlive}
-            user={user}
+            isLoggedIn={sessionAlive}
             onContinue={handleIntroContinue}
             t={t}
           />
