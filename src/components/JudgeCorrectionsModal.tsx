@@ -28,6 +28,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { invalidateCorrectionsCache } from '../services/geminiService';
 import { isCurrentUserOwner } from '../lib/owner';
+import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from '../features/referee/corrections/model';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -186,7 +187,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       const snap = await getDoc(correctionsDocRef());
       const t = snap.exists() ? String(snap.data().text || '') : '';
       const u = snap.exists() ? Number(snap.data().updatedAt || 0) : 0;
-      setLines(t ? t.split('\n') : []);
+      setLines(parseCorrections(t));
       setInitialText(t);
       setUpdatedAt(u || null);
     } catch {
@@ -209,7 +210,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     setSaving(true);
     try {
       const now = Date.now();
-      const t = lines.join('\n');
+      const t = serializeCorrections(lines);
       await setDoc(correctionsDocRef(), { text: t, updatedAt: now });
       invalidateCorrectionsCache();
       setInitialText(t);
@@ -223,33 +224,19 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     }
   };
 
-  const nonEmptyCount = useMemo(() => lines.filter((l) => l.trim().length > 0).length, [lines]);
+  const nonEmptyCount = useMemo(() => correctionCount(lines), [lines]);
 
   /** Search matches keep their ORIGINAL indices (delete/edit target them). */
-  const visibleLines = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const all = lines.map((line, index) => ({ line, index }));
-    if (!q) return all;
-    return all.filter((o) => o.line.toLowerCase().includes(q));
-  }, [lines, search]);
-
-  const deleteLine = (index: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const editLine = (index: number, value: string) => {
-    setLines((prev) => prev.map((l, i) => (i === index ? value : l)));
-  };
-
+  const visibleLines = useMemo(() => visibleCorrections(lines, search), [lines, search]);
+  const deleteLine = (index: number) => setLines(previous => deleteCorrection(previous, index));
+  const editLine = (index: number, value: string) => setLines(previous => editCorrection(previous, index, value));
   const addLine = () => {
-    const v = newLine.trim();
-    if (!v) return;
-    setLines((prev) => [...prev, v]);
-    setNewLine('');
+    const next = addCorrection(lines, newLine);
+    if (next !== lines) { setLines(next); setNewLine(''); }
   };
 
   /** Unsaved-changes flag drives the save button state and the footer hint. */
-  const dirty = lines.join('\n') !== initialText;
+  const dirty = serializeCorrections(lines) !== initialText;
 
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
