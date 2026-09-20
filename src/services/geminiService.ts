@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { db } from '../lib/firebase';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
@@ -179,10 +178,11 @@ function resolveR2Url(url: string): string {
 
 async function fetchBlob(url: string, signal?: AbortSignal): Promise<FetchedBlob | null> {
   try {
-    const response = await axios.get(resolveR2Url(url), { responseType: 'blob', signal });
+    const response = await fetch(resolveR2Url(url), { signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return {
-      data: response.data as Blob,
-      mimeType: String(response.headers['content-type'] || 'image/jpeg'),
+      data: await response.blob(),
+      mimeType: response.headers.get('content-type') || 'image/jpeg',
     };
   } catch (error) {
     console.error('Could not fetch blob:', url, error);
