@@ -2,6 +2,8 @@ import { db } from '../lib/firebase';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
+import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
+import { buildHistory, stepsToContents, textStep, toInteractionInput, toInteractionParts, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type InteractionStep, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -11,21 +13,10 @@ const MODEL_MAX_OUTPUT_TOKENS = 65536;
 
 type RulebookFile = { name: string; url: string };
 type UserFile = { url: string; key: string; base64?: string; actualFile?: File };
-type ChatHistoryMessage = { role: 'user' | 'model'; text: string; files?: unknown[] };
 type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent'; config: Record<string, unknown> };
 type PageImage = { pageIndex: number; data: string };
 type RequestFile = UserFile & { isRulebook: boolean };
 type FetchedBlob = { data: Blob; mimeType: string };
-type LegacyPart = {
-  text?: string;
-  inlineData?: { data: string; mimeType?: string };
-  fileData?: { fileUri: string; mimeType?: string };
-};
-type LegacyMessage = { role: 'user' | 'model'; parts: LegacyPart[] };
-type InteractionPart =
-  | { type: 'text'; text: string }
-  | { type: 'image'; data?: string; uri?: string; mime_type?: string; resolution?: 'high' };
-type InteractionStep = { type: 'user_input' | 'model_output'; content: InteractionPart[] };
 type StreamEvent = {
   event_type?: string;
   delta?: { type?: string; text?: string };
@@ -42,81 +33,6 @@ const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.1-pro-preview', kind: 'interactions', config: { temperature: 1, max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, topP: 0.95, thinking_level: 'high' } },
   { name: 'gemini-3.5-flash-lite', kind: 'generateContent', config: { thinkingConfig: { thinkingLevel: 'HIGH' }, mediaResolution: 'MEDIA_RESOLUTION_HIGH' } },
 ];
-
-function errorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error && error.message) return String(error.message);
-  try {
-    return typeof error === 'string' ? error : JSON.stringify(error) || String(error);
-  } catch {
-    return String(error);
-  }
-}
-
-function buildHistory(history: ChatHistoryMessage[]): LegacyMessage[] {
-  const contents: LegacyMessage[] = [];
-  for (const message of history) {
-    const role = message.role === 'user' ? 'user' : 'model';
-    if (!contents.length && role === 'model') continue;
-
-    let text = message.text || ' ';
-    if (role === 'user' && message.files?.length) {
-      text += '\n[הערת מערכת: המשתמש צירף תמונה בהודעה זו. התמונה ההיא כבר לא מוצגת לך, ולכן אל תשליך מהתשובה שלך עליה לתמונות עתידיות שיועלו].';
-    }
-
-    const previous = contents[contents.length - 1];
-    if (previous?.role === role) previous.parts.push({ text: `\n\n${text}` });
-    else contents.push({ role, parts: [{ text }] });
-  }
-  return contents;
-}
-
-function toInteractionInput(messages: LegacyMessage[]): InteractionStep[] {
-  return (messages || []).map(message => ({
-    type: (message.role === 'model' ? 'model_output' : 'user_input') as InteractionStep['type'],
-    content: message.parts.flatMap(toInteractionParts),
-  }));
-}
-
-function toInteractionParts(part: LegacyPart): InteractionPart[] {
-  if (part.inlineData) {
-    return [{ type: 'image', data: part.inlineData.data, mime_type: part.inlineData.mimeType || 'image/jpeg', resolution: 'high' }];
-  }
-  if (part.fileData) {
-    return [{ type: 'image', uri: part.fileData.fileUri, mime_type: part.fileData.mimeType || 'image/jpeg', resolution: 'high' }];
-  }
-  const text = (part.text ?? '').trim();
-  return text ? [{ type: 'text', text: part.text ?? '' }] : [];
-}
-
-function toInteractionTextOnly(messages: LegacyMessage[]): InteractionStep[] {
-  return (messages || [])
-    .map(message => ({
-      type: (message.role === 'model' ? 'model_output' : 'user_input') as InteractionStep['type'],
-      content: (message.parts || [])
-        .filter((part: LegacyPart) => !part.fileData && !part.inlineData &&
-          !(part.text && /^Image \d+:\n---/.test(part.text)) &&
-          !(part.text && part.text.includes('--- HIGH RESOLUTION ZOOM')))
-        .map((part: LegacyPart) => ({ type: 'text', text: part.text ?? '' } as const))
-        .filter(part => part.text && part.text.trim()),
-    }))
-    .filter(message => message.content.length);
-}
-
-function stepsToContents(steps: InteractionStep[]): LegacyMessage[] {
-  return (steps || []).map(step => {
-    const role: LegacyMessage['role'] = step.type === 'model_output' ? 'model' : 'user';
-    return {
-      role,
-      parts: (step.content || []).map(part => part.type === 'image'
-        ? { inlineData: { data: part.data, mimeType: part.mime_type || 'image/jpeg' } }
-        : { text: part.text }),
-    };
-  });
-}
-
-function textStep(type: InteractionStep['type'], text: string): InteractionStep {
-  return { type, content: [{ type: 'text', text }] };
-}
 
 async function collectStreamedText(
   stream: AsyncIterable<unknown>,
@@ -152,21 +68,6 @@ function interactionText(interaction: unknown): string {
       typeof (output as { text?: unknown }).text === 'string')
     .map(output => output.text)
     .join('');
-}
-
-const isKeyInvalidError = (message: string): boolean =>
-  ['403', '401', 'leaked', 'PERMISSION_DENIED', 'API key not valid', 'API_KEY_INVALID'].some(value => message.includes(value));
-
-const isQuotaError = (message: string): boolean =>
-  message.includes('429') || message.includes('Too Many Requests') ||
-  message.includes('Quota exceeded') || message.includes('RESOURCE_EXHAUSTED');
-
-function isRequestLevelError(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes('400') && [
-    'schema', 'model', 'unsupported', 'not found', 'input format',
-    'unknown field', 'invalid argument', 'not enabled',
-  ].some(value => lower.includes(value));
 }
 
 // --- File parts ---
@@ -264,7 +165,7 @@ async function mapPool<T, R>(items: T[], size: number, fn: (item: T, index: numb
 // --- API key pool ---
 let GEMINI_KEYS: string[] = [];
 
-const unhealthyKeys = new Set<string>();
+const keyHealth = new KeyHealth();
 
 function getEnvKey(): string | undefined {
   return (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || import.meta.env?.VITE_GEMINI_API_KEY;
@@ -320,29 +221,13 @@ export function invalidateCorrectionsCache(): void {
 }
 
 export async function getNextApiKey(): Promise<string> {
-  await ensureKeysLoaded();
-
-  const availableKeys = GEMINI_KEYS.filter(k => !unhealthyKeys.has(k));
-  if (availableKeys.length) {
-    const index = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
-    const key = availableKeys[index % availableKeys.length];
-    localStorage.setItem('gemini_key_rotation_index', String((index + 1) % availableKeys.length));
-    return key;
-  }
-
-  if (GEMINI_KEYS.length) {
-    console.warn("All keys are unhealthy, resetting state");
-    unhealthyKeys.clear();
-    return GEMINI_KEYS[0];
-  }
-
-  const envKey = getEnvKey();
-  if (envKey) return envKey;
-  throw new Error("No API keys configured");
-}
-
-function markKeyUnhealthy(key: string): void {
-  if (key !== 'proxy-key') unhealthyKeys.add(key);
+  const keys = await getAllApiKeys();
+  const available = keyHealth.available(keys);
+  const candidates = available.length ? available : keys;
+  const index = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+  const key = candidates[index % candidates.length];
+  localStorage.setItem('gemini_key_rotation_index', String((index + 1) % candidates.length));
+  return key;
 }
 
 // --- Core AI logic ---
@@ -617,21 +502,19 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       };
 
       let responseText = '';
-      let success = false;
+      let lastFailureKind: ReturnType<typeof classifyFailure>['kind'] | null = null;
       const allKeys = await getAllApiKeys();
 
-      for (let mi = 0; mi < effectiveChain.length && !success; mi++) {
-        const modelEntry = effectiveChain[mi];
-        console.log(`Attempting model ${mi + 1}/${effectiveChain.length}: ${modelEntry.name} (${modelEntry.kind})`);
-        if (mi === effectiveChain.length - 1) {
-          unhealthyKeys.clear();
-        }
-        for (const key of allKeys) {
+      modelLoop: for (let modelIndex = 0; modelIndex < effectiveChain.length; modelIndex++) {
+        const modelEntry = effectiveChain[modelIndex];
+        const availableKeys = keyHealth.available(allKeys);
+        if (!availableKeys.length) break;
+        const rotationIndex = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+        const candidates = rotateCandidates(availableKeys, rotationIndex);
+        localStorage.setItem('gemini_key_rotation_index', String((rotationIndex + 1) % availableKeys.length));
+        for (const key of candidates) {
           if (signal?.aborted) return '';
-          if (unhealthyKeys.has(key)) continue;
-
           const client = new GoogleGenAI({ apiKey: key });
-
           try {
             const draftText = await callModel(client, modelEntry, interactionInput, false);
 
@@ -664,29 +547,29 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             }
 
             responseText = finalAnswer;
-            success = true;
-            break;
-          } catch (err: unknown) {
-            if (signal?.aborted) return '';
-            const errMsg = errorMessage(err);
-            if (isKeyInvalidError(errMsg)) {
-              markKeyUnhealthy(key);
-            } else if (isRequestLevelError(errMsg)) {
-              break;
-            } else if (isQuotaError(errMsg)) markKeyUnhealthy(key);
+            break modelLoop;
+
+          } catch (error: unknown) {
+            const decision = classifyFailure(error, signal?.aborted);
+            lastFailureKind = decision.kind;
+            if (decision.kind === 'aborted') return '';
+            keyHealth.coolDown(key, decision.cooldownMs);
+            if (decision.tryNextKey) continue;
+            if (decision.tryNextModel) continue modelLoop;
+            throw error;
           }
         }
       }
 
       if (!responseText) {
-        throw new Error("All models and API keys were exhausted without a successful answer.");
+        throw new Error(lastFailureKind === 'quota' ? '429 RESOURCE_EXHAUSTED: all keys cooling down' : 'All models and API keys were exhausted without a successful answer.');
       }
 
       return responseText;
 
     } catch (error: unknown) {
       if (signal?.aborted) return '';
-      const errMsg = errorMessage(error);
+      const errMsg = errorText(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
         console.warn("Quota exceeded, returning friendly message");

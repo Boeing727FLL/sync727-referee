@@ -78,3 +78,5 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `features/auth/AuthProgressOverlay.tsx`: verification/success/departure choreography after login. `LoginPage` retains Firebase auth, signup, password reset, maintenance gating and navigation timing.
 - `features/referee/rulebook/pdfRendering.ts`: lazy MuPDF loading, browser PDF-page rendering and Blob-to-base64 conversion. Gemini request/model fallback logic stays in `geminiService`.
 - `lib/refereeFlags.ts`: global maintenance and feedback-reset flags, including fail-closed maintenance gating. `analytics.ts` now stays focused on counters, logs, feedback records, presence, sessions and dashboard reads.
+- `features/referee/ai/conversation.ts`: pure history normalization and conversion between chat, Gemini interactions and generate-content shapes.
+- `features/referee/ai/retryPolicy.ts`: deterministic error classification, retry transitions, key rotation order and in-memory key cooldowns. Secret values remain in the service/key vault boundary.
