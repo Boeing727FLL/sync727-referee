@@ -74,3 +74,4 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `ui/AccountDialogs.tsx`: password confirmation and displaced-session presentation. Reauthentication, Firebase/RTDB cleanup and account deletion ordering remain in the coordinator.
 - `chat/messageView.ts`: pure display-state derivation for think blocks, arrow cleanup, typewriter slicing and initial-answer gating. It owns no timer or stream state.
 - `chat/ChatMessageRow.tsx`: thinking/user/referee row presentation, attachments, Markdown, copy/reply controls and live-answer glow. The coordinator owns the typewriter target/ref, stream lifecycle and actions.
+- `chat/useTypewriter.ts`: the visible-response clock, target ref and rendering completion boundary. Network streaming, stop/abort and request bookkeeping remain in the coordinator.

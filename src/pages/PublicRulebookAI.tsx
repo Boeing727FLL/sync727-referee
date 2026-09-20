@@ -42,6 +42,7 @@ import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
+import { useTypewriter } from '../features/referee/chat/useTypewriter';
 import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
 import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
@@ -593,51 +594,25 @@ export default function PublicRulebookAI() {
     }
   }, [messages, loading]);
 
-  const typewriterTargetRef = useRef(0);
-  const [typewriterCount, setTypewriterCount] = useState(0);
-  const [renderingResponse, setRenderingResponse] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!typewriterReady) return;
-      setTypewriterCount(prev => {
-        if (prev >= typewriterTargetRef.current) return prev;
-        return prev + 1;
-      });
-    }, TYPEWRITER_TICK_MS);
-    return () => clearInterval(interval);
-  }, [typewriterReady]);
-
-  useEffect(() => {
-    if (loading) {
-      setTypewriterCount(0);
-      typewriterTargetRef.current = 0;
-    }
-  }, [loading]);
-
-  // Fresh typing session whenever a new chat begins or the gate opens.
-  // (Previously two identical effects; one covers both dependency sets.)
-  useEffect(() => {
-    if (chatStarted && typewriterReady) {
-      setTypewriterCount(0);
-      typewriterTargetRef.current = 0;
-    }
-  }, [chatStarted, typewriterReady]);
-
+  const finishRenderedResponse = React.useCallback(() => {
+    requestFinishedRef.current = false;
+    abortControllerRef.current = null;
+  }, []);
   useEffect(() => {
     if (!chatStarted) setTypewriterReady(false);
   }, [chatStarted]);
 
+  const typewriter = useTypewriter({
+    ready: typewriterReady,
+    chatStarted,
+    loading,
+    onFinished: finishRenderedResponse,
+  });
+  const typewriterTargetRef = typewriter.targetRef;
+  const typewriterCount = typewriter.count;
+  const renderingResponse = typewriter.rendering;
+  const setRenderingResponse = typewriter.setRendering;
   const isAiBusy = loading || renderingResponse;
-
-  useEffect(() => {
-    const typewriterDone = typewriterReady && typewriterTargetRef.current > 0 && typewriterCount >= typewriterTargetRef.current;
-    if (renderingResponse && (!typewriterReady || typewriterDone)) {
-      setRenderingResponse(false);
-      requestFinishedRef.current = false;
-      abortControllerRef.current = null;
-    }
-  }, [renderingResponse, typewriterReady, typewriterCount]);
 
   useEffect(() => {
     // Rulebook metadata is not needed on the landing screen. Waiting until
@@ -966,8 +941,7 @@ export default function PublicRulebookAI() {
     requestFinishedRef.current = false;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-    typewriterTargetRef.current = 0;
-    setTypewriterCount(0);
+    typewriter.reset();
     setRenderingResponse(false);
     refundClientRateLimit();
     setMessages(prev => {
