@@ -5,7 +5,7 @@
 @theme {
   --color-primary: #D32F2F;
   --color-slate-text: #334155;
-  --font-sans: "Assistant", "Heebo", "Rubik", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Hebrew", "Helvetica Neue", "Arial Hebrew", "Noto Sans Hebrew", "Segoe UI", "Assistant", "Heebo", Arial, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Share Tech Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -14,6 +14,11 @@
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
     font-synthesis: none;
+    font-kerning: normal;
+    font-optical-sizing: auto;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    letter-spacing: -0.011em;
+    line-height: 1.45;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -24,8 +29,20 @@
     overflow: hidden;
     background-color: #020617;
   }
+  body, button, input, textarea, select {
+    font-family: var(--font-sans);
+  }
   input, textarea, select {
     font-size: 16px !important;
+  }
+  button, [role="button"], input, textarea, select {
+    transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  h1, h2, h3, h4, h5, h6, strong, b {
+    letter-spacing: -0.018em;
+  }
+  [dir="ltr"] {
+    letter-spacing: normal;
   }
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
@@ -133,7 +150,7 @@
   border-radius: 9999px;
   background: #2f7fd1;
   display: inline-block;
-  animation: thinking-bounce 1.2s infinite ease-in-out;
+  animation: thinking-bounce 1.2s infinite cubic-bezier(0.37, 0, 0.63, 1);
 }
 
 .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
@@ -147,7 +164,7 @@
 
 .thinking-letter {
   display: inline-block;
-  animation: thinking-letter-wave 1.6s ease-in-out infinite;
+  animation: thinking-letter-wave 1.6s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
 /* ---------- Intro polish (minimal, lightweight) ---------- */

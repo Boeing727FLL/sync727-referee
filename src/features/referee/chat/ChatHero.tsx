@@ -18,7 +18,7 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ type: 'spring', stiffness: 220, damping: 26, mass: 0.8 }}
       className="relative flex flex-col items-center text-center max-w-2xl mx-auto"
     >
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>

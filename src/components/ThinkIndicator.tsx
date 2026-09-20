@@ -61,7 +61,7 @@ export default function ThinkIndicator() {
             initial={{ opacity: 0, scale: 0.88 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.07 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.8 }}
           >
             <ThinkingOrb state={current.orb} size={64} theme="dark" />
           </motion.div>
@@ -76,7 +76,7 @@ export default function ThinkIndicator() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.72 }}
             >
               {t('chat.phase_connecting')}
             </motion.span>
@@ -87,7 +87,7 @@ export default function ThinkIndicator() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.72 }}
             >
               <span className="tracking-[0.15em]">
                 {thinkingBase.split('').map((ch, i) => (

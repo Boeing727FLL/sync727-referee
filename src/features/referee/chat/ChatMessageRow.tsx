@@ -29,7 +29,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
   );
   const isUser = message.role === 'user';
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.72 }} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
         {isUser ? (userPicture ? <img src={userPicture} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" /> : <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center"><span className="text-xs md:text-sm font-black text-white">{(userName || 'U').trim().charAt(0)}</span></div>)
           : <div className={`w-full h-full rounded-full bg-white overflow-hidden transition-all duration-500 ${liveAnswer ? 'ring-2 ring-[#E1251B]/80 shadow-[0_0_18px_rgba(225,37,27,0.55)]' : 'ring-1 ring-white/25'}`}><img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" /></div>}

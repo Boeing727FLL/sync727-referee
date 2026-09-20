@@ -1321,7 +1321,7 @@ export default function PublicRulebookAI() {
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
                       className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden z-50"
                     >
                       <div className="p-3 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center gap-3">
@@ -1616,7 +1616,7 @@ export default function PublicRulebookAI() {
               initial={{ opacity: 0, y: 16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ type: 'spring', stiffness: 360, damping: 32, mass: 0.75 }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/95 backdrop-blur-xl border border-emerald-300/40 shadow-[0_8px_28px_rgba(16,185,129,0.4)]"
               role="status"
             >
@@ -1702,7 +1702,7 @@ export default function PublicRulebookAI() {
               initial={{ opacity: 0, y: -10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
               style={{ top: langPos.top, right: langPos.right }}
               className="fixed z-[70] w-52 max-w-[70vw] bg-white/70 backdrop-blur-2xl border border-white/60 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] overflow-hidden"
               dir="rtl"

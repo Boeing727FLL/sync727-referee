@@ -32,7 +32,7 @@ export default function ChatComposer(props: Props) {
             initial={{ opacity: 0, y: 18, scale: 0.95, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: 14, scale: 0.96, filter: 'blur(8px)' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.72 }}
             className="w-full max-w-3xl mx-auto mb-2 flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl backdrop-saturate-150 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.4)]"
           >
             <span className="shrink-0 w-8 h-8 rounded-full bg-[#0B6BCB]/25 border border-[#0B6BCB]/50 flex items-center justify-center shadow-[0_0_12px_rgba(11,107,203,0.35)]"><Reply className="w-4 h-4 text-[#7FB8EC]" /></span>
@@ -44,9 +44,9 @@ export default function ChatComposer(props: Props) {
       <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
         <AnimatePresence>
           {attachments.length > 0 && (
-            <motion.div initial={{ opacity: 0, height: 0, filter: 'blur(8px)' }} animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }} exit={{ opacity: 0, height: 0, filter: 'blur(8px)' }} transition={{ type: 'spring', stiffness: 380, damping: 34 }} className="overflow-hidden">
+            <motion.div initial={{ opacity: 0, height: 0, filter: 'blur(8px)' }} animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }} exit={{ opacity: 0, height: 0, filter: 'blur(8px)' }} transition={{ type: 'spring', stiffness: 340, damping: 32, mass: 0.72 }} className="overflow-hidden">
               <div className="flex gap-2 px-1 pt-1 pb-1"><AnimatePresence>{attachments.map(item => (
-                <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }} transition={{ type: 'spring', stiffness: 420, damping: 30 }} className="relative w-16 h-16 shrink-0">
+                <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }} transition={{ type: 'spring', stiffness: 400, damping: 28, mass: 0.68 }} className="relative w-16 h-16 shrink-0">
                   <img src={item.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/25 shadow-[0_4px_14px_rgba(0,0,0,0.45)]" />
                   <button onClick={() => removeAttachment(item.url)} aria-label="הסר תמונה" className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-slate-950/90 border border-white/25 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"><X className="w-3 h-3" /></button>
                 </motion.div>
