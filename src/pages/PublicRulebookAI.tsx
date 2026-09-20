@@ -13,40 +13,40 @@
  * STATE LIVES HERE; the lib/ services only talk to backends. Nothing in this
  * file throws to the user: failures degrade to chat notices or console warns.
  */
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
-import { GeminiService } from '../services/geminiService';
-import { s3Client, R2_BUCKET_NAME, getPublicUrl } from '../lib/r2';
-import { Upload } from '@aws-sdk/lib-storage';
-import { ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { convertPdfToImages } from '../services/geminiService';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { getPublicUrl } from '../lib/r2Config';
 import ThinkIndicator from '../components/ThinkIndicator';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
-import AdminAnalyticsModal from '../components/AdminAnalyticsModal';
-import RefereeLogsModal from '../components/RefereeLogsModal';
-import JudgeCorrectionsModal from '../components/JudgeCorrectionsModal';
-import FeedbackModal from '../components/FeedbackModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
-import PrivacyModal from '../components/PrivacyModal';
-import SettingsModal from '../components/SettingsModal';
-import MaintenanceScreen from '../components/MaintenanceScreen';
-import FeedbackAdminModal from '../components/FeedbackAdminModal';
-import TeamWorkspaceModal from '../components/TeamWorkspaceModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
+
+// Heavy, optional interfaces are fetched only when the user opens them.
+// This keeps admin tools, Markdown rendering and their Firebase code out of
+// the critical mobile startup path.
+const AdminAnalyticsModal = lazy(() => import('../components/AdminAnalyticsModal'));
+const RefereeLogsModal = lazy(() => import('../components/RefereeLogsModal'));
+const JudgeCorrectionsModal = lazy(() => import('../components/JudgeCorrectionsModal'));
+const FeedbackModal = lazy(() => import('../components/FeedbackModal'));
+const PrivacyModal = lazy(() => import('../components/PrivacyModal'));
+const SettingsModal = lazy(() => import('../components/SettingsModal'));
+const MaintenanceScreen = lazy(() => import('../components/MaintenanceScreen'));
+const FeedbackAdminModal = lazy(() => import('../components/FeedbackAdminModal'));
+const TeamWorkspaceModal = lazy(() => import('../components/TeamWorkspaceModal'));
+const MarkdownMessage = lazy(() => import('../components/MarkdownMessage'));
+
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -764,6 +764,9 @@ export default function PublicRulebookAI() {
   }, [renderingResponse, typewriterReady, typewriterCount]);
 
   useEffect(() => {
+    // Rulebook metadata is not needed on the landing screen. Waiting until
+    // chat opens avoids downloading the R2 administration SDK on first paint.
+    if (!chatStarted) return;
     const unsubSettings = onSnapshot(doc(db, 'app_config', 'rulebook'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -777,7 +780,7 @@ export default function PublicRulebookAI() {
     });
 
     return () => unsubSettings();
-  }, [seasonName]);
+  }, [chatStarted, seasonName]);
 
   /**
    * Load the newest rulebook files from R2 (latest 5) and detect the season
@@ -787,6 +790,7 @@ export default function PublicRulebookAI() {
     try {
       let files = [];
       try {
+        const { s3Client, R2_BUCKET_NAME, ListObjectsV2Command } = await import('../lib/r2');
         const command = new ListObjectsV2Command({
           Bucket: R2_BUCKET_NAME,
           Prefix: 'fll-rules/',
@@ -896,6 +900,7 @@ export default function PublicRulebookAI() {
     if (detected !== 'UNKNOWN' && detected !== seasonName) {
       let oldCount = 0;
       try {
+        const { s3Client, R2_BUCKET_NAME, ListObjectsV2Command } = await import('../lib/r2');
         const resp = await s3Client.send(new ListObjectsV2Command({
           Bucket: R2_BUCKET_NAME,
           Prefix: 'fll-rules',
@@ -929,6 +934,11 @@ export default function PublicRulebookAI() {
     setUploading(true);
     setUploadProgress(0);
     try {
+      const [{ Upload }, { s3Client, R2_BUCKET_NAME, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand }, { convertPdfToImages }] = await Promise.all([
+        import('@aws-sdk/lib-storage'),
+        import('../lib/r2'),
+        import('../services/geminiService'),
+      ]);
       const fileName = `fll-rules/${file.name}`;
       
       const upload = new Upload({
@@ -1261,6 +1271,7 @@ export default function PublicRulebookAI() {
     try {
       const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
       
+      const { GeminiService } = await import('../services/geminiService');
       const response = await GeminiService.askRulebook(
         finalPrompt,
         messages,
@@ -1885,8 +1896,7 @@ export default function PublicRulebookAI() {
                       </div>
                     ) : (
                       <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
+                        <Suspense fallback={<span>{finalRenderText}</span>}><MarkdownMessage
                           components={{
                             em: ({children, ...props}) => {
                               const txt = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null;
@@ -1896,7 +1906,7 @@ export default function PublicRulebookAI() {
                           }}
                         >
                           {isTypewriting ? finalRenderText + '\u200B*\u258D*' : finalRenderText}
-                        </ReactMarkdown>
+                        </MarkdownMessage></Suspense>
                       </div>
                     )}
                   </div>
@@ -2211,23 +2221,24 @@ export default function PublicRulebookAI() {
       </AnimatePresence>
 
       <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
-      <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
-      <SettingsModal
-        isOpen={showSettings}
+      <Suspense fallback={null}>
+      {showPrivacy && <PrivacyModal isOpen onClose={() => setShowPrivacy(false)} />}
+      {showSettings && <SettingsModal
+        isOpen
         onClose={() => setShowSettings(false)}
         onOpenUpload={() => { setShowSettings(false); openUploadModal(); }}
         onOpenAnalytics={() => setShowAdminAnalytics(true)}
         onOpenCorrections={() => setShowJudgeCorrections(true)}
         onOpenFeedback={() => setShowSettingsFeedback(true)}
         onOpenPrivacy={() => setShowPrivacy(true)}
-      />
-      <FeedbackAdminModal isOpen={showSettingsFeedback} onClose={() => setShowSettingsFeedback(false)} />
-      <TeamWorkspaceModal
-        isOpen={showTeamWorkspace}
+      />}
+      {showSettingsFeedback && <FeedbackAdminModal isOpen onClose={() => setShowSettingsFeedback(false)} />}
+      {showTeamWorkspace && <TeamWorkspaceModal
+        isOpen
         onClose={() => setShowTeamWorkspace(false)}
         onTeamChange={team => setTeamWorkspaceId(team?.id || '')}
         currentUser={currentTeamMember || { uid: '', name: 'חבר קבוצה', email: '' }}
-      />
+      />}
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
@@ -2336,23 +2347,23 @@ export default function PublicRulebookAI() {
         )}
       </AnimatePresence>
 
-      <AdminAnalyticsModal
-        isOpen={showAdminAnalytics}
+      {showAdminAnalytics && <AdminAnalyticsModal
+        isOpen
         onClose={() => setShowAdminAnalytics(false)}
-      />
+      />}
 
-      <RefereeLogsModal
-        isOpen={showRefereeLogs}
+      {showRefereeLogs && <RefereeLogsModal
+        isOpen
         onClose={() => setShowRefereeLogs(false)}
-      />
+      />}
 
-      <JudgeCorrectionsModal
-        isOpen={showJudgeCorrections}
+      {showJudgeCorrections && <JudgeCorrectionsModal
+        isOpen
         onClose={() => setShowJudgeCorrections(false)}
-      />
+      />}
 
-      <FeedbackModal
-        isOpen={showFeedback}
+      {showFeedback && <FeedbackModal
+        isOpen
         onClose={() => setShowFeedback(false)}
         onSubmit={() => {
           const uid = resolveRefereeUid() || 'anon';
@@ -2361,7 +2372,8 @@ export default function PublicRulebookAI() {
         }}
         season={seasonName}
         uid={resolveRefereeUid()}
-      />
+      />}
+      </Suspense>
 
       <AnimatePresence>
         {sessionKicked && (

@@ -2,16 +2,13 @@
  * firebase.ts — one initialized Firebase app shared by the whole codebase.
  *
  * SERVICES: Auth (email/password + Google), Firestore (users, rulebooks,
- * corrections, key pool — offline-persistent), Realtime Database (all
- * analytics/presence/flags), Storage, Messaging (initialized only where
- * supported). App Check (reCAPTCHA Enterprise) attests web clients.
+ * corrections, key pool — offline-persistent) and Realtime Database (all
+ * analytics/presence/flags). App Check (reCAPTCHA Enterprise) attests web clients.
  */
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
-import { getStorage } from "firebase/storage";
-import { getMessaging, isSupported } from "firebase/messaging";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig = {
@@ -49,15 +46,6 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
 });
 export const rtdb = getDatabase(app);
-export const storage = getStorage(app);
-
-export let messaging: any = null;
-isSupported().then((supported) => {
-  if (supported) {
-    messaging = getMessaging(app);
-  }
-}).catch(console.warn);
-
 export const googleProvider = new GoogleAuthProvider();
 
 // No Drive scopes: the app only needs the basic Google profile (name, email,

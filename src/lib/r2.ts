@@ -5,7 +5,8 @@
  * URL/key translators between public download links and bucket keys.
  * Used by rulebook listing, owner uploads, and AI page-image fetching.
  */
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+export { PutObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { R2_PUBLIC_URL } from './r2Config';
 
 const R2_ACCOUNT_ID = '2d106fb460c2e5c4df4201020f56d44a';
