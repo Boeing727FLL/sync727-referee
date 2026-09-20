@@ -16,7 +16,7 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -42,6 +42,7 @@ import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
 import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
+import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
 import ChatHero from '../features/referee/chat/ChatHero';
 import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
@@ -1779,63 +1780,21 @@ export default function PublicRulebookAI() {
         variant="warning"
       />
 
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
-            dir="rtl"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-slate-900 border border-red-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6 text-center space-y-4">
-                <h3 className="text-xl font-bold text-white">מחיקת החשבון לצמיתות</h3>
-                <p className="text-slate-400 text-sm">
-                  החשבון ומסמך המשתמש יימחקו ולא ניתן יהיה לשחזר. לאישור, הזינו את הסיסמה.
-                </p>
-                <input
-                  type="password"
-                  value={deletePassword}
-                  onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(null); }}
-                  onKeyDown={(e) => e.key === 'Enter' && !deletingAccount && handleDeleteAccount()}
-                  placeholder="סיסמה"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
-                />
-                {deleteError && (
-                  <p className="text-red-400 text-xs font-bold">{deleteError}</p>
-                )}
-              </div>
-              <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex gap-3 justify-center">
-                <button
-                  onClick={() => {
-                    if (deletingAccount) return;
-                    setShowDeleteConfirm(false);
-                    setDeletePassword('');
-                    setDeleteError(null);
-                  }}
-                  className="px-4 py-2 rounded-lg text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
-                >
-                  ביטול
-                </button>
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={deletingAccount || !deletePassword}
-                  className="px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {deletingAccount ? 'מוחק' : 'כן, מחק הכל'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteAccountDialog
+        open={showDeleteConfirm}
+        password={deletePassword}
+        error={deleteError}
+        deleting={deletingAccount}
+        setPassword={setDeletePassword}
+        clearError={() => setDeleteError(null)}
+        onCancel={() => {
+          if (deletingAccount) return;
+          setShowDeleteConfirm(false);
+          setDeletePassword('');
+          setDeleteError(null);
+        }}
+        onConfirm={handleDeleteAccount}
+      />
 
       {showAdminAnalytics && <AdminAnalyticsModal
         isOpen
@@ -1865,39 +1824,10 @@ export default function PublicRulebookAI() {
       />}
       </Suspense>
 
-      <AnimatePresence>
-        {sessionKicked && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
-            dir="rtl"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center"
-            >
-              <div className="p-6">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/15 flex items-center justify-center">
-                  <Scale className="w-8 h-8 text-red-400" />
-                </div>
-                <h3 className="text-lg font-black text-white mb-2">החשבון נפתח במקום אחר</h3>
-                <p className="text-slate-400 text-sm mb-6">
-                  המשתמש שלך נכנס ממכשיר אחר, ולכן התחברות זו נותקה כדי למנוע חוסר עקביות בנתוני האנליטיקס.
-                </p>
-                <button
-                  onClick={() => { setSessionKicked(false); navigate('/login'); }}
-                  className="w-full py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black transition-colors shadow-lg shadow-yellow-500/20"
-                >
-                  חזרה לכניסה
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SessionKickedDialog
+        open={sessionKicked}
+        onReturnToLogin={() => { setSessionKicked(false); navigate('/login'); }}
+      />
 
       {/* Language floating dropdown - BizPortal style, anchored right */}
       <AnimatePresence>

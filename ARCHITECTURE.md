@@ -71,3 +71,4 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `feedback/model.ts` and `feedback/FeedbackViews.tsx`: pure feedback statistics/formatting and feedback-card/stat/empty/lock presentation. Firebase ownership and destructive operations stay in `FeedbackAdminModal`.
 - `chat/ChatHero.tsx`: empty-chat welcome and starter-question presentation. The coordinator still owns sending, busy state and locale data.
 - `rulebook/RulebookDialogs.tsx`: upload progress/picker and typed season-replacement confirmation. R2 operations, season detection and destructive ordering remain in the coordinator.
+- `ui/AccountDialogs.tsx`: password confirmation and displaced-session presentation. Reauthentication, Firebase/RTDB cleanup and account deletion ordering remain in the coordinator.
