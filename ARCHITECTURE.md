@@ -61,3 +61,4 @@ The current R2 S3 credential is embedded in the historical client implementation
 - `ui/useTransientToast.ts`, `ui/useDeviceType.ts`, `ui/browser.ts`: small reusable browser/UI concerns.
 
 The coordinator intentionally retains operations that mutate several domains in one transaction, such as account deletion and rulebook replacement. Splitting those into prop-heavy components would hide ordering constraints without reducing risk.
+- `chat/ChatComposer.tsx`: reply preview, image attachment preview, textarea and send/stop controls. The coordinator owns message/request state and passes explicit actions; the component owns no network or quota behavior.
