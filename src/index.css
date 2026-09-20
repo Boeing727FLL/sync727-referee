@@ -44,6 +44,15 @@
   [dir="ltr"] {
     letter-spacing: normal;
   }
+  textarea {
+    transition-property: height, border-color, box-shadow, opacity;
+    transition-duration: 220ms;
+    transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  button:active:not(:disabled), [role="button"]:active {
+    transition-duration: 80ms;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
   }

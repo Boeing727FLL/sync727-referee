@@ -6,6 +6,7 @@ import ThinkIndicator from '../../../components/ThinkIndicator';
 import { MarkdownMessage } from '../ui/lazyComponents';
 import type { MessageView } from './messageView';
 import { STOPPED_TEXT } from '../config';
+import { MOTION } from '../ui/motion';
 
 type Props = {
   view: MessageView;
@@ -19,7 +20,7 @@ type Props = {
 export default function ChatMessageRow({ view, userPicture, userName, onCopy, onReply, t }: Props) {
   const { message, index, thinking, thinkContent, text, typewriting, liveAnswer } = view;
   if (thinking) return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
+    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.985 }} transition={MOTION.content} className="flex gap-2.5 md:gap-3">
       <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center"><img src="/logoref.png" alt="" className="w-full h-full object-contain" /></div>
       <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2 max-w-[85%] md:max-w-[75%]">
         <ThinkIndicator />
@@ -29,7 +30,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
   );
   const isUser = message.role === 'user';
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.72 }} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 12, scale: 0.992 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.992 }} transition={MOTION.content} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
         {isUser ? (userPicture ? <img src={userPicture} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" /> : <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center"><span className="text-xs md:text-sm font-black text-white">{(userName || 'U').trim().charAt(0)}</span></div>)
           : <div className={`w-full h-full rounded-full bg-white overflow-hidden transition-all duration-500 ${liveAnswer ? 'ring-2 ring-[#E1251B]/80 shadow-[0_0_18px_rgba(225,37,27,0.55)]' : 'ring-1 ring-white/25'}`}><img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" /></div>}

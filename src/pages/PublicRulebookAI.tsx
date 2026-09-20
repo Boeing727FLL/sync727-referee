@@ -15,7 +15,7 @@
  */
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
@@ -46,6 +46,7 @@ import { buildMessageView, typewriterLength } from '../features/referee/chat/mes
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
 import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
 import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
+import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
 import ChatHero from '../features/referee/chat/ChatHero';
@@ -595,9 +596,14 @@ export default function PublicRulebookAI() {
   }, [activeRulebookFiles]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    scroller.scrollTo({
+      top: scroller.scrollHeight,
+      behavior: !reduce && distance < scroller.clientHeight * 1.25 ? 'smooth' : 'auto',
+    });
   }, [messages, loading]);
 
   const finishRenderedResponse = React.useCallback(() => {
@@ -1263,10 +1269,11 @@ export default function PublicRulebookAI() {
       initial={false}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
+      <MotionConfig reducedMotion="user" transition={MOTION.content}>
       <RefereeBackdrop />
 
       {/* Header - dark glass, premium AI console */}
-      <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={MOTION.gentle} className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -1321,7 +1328,7 @@ export default function PublicRulebookAI() {
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
+                      transition={MOTION.overlay}
                       className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden z-50"
                     >
                       <div className="p-3 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center gap-3">
@@ -1457,7 +1464,7 @@ export default function PublicRulebookAI() {
 
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Golden reveal flash after login transition */}
       {enterFlash && (
@@ -1480,6 +1487,7 @@ export default function PublicRulebookAI() {
           onQuestion={question => handleSend(question)}
           t={t}
         />}
+        <AnimatePresence initial={false} mode="popLayout">
         {messages.map((message, index) => {
           const preview = buildMessageView(message, index, {
             lastIndex: messages.length - 1,
@@ -1509,6 +1517,7 @@ export default function PublicRulebookAI() {
             t={t}
           />;
         })}
+        </AnimatePresence>
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
@@ -1616,7 +1625,7 @@ export default function PublicRulebookAI() {
               initial={{ opacity: 0, y: 16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 32, mass: 0.75 }}
+              transition={MOTION.content}
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/95 backdrop-blur-xl border border-emerald-300/40 shadow-[0_8px_28px_rgba(16,185,129,0.4)]"
               role="status"
             >
@@ -1702,7 +1711,7 @@ export default function PublicRulebookAI() {
               initial={{ opacity: 0, y: -10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
+              transition={MOTION.overlay}
               style={{ top: langPos.top, right: langPos.right }}
               className="fixed z-[70] w-52 max-w-[70vw] bg-white/70 backdrop-blur-2xl border border-white/60 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] overflow-hidden"
               dir="rtl"
@@ -1730,6 +1739,7 @@ export default function PublicRulebookAI() {
           </>
         )}
       </AnimatePresence>
+      </MotionConfig>
     </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 /** Empty-chat hero and its four starter questions. */
 import { motion } from 'framer-motion';
+import { MOTION } from '../ui/motion';
 import { Cog, Hand, ListOrdered, Users } from 'lucide-react';
 import { MISSION_ACCENTS } from '../config';
 
@@ -18,7 +19,7 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 220, damping: 26, mass: 0.8 }}
+      transition={MOTION.gentle}
       className="relative flex flex-col items-center text-center max-w-2xl mx-auto"
     >
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
@@ -41,10 +42,10 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
           const Icon = ICONS[index % ICONS.length];
           const accent = MISSION_ACCENTS[index % MISSION_ACCENTS.length];
           return (
-            <button key={index} onClick={() => onQuestion(question)} disabled={disabled} style={{ borderTopColor: accent }} className="group relative flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E2238] border border-t-[3px] border-x-white/10 border-b-white/10 hover:bg-[#142a47] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            <motion.button key={index} whileHover={{ y: -1 }} whileTap={{ scale: 0.985 }} transition={MOTION.tap} onClick={() => onQuestion(question)} disabled={disabled} style={{ borderTopColor: accent }} className="group relative flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E2238] border border-t-[3px] border-x-white/10 border-b-white/10 hover:bg-[#142a47] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
               <span style={{ color: accent }} className="shrink-0 w-11 h-11 rounded-xl bg-white/[0.06] border border-white/15 flex items-center justify-center"><Icon className="w-6 h-6" /></span>
               <span className="text-[15px] md:text-base font-bold text-white leading-relaxed">{question}</span>
-            </button>
+            </motion.button>
           );
         })}
       </div>

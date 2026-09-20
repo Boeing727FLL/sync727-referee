@@ -1,5 +1,7 @@
 /** Static arena identity behind the working referee. No state or network work. */
+import { motion } from 'framer-motion';
 import { GRID_BG } from '../config';
+import { MOTION } from './motion';
 
 export function RefereeBackdrop() {
   return (
@@ -20,13 +22,13 @@ export function SeasonStatus({ learning, season, label, compact = false }: Seaso
   const glow = learning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40';
   const border = learning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80';
   return (
-    <div className={`relative whitespace-nowrap ${compact ? '' : ''}`}>
+    <motion.div layout transition={MOTION.control} className={`relative whitespace-nowrap ${compact ? '' : ''}`}>
       <div aria-hidden className={`absolute -inset-1 rounded-full blur-md ${glow}`} />
       <div className={`relative rounded-full p-px ${border}`}>
         <div className={`rounded-full bg-[#0B1526] ${compact ? 'px-2 py-px' : 'px-4 py-1.5'}`}>
           <span className={`${compact ? 'text-[10px]' : 'text-sm'} font-black text-slate-100 ${learning || compact ? '' : 'tracking-[0.18em]'}`} dir={compact ? undefined : 'ltr'}>{learning ? label : season}</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
