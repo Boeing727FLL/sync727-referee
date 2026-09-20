@@ -16,7 +16,7 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, Scale, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -33,7 +33,7 @@ import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceServ
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
-import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, MISSION_ACCENTS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
 import { stripThinkBlocks } from '../features/referee/chat/text';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
@@ -43,6 +43,8 @@ import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
 import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
 import ChatComposer from '../features/referee/chat/ChatComposer';
+import ChatHero from '../features/referee/chat/ChatHero';
+import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
 
 import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, MarkdownMessage, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
 
@@ -1173,7 +1175,6 @@ export default function PublicRulebookAI() {
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
 
-  const heroIcons = [ListOrdered, Hand, Cog, Users];
 
   const playWhistleSound = () => {
     try {
@@ -1458,69 +1459,13 @@ export default function PublicRulebookAI() {
       {/* Chat Area - premium AI console, full screen */}
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
         <div className="w-full px-3 md:px-10 py-4 md:py-8 space-y-4 md:space-y-6">
-        {heroActive && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex flex-col items-center text-center max-w-2xl mx-auto"
-          >
-            {/* Soft FIRST-color glow behind the hero (no boxes, no borders). */}
-            <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full bg-[#FFC400]/10 blur-3xl" />
-            </div>
-
-            {/* Logo — bigger, sits on a soft halo */}
-            <div className="relative mb-5">
-              <div className="absolute inset-0 -m-2 rounded-full bg-[#FFC400]/[0.07] blur-xl" aria-hidden />
-              <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[24px] bg-white ring-1 ring-white/30 overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
-                <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
-              </div>
-            </div>
-
-            <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC]" dir="ltr">
-              FIRST&nbsp;LEGO&nbsp;LEAGUE&nbsp;·&nbsp;VIRTUAL&nbsp;REFEREE
-            </p>
-            {heroGreeting && (
-              <p className="text-sm md:text-base font-bold text-amber-300/90 mt-3">
-                {heroGreeting}
-              </p>
-            )}
-            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-2">
-              {t('intro.subtitle')}
-            </h2>
-            <p className="text-sm md:text-base text-slate-300 font-medium mt-2 max-w-lg leading-relaxed px-2">
-              {t('intro.descFull')}
-            </p>
-
-            {/* Mission cards: clean, each with a 3px FLL accent stripe at the top */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7 w-full">
-              {quickQuestions.map((q, i) => {
-                const Icon = heroIcons[i % heroIcons.length];
-                const accent = MISSION_ACCENTS[i % MISSION_ACCENTS.length];
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleSend(q)}
-                    disabled={isAiBusy || isLearning}
-                    style={{ borderTopColor: accent }}
-                    className="group relative flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E2238] border border-t-[3px] border-x-white/10 border-b-white/10 hover:bg-[#142a47] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <span
-                      style={{ color: accent }}
-                      className="shrink-0 w-11 h-11 rounded-xl bg-white/[0.06] border border-white/15 flex items-center justify-center"
-                    >
-                      <Icon className="w-6 h-6" />
-                    </span>
-                    <span className="text-[15px] md:text-base font-bold text-white leading-relaxed">
-                      {q}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+        {heroActive && <ChatHero
+          greeting={heroGreeting}
+          questions={quickQuestions}
+          disabled={isAiBusy || isLearning}
+          onQuestion={question => handleSend(question)}
+          t={t}
+        />}
         {messages.map((msg, idx) => {
           const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
           const isThinking = isOpenThink && loading && idx === messages.length - 1;
@@ -1738,121 +1683,22 @@ export default function PublicRulebookAI() {
       {/* ===== Floating layers: every modal/toast/drawer mounts here and
           gates itself with isOpen, so the chat tree underneath never unmounts. ===== */}
 
-      {/* Upload Modal */}
-      <AnimatePresence>
-        {showUploadModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-6"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-6"
-            >
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UploadIcon className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-black text-slate-800">{t('admin.uploadTitle')}</h3>
-                <p className="text-slate-500 text-sm mt-2">
-                  {t('admin.uploadDesc')}
-                </p>
-              </div>
-
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-blue-600/50 hover:bg-blue-600/5 transition-all group"
-              >
-                <FileText className="w-10 h-10 text-slate-300 group-hover:text-blue-600 transition-colors" />
-                <span className="text-sm font-bold text-slate-400 group-hover:text-blue-600">{t('admin.uploadPick')}</span>
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  accept=".txt,.md,.json,.docx,.pdf,application/pdf"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </div>
-
-              {uploading && (
-                <div className="w-full space-y-2">
-                  <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>{t('admin.uploading')}</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-600 transition-all duration-300 ease-out"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
-              >
-                {t('admin.cancel')}
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {wipePending && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-2">??</div>
-                <h3 className="text-xl font-black text-slate-800">מחיקת עונה שלמה</h3>
-                <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-                  הקובץ {wipePending.fileName} מזוהה כעונה חדשה ({wipePending.season}).
-                  ההעלאה תמחק {wipePending.oldCount} קבצי חוקים ישנים. כדי לאשר, הקלידו את שם העונה.
-                </p>
-              </div>
-              <input
-                type="text"
-                value={wipeTyped}
-                onChange={(e) => setWipeTyped(e.target.value)}
-                placeholder={wipePending.season}
-                className="w-full px-4 py-3 rounded-xl border-2 border-red-300 bg-red-50 text-slate-900 font-black text-base md:text-sm text-center tracking-widest outline-none focus:border-red-500 transition-all"
-                dir="ltr"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setWipePending(null); setWipeTyped(''); }}
-                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
-                >
-                  ביטול
-                </button>
-                <button
-                  onClick={confirmSeasonWipe}
-                  disabled={wipeTyped.trim().toUpperCase() !== wipePending.season.toUpperCase()}
-                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  מחק והעלה
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <RulebookUploadDialog
+        open={showUploadModal}
+        uploading={uploading}
+        progress={uploadProgress}
+        inputRef={fileInputRef}
+        onFile={handleFileUpload}
+        onClose={() => setShowUploadModal(false)}
+        t={t}
+      />
+      <SeasonWipeDialog
+        pending={wipePending}
+        typed={wipeTyped}
+        setTyped={setWipeTyped}
+        onCancel={() => { setWipePending(null); setWipeTyped(''); }}
+        onConfirm={confirmSeasonWipe}
+      />
 
       <AnimatePresence>
         {showIntro && (
