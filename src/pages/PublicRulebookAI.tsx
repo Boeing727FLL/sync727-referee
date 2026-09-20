@@ -33,7 +33,7 @@ import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceServ
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
-import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, GRID_BG, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, MISSION_ACCENTS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, MISSION_ACCENTS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
 import { stripThinkBlocks } from '../features/referee/chat/text';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
@@ -41,6 +41,7 @@ import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
+import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
 import ChatComposer from '../features/referee/chat/ChatComposer';
 
 import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, MarkdownMessage, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
@@ -1247,31 +1248,7 @@ export default function PublicRulebookAI() {
       initial={false}
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
-      {/* Subtle grid backdrop: repeating inline SVG tile. */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ backgroundImage: `url("${GRID_BG}")`, backgroundSize: '56px 56px', backgroundRepeat: 'repeat' }}
-        aria-hidden
-      />
-      {/* A faint dark wash on top so the chat cards on top remain readable. */}
-      <div className="absolute inset-0 bg-slate-950/[0.55]" aria-hidden />
-      {/* Brand watermark: the referee logo, large and centered behind everything.
-          Masked so its edges melt into the background. Already cached via hero. */}
-      <img
-        src="/logoref.png"
-        alt=""
-        aria-hidden
-        draggable={false}
-        loading="eager"
-        decoding="async"
-        className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-[min(80vw,560px)] opacity-10 pointer-events-none select-none"
-        style={{ maskImage: 'radial-gradient(circle, black 55%, transparent 78%)', WebkitMaskImage: 'radial-gradient(circle, black 55%, transparent 78%)' }}
-      />
-      {/* Subtle veils at top + bottom so the field fades into the UI chrome. */}
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 to-transparent" />
-      {/* FLL identity strip: blue / yellow / red */}
-      <div className="h-1 bg-gradient-to-l from-[#0B6BCB] via-[#FFC400] to-[#E1251B] w-full shrink-0 relative z-10" />
+      <RefereeBackdrop />
 
       {/* Header - dark glass, premium AI console */}
       <div className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
@@ -1286,35 +1263,13 @@ export default function PublicRulebookAI() {
                   {t('app.title')}
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
-                {(!isLearning && seasonName === 'UNKNOWN') ? null : (
-                  <span className="relative whitespace-nowrap">
-                    <span aria-hidden className={`absolute -inset-1 rounded-full blur-md ${isLearning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40'}`} />
-                    <span className={`relative block rounded-full p-px ${isLearning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80'}`}>
-                      <span className="block rounded-full bg-[#0B1526] px-2 py-px">
-                        <span className="text-[10px] font-black text-slate-100">
-                          {isLearning ? t('chat.updating') : seasonName}
-                        </span>
-                      </span>
-                    </span>
-                  </span>
-                )}
+                <SeasonStatus learning={isLearning} season={seasonName} label={t('chat.updating')} compact />
               </div>
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            {(!isLearning && seasonName === 'UNKNOWN') ? null : (
-              <div className="relative whitespace-nowrap">
-                <div aria-hidden className={`absolute -inset-1 rounded-full blur-md ${isLearning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40'}`} />
-                <div className={`relative rounded-full p-px ${isLearning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80'}`}>
-                  <div className="rounded-full bg-[#0B1526] px-4 py-1.5">
-                    <span className={`text-sm font-black text-slate-100 ${isLearning ? '' : 'tracking-[0.18em]'}`} dir="ltr">
-                      {isLearning ? t('chat.updating') : seasonName}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+            <SeasonStatus learning={isLearning} season={seasonName} label={t('chat.updating')} />
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
