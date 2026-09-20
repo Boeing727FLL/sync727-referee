@@ -508,7 +508,10 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       modelLoop: for (let modelIndex = 0; modelIndex < effectiveChain.length; modelIndex++) {
         const modelEntry = effectiveChain[modelIndex];
         const availableKeys = keyHealth.available(allKeys);
-        if (!availableKeys.length) break;
+        if (!availableKeys.length) {
+          lastFailureKind = 'quota';
+          break;
+        }
         const rotationIndex = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
         const candidates = rotateCandidates(availableKeys, rotationIndex);
         localStorage.setItem('gemini_key_rotation_index', String((rotationIndex + 1) % availableKeys.length));
