@@ -16,14 +16,14 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
 import { getPublicUrl } from '../lib/r2Config';
-import ThinkIndicator from '../components/ThinkIndicator';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
+import ThinkIndicator from '../components/ThinkIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -41,13 +41,15 @@ import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
+import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
+import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
 import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
 import ChatHero from '../features/referee/chat/ChatHero';
 import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
 
-import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, MarkdownMessage, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
+import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
 
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -1467,187 +1469,34 @@ export default function PublicRulebookAI() {
           onQuestion={question => handleSend(question)}
           t={t}
         />}
-        {messages.map((msg, idx) => {
-          const isOpenThink = msg.role === 'model' && msg.text.includes('<think>') && !msg.text.includes('</think>');
-          const isThinking = isOpenThink && loading && idx === messages.length - 1;
-          const thinkContent = msg.text.includes('<think>') ? msg.text.split('<think>')[1]?.split('</think>')[0]?.trim() || '' : '';
-          const _tOpen = '<think>';
-          const _tClose = '</think>';
-          const _thinkRe = new RegExp(_tOpen + '[\\s\\S]*' + _tClose, 'g');
-          let finalRenderText = msg.role === 'model'
-            ? msg.text.replace(_thinkRe, '').replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim()
-            : msg.text.replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '');
-          if (!finalRenderText && msg.role === 'model') {
-            if (thinkContent) {
-              finalRenderText = thinkContent.replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim();
-            } else if (msg.text.includes('<think>')) {
-              finalRenderText = msg.text.replace('<think>', '').replace(/\\?rightarrow/g, '->').replace(/\\?leftarrow/g, '<-').replace(/\$/g, '').trim();
-            }
+        {messages.map((message, index) => {
+          const preview = buildMessageView(message, index, {
+            lastIndex: messages.length - 1,
+            loading,
+            typewriterReady,
+            typewriterCount,
+            typewriterTarget: typewriterTargetRef.current,
+            chatStarted,
+          });
+          if (index === messages.length - 1 && message.role === 'model' && preview.fullText && typewriterReady) {
+            typewriterTargetRef.current = typewriterLength(preview.fullText);
           }
-
-          if (idx === messages.length - 1 && msg.role === 'model' && finalRenderText.length > 0 && typewriterReady) {
-            typewriterTargetRef.current = finalRenderText.split(/(\s+)/).length;
-          }
-          const isTypewriting = idx === messages.length - 1 && msg.role === 'model' && typewriterReady && typewriterCount < typewriterTargetRef.current;
-          // Live-answer glow: bubble, glow bar and avatar light up while text streams.
-          const isLiveAnswer = isTypewriting;
-          if (isTypewriting) {
-            finalRenderText = finalRenderText.split(/(\s+)/).slice(0, typewriterCount).join('');
-          }
-          // Before the gate opens, hide the last model message entirely so the
-          // greeting never flashes fully before typing from the start.
-          if (idx === messages.length - 1 && msg.role === 'model' && !typewriterReady && chatStarted) {
-            finalRenderText = '';
-          }
-
-          if (isThinking) {
-            return (
-              <motion.div key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-                <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
-                  <img src="/logoref.png" alt="" className="w-full h-full object-contain" />
-                </div>
-                <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2 max-w-[85%] md:max-w-[75%]">
-                  <ThinkIndicator />
-                  {thinkContent && (
-                    <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                      {thinkContent}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          }
-
-          return (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className={`flex gap-2.5 md:gap-3.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-            >
-              {/* Referee or User Avatar */}
-              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
-                {msg.role === 'user' ? (
-                  (user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture')) ? (
-                    <img src={user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture') || ''} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" />
-                  ) : (
-                    <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center">
-                      <span className="text-xs md:text-sm font-black text-white">
-                        {(displayUser?.name || 'U').trim().charAt(0)}
-                      </span>
-                    </div>
-                  )
-                ) : (
-                  <div className={`w-full h-full rounded-full bg-white overflow-hidden transition-all duration-500 ${isLiveAnswer ? 'ring-2 ring-[#E1251B]/80 shadow-[0_0_18px_rgba(225,37,27,0.55)]' : 'ring-1 ring-white/25'}`}>
-                    <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
-                  </div>
-                )}
-              </div>
-
-              <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-3xl'}`}>
-                <div className={`relative overflow-hidden transition-all duration-500 ${
-                  msg.role === 'user'
-                    ? 'bg-[#0B6BCB] text-white rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3'
-                    : `bg-gradient-to-b from-[#111f38] to-[#0E1628] border text-slate-100 rounded-2xl px-4 py-3 md:px-5 md:py-4 ${
-                        isLiveAnswer
-                          ? 'border-[#E1251B]/40 shadow-[0_0_36px_rgba(225,37,27,0.22)]'
-                          : 'border-white/10 shadow-[0_10px_32px_rgba(0,0,0,0.45)]'
-                      }`
-                }`}>
-                  {/* Referee glow bar */}
-                  {msg.role !== 'user' && (
-                    <span aria-hidden className={`absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-[#E1251B] via-[#ff6b5e] to-[#E1251B]/30 transition-all duration-500 ${isLiveAnswer ? 'shadow-[0_0_16px_rgba(225,37,27,0.95)]' : 'shadow-[0_0_8px_rgba(225,37,27,0.5)]'}`} />
-                  )}
-
-                  {/* Referee Tag */}
-                  {msg.role !== 'user' && (
-                    <div className="flex items-center gap-1.5 mb-1.5 md:mb-2">
-                      <span className="text-[10px] md:text-[11px] font-black text-red-100 bg-[#E1251B]/15 border border-[#E1251B]/40 shadow-[0_0_12px_rgba(225,37,27,0.25)] px-2 py-0.5 rounded-full flex items-center gap-1">
-                         {t('chat.refereeTag')}
-                      </span>
-                      {finalRenderText.includes("שריקה") && (
-                        <span className="text-[10px] md:text-[11px] font-black text-white bg-[#E1251B] px-2 py-0.5 rounded-full">
-                            {t('chat.foulTag')}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {msg.files && msg.files.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {msg.files.map((file, fIdx) => (
-                        <div key={fIdx} className="relative w-16 h-16 md:w-28 md:h-28 group">
-                      {(file.key.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.url.match(/\.(jpg|jpeg|png|gif|webp)/i) || file.base64?.startsWith('data:image')) ? (
-                          <img src={file.url} alt="Attached" className="w-full h-full object-cover rounded-xl border border-white/15" />
-                       ) : (
-                           <div className="w-full h-full flex items-center justify-center bg-white/[0.06] rounded-xl border border-white/10">
-                                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400" />
-                              </div>
-                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className={`text-[15px] md:text-[16px] leading-relaxed ${msg.role === 'user' ? 'font-medium' : 'font-normal'}`}>
-                    {msg.role === 'user' ? (
-                      <div className="whitespace-pre-wrap">
-                        {msg.quote && (
-                          <div className="mb-1.5 rounded-lg border-r-2 border-white/60 bg-black/25 px-2.5 py-1.5 text-xs text-blue-100/90 line-clamp-3 text-right">
-                            {msg.quote}
-                          </div>
-                        )}
-                        {msg.text}
-                      </div>
-                    ) : (
-                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right">
-                        <Suspense fallback={<span>{finalRenderText}</span>}><MarkdownMessage
-                          components={{
-                            em: ({children, ...props}) => {
-                              const txt = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null;
-                              if (txt === '▍') return <span className="typewriter-cursor" aria-hidden>▍</span>;
-                              return <em {...props}>{children}</em>;
-                            }
-                          }}
-                        >
-                          {isTypewriting ? finalRenderText + '\u200B*\u258D*' : finalRenderText}
-                        </MarkdownMessage></Suspense>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {msg.role === 'model' && idx > 0 && msg.text !== STOPPED_TEXT && (
-                  <div className="flex items-center gap-1.5 px-0.5">
-                    <button
-                      onClick={async () => {
-                        if (await copyText(finalRenderText)) {
-                          showToast(t('chat.copied'));
-                        }
-                      }}
-                      className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#E1251B]/50 hover:bg-[#E1251B]/10 hover:shadow-[0_0_12px_rgba(225,37,27,0.25)] cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      {t('chat.copy')}
-                    </button>
-                    {!isLiveAnswer && (
-                      <button
-                        onClick={() => {
-                          setReplyTo({ text: finalRenderText.slice(0, 800) });
-                          composerRef.current?.focus();
-                        }}
-                        className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#0B6BCB]/60 hover:bg-[#0B6BCB]/15 hover:shadow-[0_0_12px_rgba(11,107,203,0.3)] cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Reply className="w-3.5 h-3.5" />
-                        {t('chat.reply')}
-                      </button>
-                    )}
-
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          );
+          return <ChatMessageRow
+            key={index}
+            view={buildMessageView(message, index, {
+              lastIndex: messages.length - 1,
+              loading,
+              typewriterReady,
+              typewriterCount,
+              typewriterTarget: typewriterTargetRef.current,
+              chatStarted,
+            })}
+            userPicture={user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture') || ''}
+            userName={displayUser?.name || 'U'}
+            onCopy={async text => { if (await copyText(text)) showToast(t('chat.copied')); }}
+            onReply={text => { setReplyTo({ text: text.slice(0, 800) }); composerRef.current?.focus(); }}
+            t={t}
+          />;
         })}
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
