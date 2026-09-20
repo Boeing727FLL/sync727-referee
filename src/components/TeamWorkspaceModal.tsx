@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Copy, Loader2, LogIn, Plus, Users, X } from 'lucide-react';
-import {
-  TEAM_STORAGE_KEY,
-  createTeam,
-  getActiveTeamId,
-  joinTeam,
-  subscribeTeamMembers,
-  subscribeTeamQuestions,
-  type TeamMember,
-  type TeamQuestion,
-  type TeamWorkspace,
-} from '../services/teamWorkspaceService';
+import type { TeamMember, TeamWorkspace } from '../services/teamWorkspaceService';
+import { useTeamWorkspace } from '../features/referee/team/useTeamWorkspace';
 
 type Props = {
   isOpen: boolean;
@@ -23,68 +14,16 @@ type Props = {
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function TeamWorkspaceModal({ isOpen, onClose, currentUser, onTeamChange }: Props) {
-  const [team, setTeam] = useState<TeamWorkspace | null>(null);
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [questions, setQuestions] = useState<TeamQuestion[]>([]);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
-  const notify = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(''), 2200); };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const activeId = getActiveTeamId();
-    if (!activeId) return;
-    joinTeam(activeId, currentUser).then(activeTeam => {
-      if (activeTeam) setTeam(activeTeam);
-    }).catch(() => undefined);
-  }, [isOpen, currentUser.uid]);
-
-  useEffect(() => {
-    if (!team) return;
-    const stopQuestions = subscribeTeamQuestions(team.id, setQuestions);
-    const stopMembers = subscribeTeamMembers(team.id, setMembers);
-    return () => { stopQuestions(); stopMembers(); };
-  }, [team]);
-
-  const openTeam = (nextTeam: TeamWorkspace) => {
-    localStorage.setItem(TEAM_STORAGE_KEY, nextTeam.id);
-    setTeam(nextTeam);
-    onTeamChange(nextTeam);
-  };
-
-  const handleCreate = async () => {
-    if (!name.trim()) return;
-    setBusy(true);
-    try { openTeam(await createTeam(name, currentUser)); setName(''); }
-    catch (error) { notify(error instanceof Error ? error.message : 'לא הצלחתי ליצור את הקבוצה. נסו שוב.'); }
-    finally { setBusy(false); }
-  };
-
-  const handleJoin = async () => {
-    if (!code.trim()) return;
-    setBusy(true);
-    try {
-      const joined = await joinTeam(code, currentUser);
-      if (!joined) notify('לא נמצאה קבוצה עם הקוד הזה.');
-      else { openTeam(joined); setCode(''); }
-    } catch (error) { notify(error instanceof Error ? error.message : 'לא הצלחתי להצטרף לקבוצה. נסו שוב.'); }
-    finally { setBusy(false); }
-  };
-
+  const { team, members, questions, busy, notice, notify, create, join, leave } = useTeamWorkspace(isOpen, currentUser, onTeamChange);
+  const handleCreate = async () => { if (await create(name)) setName(''); };
+  const handleJoin = async () => { if (await join(code)) setCode(''); };
   const copyCode = () => {
     if (!team) return;
     try { void navigator.clipboard?.writeText(team.id); } catch { /* clipboard unavailable */ }
-    setCopied(true);
-    notify('הקוד הועתק');
-    window.setTimeout(() => setCopied(false), 1600);
-  };
-
-  const leaveTeam = () => {
-    localStorage.removeItem(TEAM_STORAGE_KEY);
-    setTeam(null); setMembers([]); setQuestions([]); onTeamChange(null);
+    setCopied(true); notify('הקוד הועתק'); window.setTimeout(() => setCopied(false), 1600);
   };
 
   // No early return: AnimatePresence needs the tree mounted to animate the exit.
@@ -310,7 +249,7 @@ export default function TeamWorkspaceModal({ isOpen, onClose, currentUser, onTea
                       )}
                     </AnimatePresence>
                   </motion.div>
-                  <button onClick={leaveTeam} className="mt-5 text-xs font-bold text-red-300 hover:text-red-200">
+                  <button onClick={leave} className="mt-5 text-xs font-bold text-red-300 hover:text-red-200">
                     עזוב קבוצה במכשיר הזה
                   </button>
                 </motion.div>

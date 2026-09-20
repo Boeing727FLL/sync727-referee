@@ -85,3 +85,4 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `features/referee/ai/modelRunner.ts`: the two Gemini transport shapes and their streaming collection; orchestration and retry choices remain visible in `geminiService`.
 - `features/referee/data/snapshots.ts`: typed RTDB map normalization and chunked multi-path delete plans shared by logs and feedback viewers; components retain subscriptions, permissions and mutation execution.
 - `features/referee/corrections/model.ts`: pure correction parsing, serialization, counting, search and immutable row edits; Firestore load/save and cache invalidation remain in `JudgeCorrectionsModal`.
+- `features/referee/team/useTeamWorkspace.ts`: saved-team rejoin, live member/question subscriptions, create/join/leave state and timed notices. `TeamWorkspaceModal` remains presentation and form input.
