@@ -37,6 +37,7 @@ import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_
 import { stripThinkBlocks } from '../features/referee/chat/text';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
+import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
 import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
@@ -533,6 +534,10 @@ export default function PublicRulebookAI() {
   const attachInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeRulebookFiles, setActiveRulebookFiles] = useState<RulebookFile[]>([]);
+  const rulebookLoadBarrierRef = useRef(createRulebookLoadBarrier<RulebookFile[]>([]));
+  const rulebookMutationRef = useRef<Promise<void> | null>(null);
+  const seasonNameRef = useRef(seasonName);
+  seasonNameRef.current = seasonName;
 
   const [isLearning, setIsLearning] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -623,11 +628,12 @@ export default function PublicRulebookAI() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.current_season && data.current_season !== seasonName) {
+          seasonNameRef.current = data.current_season;
           setSeasonName(data.current_season);
         }
-        fetchLatestRulebook();
+        void loadLatestRulebook().catch(() => {});
       } else {
-        fetchLatestRulebook();
+        void loadLatestRulebook().catch(() => {});
       }
     });
 
@@ -651,6 +657,7 @@ export default function PublicRulebookAI() {
         files = response.Contents || [];
       } catch (apiErr) {
         console.error("Direct R2 client list failed:", apiErr);
+        throw apiErr;
       }
 
       if (files.length > 0) {
@@ -681,7 +688,8 @@ export default function PublicRulebookAI() {
         }, 'UNKNOWN');
 
         if (detectedSeason !== 'UNKNOWN') {
-          if (detectedSeason !== seasonName) {
+          if (detectedSeason !== seasonNameRef.current) {
+            seasonNameRef.current = detectedSeason;
             setSeasonName(detectedSeason);
             try {
               await updateDoc(doc(db, 'app_config', 'rulebook'), {
@@ -690,7 +698,8 @@ export default function PublicRulebookAI() {
               });
             } catch (e) {}
           }
-        } else if (seasonName !== 'UNKNOWN') {
+        } else if (seasonNameRef.current !== 'UNKNOWN') {
+          seasonNameRef.current = 'UNKNOWN';
           setSeasonName('UNKNOWN');
           try {
             await updateDoc(doc(db, 'app_config', 'rulebook'), {
@@ -699,14 +708,21 @@ export default function PublicRulebookAI() {
             });
           } catch (e) {}
         }
+        return loadedFiles;
       } else {
+        setActiveRulebookFiles([]);
         setIsLearning(false);
+        return [];
       }
     } catch (err) {
       console.error("Failed to fetch rulebook:", err);
       setIsLearning(false);
+      throw err;
     }
   };
+
+  const loadLatestRulebook = () => rulebookLoadBarrierRef.current.load(fetchLatestRulebook);
+  const refreshLatestRulebook = () => rulebookLoadBarrierRef.current.refresh(fetchLatestRulebook);
 
 
   const [wipePending, setWipePending] = useState<{ file: File; fileName: string; season: string; oldCount: number } | null>(null);
@@ -756,6 +772,15 @@ export default function PublicRulebookAI() {
   const performUpload = async (file: File) => {
     setUploading(true);
     setUploadProgress(0);
+    setIsLearning(true);
+    let resolveMutation!: () => void;
+    let rejectMutation!: (reason?: unknown) => void;
+    const mutation = new Promise<void>((resolve, reject) => {
+      resolveMutation = resolve;
+      rejectMutation = reject;
+    });
+    rulebookMutationRef.current = mutation;
+    void mutation.catch(() => {});
     try {
       const [{ Upload }, { s3Client, R2_BUCKET_NAME, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand }, { convertPdfToImages }] = await Promise.all([
         import('@aws-sdk/lib-storage'),
@@ -814,8 +839,6 @@ export default function PublicRulebookAI() {
       }
       
       setShowUploadModal(false);
-      setUploading(false);
-      setUploadProgress(0);
 
       const fileUrl = getPublicUrl(fileName);
 
@@ -911,27 +934,31 @@ export default function PublicRulebookAI() {
       }
 
       setIsLearning(true);
-      
-      setTimeout(async () => {
-        await fetchLatestRulebook(); 
-        setIsLearning(false);
-        setMessages(prev => {
-          const newMsgs = [...prev];
-          if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].isProgress) {
-            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' };
-            delete newMsgs[newMsgs.length - 1].isProgress;
-          } else {
-            newMsgs.push({ role: 'model', text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' });
-          }
-          return newMsgs;
-        });
-      }, 2000);
+      await refreshLatestRulebook();
+      setIsLearning(false);
+      setUploading(false);
+      setUploadProgress(0);
+      resolveMutation();
+      if (rulebookMutationRef.current === mutation) rulebookMutationRef.current = null;
+      setMessages(prev => {
+        const newMsgs = [...prev];
+        if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].isProgress) {
+          newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' };
+          delete newMsgs[newMsgs.length - 1].isProgress;
+        } else {
+          newMsgs.push({ role: 'model', text: 'למדתי את העדכונים מקובץ החוקים! המידע נשמר בענן ומוכן לשימוש מכל מכשיר.' });
+        }
+        return newMsgs;
+      });
 
     } catch (error: any) {
       console.error('Upload error:', error);
       alert('שגיאה בהעלאת הקובץ: ' + error.message);
       setUploading(false);
       setUploadProgress(0);
+      setIsLearning(false);
+      rejectMutation(error);
+      if (rulebookMutationRef.current === mutation) rulebookMutationRef.current = null;
     }
   };
 
@@ -986,9 +1013,18 @@ export default function PublicRulebookAI() {
 
     if ((!textToSend.trim() && !attachedImages.length) || isAiBusy) return;
 
+    let requestRulebookFiles: RulebookFile[];
+    try {
+      if (rulebookMutationRef.current) await rulebookMutationRef.current;
+      requestRulebookFiles = await rulebookLoadBarrierRef.current.ready();
+    } catch {
+      setMessages(prev => [...prev, { role: 'model', text: 'טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.' }]);
+      return;
+    }
+
     // Never answer blind: with no rulebook files loaded at all, the model
     // would fabricate. Tell the user instead of guessing.
-    if (activeRulebookFiles.length === 0 && !isLearning) {
+    if (requestRulebookFiles.length === 0) {
       setInput('');
       setMessages(prev => [
         ...prev,
@@ -1061,8 +1097,8 @@ export default function PublicRulebookAI() {
       const response = await GeminiService.askRulebook(
         finalPrompt,
         messages,
-        activeRulebookFiles,
-        seasonName,
+        requestRulebookFiles,
+        seasonNameRef.current,
         photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
         (chunkText) => {
           if (controller.signal.aborted) return;

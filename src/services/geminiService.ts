@@ -5,7 +5,7 @@ import { convertPdfToImages, fileToBase64 } from '../features/referee/rulebook/p
 import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
 import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
-import { describeRequestFile, imageLabel } from '../features/referee/ai/filePlan';
+import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
 
 // --- Configuration ---
@@ -324,7 +324,17 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
                 if (attached === null) return '';
               }
             }
-          } else if (!isText) {
+          } else if (isText) {
+            const textBlob = await getInlineBlob(file, signal) || (await fetchBlob(file.url, signal))?.data;
+            if (signal?.aborted) return '';
+            if (textBlob) {
+              const text = await textBlob.text();
+              if (text.trim()) {
+                currentParts.push({ text: textRulebookLabel(fileName, text) });
+                if (file.isRulebook) attachedRulebookImages++;
+              }
+            }
+          } else {
             let mimeType = 'image/jpeg';
             let blobToUpload: Blob | File | null = null;
 

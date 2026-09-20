@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "start": "vite preview"
+    "start": "vite preview",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "overrides": {
     "esbuild": "^0.28.2"
