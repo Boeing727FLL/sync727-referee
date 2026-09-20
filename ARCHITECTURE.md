@@ -46,3 +46,18 @@ The current R2 S3 credential is embedded in the historical client implementation
 4. Check `/`, `/login` and `/privacy` at phone and desktop sizes.
 5. Check sign-in, a question/answer, stop, image attachment and owner-only rulebook tools with authorized test accounts.
 6. Confirm no secret, generated `dist/`, environment file or deploy action is included in the commit.
+
+## Referee feature modules
+
+`src/pages/PublicRulebookAI.tsx` remains the screen coordinator because chat, upload and account overlays share live state. Pure rules and browser concerns live under `src/features/referee/`:
+
+- `types.ts`: chat, attachment, rulebook and device contracts.
+- `config.ts`: one auditable home for product timing and UI constants.
+- `chat/clientRateLimit.ts`: local fast anti-spam guard and Stop refund. Firestore quota stays authoritative.
+- `chat/text.ts`: strips private model-reasoning blocks before display/logging.
+- `rulebook/season.ts`: deterministic filename-to-season parsing.
+- `session/storage.ts`: offline session evidence and local trace cleanup, never authorization.
+- `ui/lazyComponents.ts`: code-split optional/admin surfaces.
+- `ui/useTransientToast.ts`, `ui/useDeviceType.ts`, `ui/browser.ts`: small reusable browser/UI concerns.
+
+The coordinator intentionally retains operations that mutate several domains in one transaction, such as account deletion and rulebook replacement. Splitting those into prop-heavy components would hide ordering constraints without reducing risk.

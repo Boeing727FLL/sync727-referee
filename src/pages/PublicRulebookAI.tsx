@@ -13,7 +13,7 @@
  * STATE LIVES HERE; the lib/ services only talk to backends. Nothing in this
  * file throws to the user: failures degrade to chat notices or console warns.
  */
-import React, { lazy, Suspense, useState, useRef, useEffect, useMemo } from 'react';
+import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, FileText, Scale, Upload as UploadIcon, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, ListOrdered, Hand, Cog, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, Copy, Reply, X, ImagePlus } from 'lucide-react';
@@ -32,93 +32,22 @@ import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { consumeChatQuota } from '../lib/chatQuota';
+import type { ChatMessage, RulebookFile } from '../features/referee/types';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, GRID_BG, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, MISSION_ACCENTS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
+import { stripThinkBlocks } from '../features/referee/chat/text';
+import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
+import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
+import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
+import { useDeviceType } from '../features/referee/ui/useDeviceType';
+import { useTransientToast } from '../features/referee/ui/useTransientToast';
+import { copyText } from '../features/referee/ui/browser';
 
-// Heavy, optional interfaces are fetched only when the user opens them.
-// This keeps admin tools, Markdown rendering and their Firebase code out of
-// the critical mobile startup path.
-const AdminAnalyticsModal = lazy(() => import('../components/AdminAnalyticsModal'));
-const RefereeLogsModal = lazy(() => import('../components/RefereeLogsModal'));
-const JudgeCorrectionsModal = lazy(() => import('../components/JudgeCorrectionsModal'));
-const FeedbackModal = lazy(() => import('../components/FeedbackModal'));
-const PrivacyModal = lazy(() => import('../components/PrivacyModal'));
-const SettingsModal = lazy(() => import('../components/SettingsModal'));
-const MaintenanceScreen = lazy(() => import('../components/MaintenanceScreen'));
-const FeedbackAdminModal = lazy(() => import('../components/FeedbackAdminModal'));
-const TeamWorkspaceModal = lazy(() => import('../components/TeamWorkspaceModal'));
-const MarkdownMessage = lazy(() => import('../components/MarkdownMessage'));
+import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, MarkdownMessage, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
 
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser, subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/analytics';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
-const stripThinkBlocks = (text: string): string =>
-  (text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
-
-// System notice shown when the user stops a request. No action buttons
-// (copy/like) are rendered under it.
-const STOPPED_TEXT = 'הפעולה הופסקה על ידי המשתמש.';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// Client-side send throttles (anti-spam; the hourly bucket is refunded on Stop).
-const RATE_GAP_MS = 4_000;
-const RATE_HOURLY_MAX = 120;
-
-// Feedback popup cadence: re-prompt window + quiet period after submitting.
-const FEEDBACK_REPROMPT_DAYS = 14;
-const FEEDBACK_QUIET_AFTER_SUBMIT_DAYS = 45;
-const FEEDBACK_PROMPT_DELAY_MS = 2_500;
-
-// Transient UI lifetimes.
-const TOAST_MS = 2_600;
-const ENTER_FLASH_MS = 1_200;
-
-// Typewriter speed: one character per tick.
-const TYPEWRITER_TICK_MS = 35;
-
-/** One attached file on a chat message (images render inline). */
-type ChatFile = {
-  url: string;
-  key: string;
-  name?: string;
-  base64?: string;
-};
-
-/** One chat bubble. `isProgress` marks live upload-progress notices. */
-type ChatMessage = {
-  role: 'user' | 'model';
-  text: string;
-  files?: ChatFile[];
-  isProgress?: boolean;
-  /** WhatsApp-style quoted context attached to a follow-up question. */
-  quote?: string;
-};
-
-/** Shared look for every row inside the user dropdown menu. */
-const MENU_ROW_CLASS = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/70 text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors text-right cursor-pointer';
-
-/** FLL field colors cycling on top of each hero card — yellow, blue, green,
- *  red — the four standard FIRST LEGO League team accent colors. */
-const MISSION_ACCENTS = ['#FFC400', '#0B6BCB', '#7FB35E', '#E1251B'] as const;
-
-/** Strong repeating grid backdrop (dark console look). A tiny inline SVG tile,
- *  no raster image — crisp at any resolution. */
-const GRID_BG =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'>` +
-    `<path d='M56 0H0v56' fill='none' stroke='rgba(255,255,255,0.18)' stroke-width='1'/></svg>`
-  );
-
-/** Saved login traces (written at login, cleared only by explicit logout/kick).
- * Used as offline session evidence: with no network Firebase reports no user,
- * which must never demote a logged-in user back to the login button. */
-function hasSavedRefereeSession(): boolean {
-  try {
-    return !!localStorage.getItem('google_access_token') ||
-      !!localStorage.getItem('auth_user');
-  } catch { return false; }
-}
 
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
@@ -145,10 +74,7 @@ export default function PublicRulebookAI() {
         setHasGoogleToken(false);
       } else {
         if (hasSavedRefereeSession()) {
-          localStorage.removeItem('google_access_token');
-          localStorage.removeItem('auth_user');
-          localStorage.removeItem('user_picture');
-          localStorage.removeItem('user_name');
+          clearRefereeSessionStorage();
         }
         setHasGoogleToken(false);
       }
@@ -252,38 +178,9 @@ export default function PublicRulebookAI() {
   useEffect(() => {
     return subscribeMaintenanceGate(setMaintenanceState);
   }, []);
-  // In-site toast (replaces blocking alert() popups)
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // In-site toast (replaces blocking alert popups).
+  const { toast, showToast } = useTransientToast();
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), TOAST_MS);
-  };
-
-  useEffect(() => {
-    return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
-  }, []);
-
-  const copyTextWithFallback = async (text: string): Promise<boolean> => {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        return ok;
-      } catch { return false; }
-    }
-  };
   const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
   const langBtnRef = useRef<HTMLButtonElement>(null);
@@ -352,36 +249,7 @@ export default function PublicRulebookAI() {
   const [showJudgeCorrections, setShowJudgeCorrections] = useState<boolean>(false);
   const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [deviceType, setDeviceType] = useState<'mobile' | 'desktop' | 'tablet'>(() => {
-    if (typeof navigator !== 'undefined') {
-      const ua = navigator.userAgent;
-      if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) {
-        if (/iPad|tablet/i.test(ua)) {
-          return 'tablet';
-        }
-        return 'mobile';
-      }
-    }
-    return 'desktop';
-  });
-
-  useEffect(() => {
-    const checkDevice = () => {
-      const ua = navigator.userAgent;
-      if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) {
-        if (/iPad|tablet/i.test(ua)) {
-          setDeviceType('tablet');
-        } else {
-          setDeviceType('mobile');
-        }
-      } else {
-        setDeviceType('desktop');
-      }
-    };
-    checkDevice();
-    window.addEventListener('resize', checkDevice);
-    return () => window.removeEventListener('resize', checkDevice);
-  }, []);
+  const deviceType = useDeviceType();
   
   // Persist the Firebase-restored profile photo: the chat bubbles read
   // localStorage, which doesn't roam across devices — without this sync a
@@ -655,7 +523,7 @@ export default function PublicRulebookAI() {
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeRulebookFiles, setActiveRulebookFiles] = useState<{ name: string, url: string }[]>([]);
+  const [activeRulebookFiles, setActiveRulebookFiles] = useState<RulebookFile[]>([]);
 
   const [isLearning, setIsLearning] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -857,35 +725,6 @@ export default function PublicRulebookAI() {
     }
   };
 
-  const extractSeasonFromFilename = (filename: string): string => {
-    const str = filename.toLowerCase();
-    
-    if (str.includes('submerged')) return 'SUBMERGED';
-    if (str.includes('unearthed') || str.includes('unearth')) return 'UNEARTHED';
-    if (str.includes('masterpiece') || str.includes('mustrpiece') || str.includes('master')) return 'MASTERPIECE';
-    if (str.includes('superpowered') || str.includes('super power')) return 'SUPERPOWERED';
-    if (str.includes('cargoconnect') || str.includes('cargo connect')) return 'CARGO_CONNECT';
-    if (str.includes('replay') || str.includes('re-play')) return 'REPLAY';
-    if (str.includes('cityshaper') || str.includes('city shaper')) return 'CITY_SHAPER';
-    if (str.includes('intoorbit') || str.includes('into orbit')) return 'INTO_ORBIT';
-
-    const match = str.match(/fll[_-]?(?:challenge[_-])?([a-z]+)[_-]/);
-    if (match && match[1] && match[1] !== 'challenge' && match[1] !== 'robot') {
-      return match[1].toUpperCase();
-    }
-
-    const baseName = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '').trim();
-    // Strip a trailing updates/update suffix so "Bioglow_updates.pdf" maps to the same season as "Bioglow.pdf"
-    const seasonBase = baseName
-      .replace(/\s*[_\-()\s]+\s*updates?\s*[)\-]*$/i, '')
-      .replace(/\s+updates?\s*$/i, '')
-      .trim();
-    if (seasonBase && !seasonBase.toLowerCase().includes('update') && !seasonBase.toLowerCase().includes('text') && !seasonBase.toLowerCase().includes('image')) {
-      return seasonBase.toUpperCase();
-    }
-
-    return 'UNKNOWN';
-  };
 
   const [wipePending, setWipePending] = useState<{ file: File; fileName: string; season: string; oldCount: number } | null>(null);
   const [wipeTyped, setWipeTyped] = useState('');
@@ -1113,22 +952,6 @@ export default function PublicRulebookAI() {
     }
   };
 
-  // Refund the client-side rate limit when a request is stopped: a
-  // cancelled question should not eat the hourly quota or the 4s gap.
-  // (Google still bills input tokens + whatever was generated — that part
-  // cannot be refunded, abort only stops further output.)
-  const refundRateLimit = () => {
-    try {
-      localStorage.removeItem('referee_last_send');
-      const hour = new Date().toISOString().slice(0, 13);
-      const bucketRaw = localStorage.getItem('referee_hour_bucket');
-      if (!bucketRaw) return;
-      const bucket = JSON.parse(bucketRaw);
-      if (bucket.hour !== hour) return;
-      const count = Math.max(0, (Number(bucket.count) || 0) - 1);
-      localStorage.setItem('referee_hour_bucket', JSON.stringify({ hour, count }));
-    } catch { /* storage unavailable, nothing to refund */ }
-  };
 
   const handleStop = () => {
     if (stopHandledRef.current) return;
@@ -1139,7 +962,7 @@ export default function PublicRulebookAI() {
     typewriterTargetRef.current = 0;
     setTypewriterCount(0);
     setRenderingResponse(false);
-    refundRateLimit();
+    refundClientRateLimit();
     setMessages(prev => {
       const trimmed = prev[prev.length - 1]?.role === 'model' ? prev.slice(0, -1) : prev;
       return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
@@ -1151,7 +974,6 @@ export default function PublicRulebookAI() {
    * Preview URLs are created here and live for the session (sent bubbles
    * reuse them; nothing is revoked mid-session).
    */
-  const MAX_ATTACHED_IMAGES = 3;
   const handleAttachImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = '';
@@ -1194,31 +1016,12 @@ export default function PublicRulebookAI() {
       return;
     }
 
-    // Client-side rate limit: at most one question every 4 seconds
-    // and 120 questions per hour per device.
-    try {
-      const now = Date.now();
-      const lastSend = Number(localStorage.getItem('referee_last_send') || 0);
-      if (now - lastSend < RATE_GAP_MS) {
-        setMessages(prev => [...prev, { role: 'model', text: 'חכו כמה שניות בין שאלה לשאלה.' }]);
-        return;
-      }
-      const hour = new Date().toISOString().slice(0, 13);
-      const bucketRaw = localStorage.getItem('referee_hour_bucket');
-      let count = 0;
-      if (bucketRaw) {
-        try {
-          const bucket = JSON.parse(bucketRaw);
-          if (bucket.hour === hour) count = Number(bucket.count) || 0;
-        } catch { count = 0; }
-      }
-      if (count >= RATE_HOURLY_MAX) {
-        setMessages(prev => [...prev, { role: 'model', text: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' }]);
-        return;
-      }
-      localStorage.setItem('referee_last_send', String(now));
-      localStorage.setItem('referee_hour_bucket', JSON.stringify({ hour, count: count + 1 }));
-    } catch { /* storage unavailable, continue without limits */ }
+    // Fast browser guard first; Firestore's daily quota remains authoritative.
+    const clientLimit = consumeClientRateLimit();
+    if (!clientLimit.allowed) {
+      setMessages(prev => [...prev, { role: 'model', text: clientLimit.message || 'נסו שוב מאוחר יותר.' }]);
+      return;
+    }
 
     // Server-enforced daily budget: consumes one unit from chat_quota/{uid}.
     // Rules enforce strictly-+1 inside a rolling 24h window with a hard cap,
@@ -1916,7 +1719,7 @@ export default function PublicRulebookAI() {
                   <div className="flex items-center gap-1.5 px-0.5">
                     <button
                       onClick={async () => {
-                        if (await copyTextWithFallback(finalRenderText)) {
+                        if (await copyText(finalRenderText)) {
                           showToast(t('chat.copied'));
                         }
                       }}
