@@ -62,3 +62,5 @@ The current R2 S3 credential is embedded in the historical client implementation
 
 The coordinator intentionally retains operations that mutate several domains in one transaction, such as account deletion and rulebook replacement. Splitting those into prop-heavy components would hide ordering constraints without reducing risk.
 - `chat/ChatComposer.tsx`: reply preview, image attachment preview, textarea and send/stop controls. The coordinator owns message/request state and passes explicit actions; the component owns no network or quota behavior.
+- `logs/model.ts`: pure journal timestamp normalization and search/date/sort filtering.
+- `logs/LogViews.tsx`: journal banners, filter chips, loading/empty states and expandable Q&A rows; Firebase ownership and deletes stay in `RefereeLogsModal`.
