@@ -30,6 +30,7 @@ import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter } from '../features/referee/logs/model';
 import { EmptyState, EntryRow, FilterChip, LoadingSkeleton, NoticeBanner } from '../features/referee/logs/LogViews';
+import { chunkedNullUpdates, logEntries } from '../features/referee/data/snapshots';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -129,22 +130,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     const unsub = onValue(
       logsQuery(LOG_LIMIT),
       (snap) => {
-        const entries: LogEntry[] = [];
-        const val = snap.val() || {};
-        Object.entries(val).forEach(([id, data]: [string, any]) => {
-          entries.push({
-            id,
-            question: data.question,
-            answer: data.answer,
-            season: data.season,
-            language: data.language,
-            uid: data.uid,
-            model: data.model,
-            ok: data.ok,
-            createdAt: data.createdAt,
-          });
-        });
-        setLogs(entries.reverse());
+        setLogs(logEntries(snap.val()));
         setLoading(false);
       },
       (err: any) => {
@@ -214,9 +200,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
         const d = toDate(l.createdAt);
         if (d && d.getTime() < cutoff && ids.length < MAX_BULK_DELETE) ids.push(l.id);
       }
-      for (let i = 0; i < ids.length; i += BULK_CHUNK) {
-        const updates: Record<string, null> = {};
-        ids.slice(i, i + BULK_CHUNK).forEach(id => { updates[`referee/logs/${id}`] = null; });
+      for (const updates of chunkedNullUpdates('referee/logs', ids, BULK_CHUNK)) {
         await update(ref(rtdb), updates);
       }
     } catch (err: any) {
@@ -241,10 +225,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       return;
     }
   };
-
-  const counts = useMemo(() => {
-    return { total: logs.length };
-  }, [logs]);
 
   const filtered = useMemo(() => filterLogs(logs, search, filter, sortNew), [logs, search, filter, sortNew]);
 
@@ -293,7 +273,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                   <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-black text-white leading-tight">יומן שאלות ותשובות</h3>
                     <p className="text-[11px] md:text-xs text-slate-400 font-medium">
-                      {unlocked ? `סך הכל ${counts.total} רשומות` : 'גישה לשופטים ראשיים בלבד'}
+                      {unlocked ? `סך הכל ${logs.length} רשומות` : 'גישה לשופטים ראשיים בלבד'}
                     </p>
                   </div>
                 </div>
@@ -402,7 +382,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         {cleaning ? 'מנקה' : confirmOld ? 'לחצו שוב למחיקת ישנות מ90 יום' : 'נקה ישנות מ90 יום'}
                       </button>
                       <span className="mr-auto text-[11px] text-slate-500 font-medium">
-                        מציג {filtered.length} מתוך {counts.total}
+                        מציג {filtered.length} מתוך {logs.length}
                       </span>
                     </div>
                   </div>

@@ -19,6 +19,7 @@ import { feedbackQuery } from '../lib/analytics';
 import { resetFeedbackForAll } from '../lib/refereeFlags';
 import { isCurrentUserOwner } from '../lib/owner';
 import { feedbackStats, type FeedbackEntry } from '../features/referee/feedback/model';
+import { chunkedNullUpdates, feedbackEntries } from '../features/referee/data/snapshots';
 import { DangerButton, EmptyView, FeedbackCard, GhostButton, LoadingView, LockGate, StatTile } from '../features/referee/feedback/FeedbackViews';
 
 // ---------------------------------------------------------------------------
@@ -62,21 +63,9 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   const [resettingTimer, setResettingTimer] = useState(false);
   const [timerReset, setTimerReset] = useState(false);
 
-  /** Snapshot (live or manual) -> newest-first entries. RTDB reads ascending. */
-  const applySnapshot = (val: any) => {
-    const entries: FeedbackEntry[] = [];
-    Object.entries(val || {}).forEach(([id, data]: [string, any]) => {
-      entries.push({
-        id,
-        rating: data.rating,
-        improvements: data.improvements,
-        uid: data.uid,
-        season: data.season,
-        language: data.language,
-        createdAt: data.createdAt,
-      });
-    });
-    setItems(entries.reverse());
+  /** Snapshot (live or manual) -> newest-first entries. */
+  const applySnapshot = (value: unknown) => {
+    setItems(feedbackEntries(value));
     setLoading(false);
   };
 
@@ -130,10 +119,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   /** Two-tap wipe-all, chunked so one giant write never hits server limits. */
   const handleClearAll = async () => {
     try {
-      const ids = items.map(i => i.id);
-      for (let i = 0; i < ids.length; i += BULK_CHUNK) {
-        const updates: Record<string, null> = {};
-        ids.slice(i, i + BULK_CHUNK).forEach(id => { updates[`referee/feedback/${id}`] = null; });
+      for (const updates of chunkedNullUpdates('referee/feedback', items.map(item => item.id), BULK_CHUNK)) {
         await update(ref(rtdb), updates);
       }
     } catch (e) {
