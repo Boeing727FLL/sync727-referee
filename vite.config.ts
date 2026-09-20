@@ -42,41 +42,9 @@ export default defineConfig(({mode}) => {
       target: 'es2022',
       chunkSizeWarningLimit: 2000,
       sourcemap: false,
-      rollupOptions: {
-        maxParallelFileOps: 3,
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('firebase')) {
-                return 'vendor-firebase';
-              }
-              if (
-                id.includes('pdfjs-dist') ||
-                id.includes('mupdf') ||
-                id.includes('pdf-lib') ||
-                id.includes('jspdf') ||
-                id.includes('html2canvas')
-              ) {
-                return 'vendor-pdf-tools';
-              }
-              if (
-                id.includes('@mlc-ai') ||
-                id.includes('wllama') ||
-                id.includes('@mediapipe')
-              ) {
-                return 'vendor-local-ai';
-              }
-              if (id.includes('recharts') || id.includes('d3')) {
-                return 'vendor-charts';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              return 'vendor';
-            }
-          }
-        }
-      }
+      // Let Rollup preserve dynamic-import boundaries. A catch-all vendor
+      // chunk pulled admin, AI, PDF and upload SDKs into every first visit.
+
     },
   };
 });
