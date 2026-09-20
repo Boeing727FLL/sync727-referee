@@ -1,7 +1,6 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
-import { useNavigate } from 'react-router-dom';
 import IntroScreen from '../components/IntroScreen';
-import { LanguageProvider, useLanguage } from '../hooks/useLanguage';
+import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 
 function hasSavedSession() {
   try {
@@ -17,19 +16,18 @@ function hasSavedSession() {
 }
 
 function LandingContent() {
-  const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t } = useLandingLanguage();
   const signedIn = hasSavedSession();
 
   return (
     <IntroScreen
       isLoggedIn={signedIn}
-      onContinue={() => navigate(signedIn ? '/app?enter=chat' : '/login')}
+      onContinue={() => window.location.assign(signedIn ? '/app?enter=chat' : '/login')}
       t={t}
     />
   );
 }
 
 export default function LandingPage() {
-  return <LanguageProvider><LandingContent /></LanguageProvider>;
+  return <LandingLanguageProvider><LandingContent /></LandingLanguageProvider>;
 }

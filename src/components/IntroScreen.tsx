@@ -10,8 +10,7 @@
  * is a clean dark field; the logo fades in gently; the button sits still.
  */
 
-import { motion } from 'framer-motion';
-import { MessageCircle, Smartphone, FileCheck } from 'lucide-react';
+import type {SVGProps} from 'react';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (single calm entrance ladder, then stillness)
@@ -31,6 +30,15 @@ const ENTER_DELAY = {
 /** Gap between feature cards firing in. */
 const FEATURE_STAGGER = 0.09;
 
+type IntroPart = keyof typeof ENTER_DELAY;
+
+function enterStyle(part: IntroPart, duration: number, extraDelay = 0): React.CSSProperties {
+  return {
+    animationDelay: `${ENTER_DELAY[part] + extraDelay}s`,
+    animationDuration: `${duration}s`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -41,18 +49,33 @@ interface IntroScreenProps {
   t: (key: string) => string;
 }
 
+type FeatureIcon = (props: SVGProps<SVGSVGElement>) => React.ReactNode;
+
 type Feature = {
-  icon: typeof MessageCircle;
+  icon: FeatureIcon;
   title: string;
   desc: string;
 };
 
+
+function MessageCircleIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /></svg>;
+}
+
+function SmartphoneIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>;
+}
+
+function FileCheckIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z" /><polyline points="14 2 14 8 20 8" /><path d="m9 15 2 2 4-4" /></svg>;
+}
+
 /** The three proof cards, translated at render time. */
 function buildFeatures(t: (key: string) => string): Feature[] {
   return [
-    { icon: MessageCircle, title: t('intro.feature1Title'), desc: t('intro.feature1Desc') },
-    { icon: Smartphone, title: t('intro.feature2Title'), desc: t('intro.feature2Desc') },
-    { icon: FileCheck, title: t('intro.feature3Title'), desc: t('intro.feature3Desc') },
+    { icon: MessageCircleIcon, title: t('intro.feature1Title'), desc: t('intro.feature1Desc') },
+    { icon: SmartphoneIcon, title: t('intro.feature2Title'), desc: t('intro.feature2Desc') },
+    { icon: FileCheckIcon, title: t('intro.feature3Title'), desc: t('intro.feature3Desc') },
   ];
 }
 
@@ -72,17 +95,18 @@ function Backdrop() {
         className="absolute inset-0 w-full h-full object-cover object-center blur-[12px] scale-110 opacity-60"
         decoding="async"
       />
-      <img
-        src="/intro-mobile.webp"
-        srcSet="/intro-mobile.webp 768w, /intro-desktop.webp 1440w"
-        sizes="100vw"
-        width="768" height="1024"
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover object-center blur-[5px] md:blur-[6px] scale-[1.03]"
-        fetchPriority="high"
-        decoding="async"
-        loading="eager"
-      />
+      <picture>
+        <source media="(max-width: 767px)" srcSet="/intro-mobile.webp" />
+        <img
+          src="/intro-desktop.webp"
+          width="1440" height="1024"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center blur-[5px] md:blur-[6px] scale-[1.03]"
+          fetchPriority="high"
+          decoding="async"
+          loading="eager"
+        />
+      </picture>
       {/* veil — darker for text readability, no card needed */}
       <div className="absolute inset-0 bg-slate-950/45" />
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/25 to-slate-950/55" />
@@ -95,11 +119,9 @@ function Backdrop() {
 /** Sticky Boeing 727 brand bar pinned to the top. */
 function BrandBar() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, delay: ENTER_DELAY.brand }}
-      className="sticky top-0 z-50 border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center shrink-0 bg-slate-950/70 backdrop-blur-md"
+    <div
+      style={enterStyle('brand', 0.4)}
+      className="intro-fade sticky top-0 z-50 border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center shrink-0 bg-slate-950/70 backdrop-blur-md"
     >
       <div className="flex items-center gap-4 md:gap-6">
         <img
@@ -120,18 +142,16 @@ function BrandBar() {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 /** The referee emblem in a quiet gold frame: one gentle fade-in. */
 function HeroLogo() {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.55, delay: ENTER_DELAY.logo, ease: [0.22, 1, 0.36, 1] }}
-      className="relative mb-5 md:mb-6"
+    <div
+      style={enterStyle('logo', 0.55)}
+      className="intro-logo relative mb-5 md:mb-6"
     >
       {/* soft halo */}
       <div className="absolute -inset-6 bg-yellow-400/10 blur-2xl rounded-full pointer-events-none" aria-hidden />
@@ -151,7 +171,7 @@ function HeroLogo() {
       </div>
       {/* thin outer ring */}
       <div className="absolute -inset-1.5 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
-    </motion.div>
+    </div>
   );
 }
 
@@ -159,11 +179,9 @@ function HeroLogo() {
 function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
   const Icon = feature.icon;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: ENTER_DELAY.features + index * FEATURE_STAGGER, duration: 0.4 }}
-      className="bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-5 flex md:flex-col items-start md:items-center md:text-center gap-3 md:gap-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+    <div
+      style={enterStyle('features', 0.4, index * FEATURE_STAGGER)}
+      className="intro-rise bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-5 flex md:flex-col items-start md:items-center md:text-center gap-3 md:gap-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
     >
       <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300">
         <Icon className="w-5 h-5 md:w-6 md:h-6" />
@@ -172,7 +190,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
         <h4 className="text-sm md:text-[15px] font-black text-white leading-tight mb-1">{feature.title}</h4>
         <p className="text-xs md:text-xs text-slate-300 leading-relaxed font-medium">{feature.desc}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -199,12 +217,8 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
   const features = buildFeatures(t);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
+    <div
+      className="intro-screen fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
       <Backdrop />
@@ -216,22 +230,18 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
           <HeroLogo />
 
           {/* Badge — quiet status pill */}
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: ENTER_DELAY.badge, duration: 0.4 }}
-            className="inline-flex items-center gap-2 bg-slate-900/50 backdrop-blur-xl text-yellow-300 text-[11px] md:text-xs font-bold px-4 md:px-5 py-1.5 md:py-2 rounded-full border border-yellow-400/30 shadow-[0_4px_16px_rgba(0,0,0,0.3)] mb-5 md:mb-6"
+          <span
+            style={enterStyle('badge', 0.4)}
+            className="intro-fade inline-flex items-center gap-2 bg-slate-900/50 backdrop-blur-xl text-yellow-300 text-[11px] md:text-xs font-bold px-4 md:px-5 py-1.5 md:py-2 rounded-full border border-yellow-400/30 shadow-[0_4px_16px_rgba(0,0,0,0.3)] mb-5 md:mb-6"
           >
             <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]" aria-hidden />
             {t('intro.badge')}
-          </motion.span>
+          </span>
 
           {/* Title — clean solid white, sharp and legible */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: ENTER_DELAY.title, duration: 0.45 }}
-            className="mb-3 md:mb-4"
+          <div
+            style={enterStyle('title', 0.45)}
+            className="intro-fade mb-3 md:mb-4"
           >
             <h2
               className="text-3xl md:text-6xl font-black text-white leading-tight tracking-tight"
@@ -245,14 +255,12 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
               <div className="w-16 md:w-24 h-[2px] bg-yellow-400/80 rounded-full" aria-hidden />
               <div className="h-[1px] w-8 md:w-12 bg-gradient-to-l from-transparent to-white/20" aria-hidden />
             </div>
-          </motion.div>
+          </div>
 
           {/* Subtitle — the one-line promise in calm glass */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: ENTER_DELAY.subtitle, duration: 0.45 }}
-            className="w-full max-w-3xl mx-auto mb-6 md:mb-8"
+          <div
+            style={enterStyle('subtitle', 0.45)}
+            className="intro-fade w-full max-w-3xl mx-auto mb-6 md:mb-8"
           >
             <div className="relative bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 md:px-8 py-5 md:py-6 shadow-[0_12px_32px_rgba(0,0,0,0.4)] overflow-hidden">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 md:w-36 h-[2px] bg-gradient-to-r from-transparent via-yellow-400/60 to-transparent" aria-hidden />
@@ -263,7 +271,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
                 {t('intro.descFull')}
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Proof — three cards in calm sequence */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-3xl mb-6 md:mb-8 text-right">
@@ -273,11 +281,9 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
           </div>
 
           {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: ENTER_DELAY.cta, duration: 0.4 }}
-            className="w-full max-w-md"
+          <div
+            style={enterStyle('cta', 0.4)}
+            className="intro-fade w-full max-w-md"
           >
             <EntryButton
               label={isLoggedIn ? t('intro.continue') : t('intro.continueLogin')}
@@ -290,9 +296,9 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
                 פרטיות
               </a>
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
