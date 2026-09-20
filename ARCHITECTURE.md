@@ -76,3 +76,4 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `chat/ChatMessageRow.tsx`: thinking/user/referee row presentation, attachments, Markdown, copy/reply controls and live-answer glow. The coordinator owns the typewriter target/ref, stream lifecycle and actions.
 - `chat/useTypewriter.ts`: the visible-response clock, target ref and rendering completion boundary. Network streaming, stop/abort and request bookkeeping remain in the coordinator.
 - `features/auth/AuthProgressOverlay.tsx`: verification/success/departure choreography after login. `LoginPage` retains Firebase auth, signup, password reset, maintenance gating and navigation timing.
+- `features/referee/rulebook/pdfRendering.ts`: lazy MuPDF loading, browser PDF-page rendering and Blob-to-base64 conversion. Gemini request/model fallback logic stays in `geminiService`.

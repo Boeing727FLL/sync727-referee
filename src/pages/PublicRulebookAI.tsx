@@ -759,7 +759,7 @@ export default function PublicRulebookAI() {
       const [{ Upload }, { s3Client, R2_BUCKET_NAME, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand }, { convertPdfToImages }] = await Promise.all([
         import('@aws-sdk/lib-storage'),
         import('../lib/r2'),
-        import('../services/geminiService'),
+        import('../features/referee/rulebook/pdfRendering'),
       ]);
       const fileName = `fll-rules/${file.name}`;
       
