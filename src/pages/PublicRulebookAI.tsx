@@ -41,6 +41,7 @@ import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
+import ChatComposer from '../features/referee/chat/ChatComposer';
 
 import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, MarkdownMessage, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
 
@@ -1761,138 +1762,23 @@ export default function PublicRulebookAI() {
         </div>
       </div>
 
-      {/* Input Area - AI composer */}
-      <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
-        <AnimatePresence>
-          {replyTo && (
-            <motion.div
-              initial={{ opacity: 0, y: 18, scale: 0.95, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, y: 14, scale: 0.96, filter: 'blur(8px)' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="w-full max-w-3xl mx-auto mb-2 flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl backdrop-saturate-150 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.4)]"
-            >
-              <span className="shrink-0 w-8 h-8 rounded-full bg-[#0B6BCB]/25 border border-[#0B6BCB]/50 flex items-center justify-center shadow-[0_0_12px_rgba(11,107,203,0.35)]">
-                <Reply className="w-4 h-4 text-[#7FB8EC]" />
-              </span>
-              <div className="flex-1 min-w-0 text-right">
-                <div className="text-[10px] font-black text-[#7FB8EC]">{t('chat.replyTo')}</div>
-                <div className="truncate text-xs text-slate-200">{replyTo.text}</div>
-              </div>
-              <button
-                onClick={() => setReplyTo(null)}
-                aria-label="בטל תגובה"
-                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
-          <AnimatePresence>
-            {attachedImages.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }}
-                exit={{ opacity: 0, height: 0, filter: 'blur(8px)' }}
-                transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-                className="overflow-hidden"
-              >
-                <div className="flex gap-2 px-1 pt-1 pb-1">
-                  <AnimatePresence>
-                    {attachedImages.map(a => (
-                      <motion.div
-                        key={a.url}
-                        layout
-                        initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }}
-                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }}
-                        transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                        className="relative w-16 h-16 shrink-0"
-                      >
-                        <img src={a.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/25 shadow-[0_4px_14px_rgba(0,0,0,0.45)]" />
-                        <button
-                          onClick={() => removeAttachedImage(a.url)}
-                          aria-label="הסר תמונה"
-                          className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-slate-950/90 border border-white/25 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <textarea
-            ref={composerRef}
-            rows={1}
-            value={input}
-            onChange={(e) => { setInput(e.target.value); autoresizeComposer(); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !(e.nativeEvent as any).isComposing) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={isLearning ? t('chat.researching') : t('chat.placeholder2')}
-            disabled={isAiBusy || isLearning}
-            aria-label={t('chat.placeholder2')}
-            className="w-full bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium disabled:opacity-50 resize-none overflow-y-auto"
-            style={{ minHeight: 44, maxHeight: 132 }}
-          />
-          <div className="flex items-center gap-2 px-1 pb-0.5">
-            <span className="hidden md:block text-[11px] text-slate-600 font-medium select-none">
-              {t('chat.shiftHint')}
-            </span>
-            <button
-              onClick={() => attachInputRef.current?.click()}
-              disabled={isAiBusy || isLearning}
-              aria-label={t('chat.attachImage')}
-              title={t('chat.attachImage')}
-              className="ms-auto shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <ImagePlus className="w-5 h-5" />
-            </button>
-            <input
-              ref={attachInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleAttachImages}
-            />
-
-          {isAiBusy ? (
-            <button
-              onClick={handleStop}
-              aria-label="עצור"
-              title="עצור"
-              className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#E1251B] hover:bg-[#C11E16] text-white active:scale-90 transition-all cursor-pointer"
-            >
-              <Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
-            </button>
-          ) : (
-            <button
-              onClick={() => handleSend()}
-              disabled={isAiBusy || isLearning || (!input.trim() && !attachedImages.length)}
-              aria-label={t('chat.send')}
-              className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_16px_rgba(250,204,21,0.35)] disabled:shadow-none"
-            >
-              <Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" />
-            </button>
-          )}
-          </div>
-        </div>
-        <div className="flex items-center justify-center gap-1.5 mt-2">
-          <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" />
-           <p className="text-[11px] text-slate-500 font-medium">
-            נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}
-          </p>
-        </div>
-      </div>
+      <ChatComposer
+        replyTo={replyTo}
+        clearReply={() => setReplyTo(null)}
+        attachments={attachedImages}
+        removeAttachment={removeAttachedImage}
+        attachInputRef={attachInputRef}
+        onAttach={handleAttachImages}
+        composerRef={composerRef}
+        input={input}
+        setInput={setInput}
+        resize={autoresizeComposer}
+        busy={isAiBusy}
+        learning={isLearning}
+        onSend={() => handleSend()}
+        onStop={handleStop}
+        t={t}
+      />
 
       {/* ===== Floating layers: every modal/toast/drawer mounts here and
           gates itself with isOpen, so the chat tree underneath never unmounts. ===== */}
