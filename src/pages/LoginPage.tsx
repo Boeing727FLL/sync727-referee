@@ -21,7 +21,7 @@ import { auth, db } from '../lib/firebase';
 import { trackRefereeUser } from '../lib/analytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
-import { subscribeMaintenanceGate } from '../lib/analytics';
+import { subscribeMaintenanceGate } from '../lib/refereeFlags';
 import { isCurrentUserOwner, isOwnerEmail } from '../lib/owner';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import AuthProgressOverlay from '../features/auth/AuthProgressOverlay';

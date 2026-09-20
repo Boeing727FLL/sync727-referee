@@ -17,9 +17,8 @@ import {
   X, Settings, Wrench, Upload, BarChart3, Database,
   MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft,
 } from 'lucide-react';
-import {
-  subscribeMaintenance, setMaintenance, resetQuestions, resetFeedbackForAll,
-} from '../lib/analytics';
+import { resetQuestions } from '../lib/analytics';
+import { subscribeMaintenance, setMaintenance, resetFeedbackForAll } from '../lib/refereeFlags';
 import { isCurrentUserOwner } from '../lib/owner';
 
 // ---------------------------------------------------------------------------

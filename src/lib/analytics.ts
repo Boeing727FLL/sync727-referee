@@ -48,7 +48,6 @@ const LOGS_PATH = 'referee/logs';
 const FEEDBACK_PATH = 'referee/feedback';
 const PRESENCE_PATH = 'referee/presence';
 const SESSIONS_PATH = 'referee/sessions';
-const META_PATH = 'referee/meta';
 
 /** How often a tab re-announces "I'm still here" (presence heartbeat). */
 const PRESENCE_HEARTBEAT_MS = 30_000;
@@ -423,89 +422,5 @@ export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): (
   return () => {
     unsubStats();
     unsubUsers();
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Owner remote flags (global feedback reset + maintenance mode)
-// ---------------------------------------------------------------------------
-
-/**
- * Wipe feedback-popup suppression for EVERYONE (all users, all devices).
- * Clients ignore their local timers older than this server timestamp, so
- * the next answered question prompts feedback again everywhere.
- */
-export async function resetFeedbackForAll(): Promise<void> {
-  await guard('resetFeedbackForAll', () =>
-    set(ref(rtdb, `${META_PATH}/feedbackResetAt`), rtdbTimestamp()),
-  );
-}
-
-export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): () => void {
-  return onValue(
-    ref(rtdb, `${META_PATH}/feedbackResetAt`),
-    (snap: DataSnapshot) => {
-      const v = snap.val();
-      callback(typeof v === 'number' ? v : 0);
-    },
-    (err) => console.warn('feedback reset snapshot failed:', err),
-  );
-}
-
-/** Freeze the app for everyone except the owner (work mode switch). */
-export async function setMaintenance(on: boolean): Promise<void> {
-  await guard('setMaintenance', () => set(ref(rtdb, `${META_PATH}/maintenance`), on));
-}
-
-export function subscribeMaintenance(callback: (on: boolean) => void): () => void {
-  return onValue(
-    ref(rtdb, `${META_PATH}/maintenance`),
-    (snap: DataSnapshot) => {
-      callback(snap.val() === true);
-    },
-    (err) => console.warn('maintenance snapshot failed:', err),
-  );
-}
-
-/**
- * Gate-grade subscription for the app shell and login page: retries a few
- * times on failure, then FAILS CLOSED (reports maintenance ON) so a broken
- * flag read can never leak the full app during work mode. Call sites still
- * exempt the owner, who always passes through.
- */
-export function subscribeMaintenanceGate(callback: (on: boolean) => void): () => void {
-  const MAX_FAILURES = 3;
-  const RETRY_MS = 2000;
-  let failures = 0;
-  let stopped = false;
-  let unsub: (() => void) | null = null;
-  let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const watch = () => {
-    if (stopped) return;
-    try { unsub?.(); } catch { /* noop */ }
-    unsub = onValue(
-      ref(rtdb, `${META_PATH}/maintenance`),
-      (snap: DataSnapshot) => {
-        failures = 0;
-        callback(snap.val() === true);
-      },
-      (err) => {
-        console.warn('maintenance gate snapshot failed:', err);
-        failures++;
-        if (failures >= MAX_FAILURES) {
-          callback(true);
-        } else {
-          retryTimer = setTimeout(watch, RETRY_MS);
-        }
-      },
-    );
-  };
-  watch();
-
-  return () => {
-    stopped = true;
-    if (retryTimer) clearTimeout(retryTimer);
-    try { unsub?.(); } catch { /* noop */ }
   };
 }
