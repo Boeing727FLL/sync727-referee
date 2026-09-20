@@ -10,11 +10,26 @@
  * is a clean dark field; the logo fades in gently; the button sits still.
  */
 
+import { motion } from 'framer-motion';
 import { MessageCircle, Smartphone, FileCheck } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (single calm entrance ladder, then stillness)
 // ---------------------------------------------------------------------------
+
+/** Staggered entrance delays: the eye's top-to-bottom reading path. */
+const ENTER_DELAY = {
+  brand: 0.05,
+  logo: 0.1,
+  badge: 0.2,
+  title: 0.25,
+  subtitle: 0.3,
+  features: 0.36,
+  cta: 0.5,
+} as const;
+
+/** Gap between feature cards firing in. */
+const FEATURE_STAGGER = 0.09;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,7 +95,10 @@ function Backdrop() {
 /** Sticky Boeing 727 brand bar pinned to the top. */
 function BrandBar() {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, delay: ENTER_DELAY.brand }}
       className="sticky top-0 z-50 border-b border-white/10 px-6 py-4 md:py-5 flex items-center justify-center shrink-0 bg-slate-950/70 backdrop-blur-md"
     >
       <div className="flex items-center gap-4 md:gap-6">
@@ -102,14 +120,17 @@ function BrandBar() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 /** The referee emblem in a quiet gold frame: one gentle fade-in. */
 function HeroLogo() {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.55, delay: ENTER_DELAY.logo, ease: [0.22, 1, 0.36, 1] }}
       className="relative mb-5 md:mb-6"
     >
       {/* soft halo */}
@@ -130,7 +151,7 @@ function HeroLogo() {
       </div>
       {/* thin outer ring */}
       <div className="absolute -inset-1.5 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
-    </div>
+    </motion.div>
   );
 }
 
@@ -138,7 +159,10 @@ function HeroLogo() {
 function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
   const Icon = feature.icon;
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: ENTER_DELAY.features + index * FEATURE_STAGGER, duration: 0.4 }}
       className="bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-5 flex md:flex-col items-start md:items-center md:text-center gap-3 md:gap-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
     >
       <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-yellow-400/15 border border-yellow-400/25 flex items-center justify-center text-yellow-300">
@@ -148,7 +172,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
         <h4 className="text-sm md:text-[15px] font-black text-white leading-tight mb-1">{feature.title}</h4>
         <p className="text-xs md:text-xs text-slate-300 leading-relaxed font-medium">{feature.desc}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -175,7 +199,11 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
   const features = buildFeatures(t);
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
       className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
       dir="rtl"
     >
@@ -188,15 +216,21 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
           <HeroLogo />
 
           {/* Badge — quiet status pill */}
-          <span
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: ENTER_DELAY.badge, duration: 0.4 }}
             className="inline-flex items-center gap-2 bg-slate-900/50 backdrop-blur-xl text-yellow-300 text-[11px] md:text-xs font-bold px-4 md:px-5 py-1.5 md:py-2 rounded-full border border-yellow-400/30 shadow-[0_4px_16px_rgba(0,0,0,0.3)] mb-5 md:mb-6"
           >
             <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]" aria-hidden />
             {t('intro.badge')}
-          </span>
+          </motion.span>
 
           {/* Title — clean solid white, sharp and legible */}
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: ENTER_DELAY.title, duration: 0.45 }}
             className="mb-3 md:mb-4"
           >
             <h2
@@ -211,10 +245,13 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
               <div className="w-16 md:w-24 h-[2px] bg-yellow-400/80 rounded-full" aria-hidden />
               <div className="h-[1px] w-8 md:w-12 bg-gradient-to-l from-transparent to-white/20" aria-hidden />
             </div>
-          </div>
+          </motion.div>
 
           {/* Subtitle — the one-line promise in calm glass */}
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: ENTER_DELAY.subtitle, duration: 0.45 }}
             className="w-full max-w-3xl mx-auto mb-6 md:mb-8"
           >
             <div className="relative bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl px-5 md:px-8 py-5 md:py-6 shadow-[0_12px_32px_rgba(0,0,0,0.4)] overflow-hidden">
@@ -226,7 +263,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
                 {t('intro.descFull')}
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Proof — three cards in calm sequence */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-3xl mb-6 md:mb-8 text-right">
@@ -236,7 +273,10 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
           </div>
 
           {/* CTA */}
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: ENTER_DELAY.cta, duration: 0.4 }}
             className="w-full max-w-md"
           >
             <EntryButton
@@ -250,9 +290,9 @@ export default function IntroScreen({ isLoggedIn, onContinue, t }: IntroScreenPr
                 פרטיות
               </a>
             </p>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
