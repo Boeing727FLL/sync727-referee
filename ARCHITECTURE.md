@@ -64,3 +64,7 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `chat/ChatComposer.tsx`: reply preview, image attachment preview, textarea and send/stop controls. The coordinator owns message/request state and passes explicit actions; the component owns no network or quota behavior.
 - `logs/model.ts`: pure journal timestamp normalization and search/date/sort filtering.
 - `logs/LogViews.tsx`: journal banners, filter chips, loading/empty states and expandable Q&A rows; Firebase ownership and deletes stay in `RefereeLogsModal`.
+
+## Locales
+
+`src/locales/<code>.ts` keeps one dictionary per language. They are synchronous by design so a saved non-Hebrew language is available on the first render with no fallback-language flash. `useLanguage.tsx` owns only selection, persistence, direction metadata and fallback behavior.
