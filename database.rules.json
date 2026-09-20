@@ -61,37 +61,6 @@
           ".read": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
           ".write": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))"
         }
-      },
-      "live_stats": {
-        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
-        "totalSessions": {
-          ".write": "auth != null",
-          ".validate": "newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || newData.val() === data.val() + 1)"
-        },
-        "totalSeconds": {
-          ".write": "auth != null",
-          ".validate": "newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || (newData.val() >= data.val() && newData.val() <= data.val() + 600))"
-        },
-        "perUser": {
-          "$uid": {
-            "sessions": {
-              ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
-              ".validate": "newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || newData.val() === data.val() + 1)"
-            },
-            "seconds": {
-              ".write": "auth != null && (auth.uid === $uid || auth.token.email.toLowerCase() === 'boeing727.il@gmail.com')",
-              ".validate": "newData.isNumber() && newData.val() >= 0 && (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' || !data.exists() || (newData.val() >= data.val() && newData.val() <= data.val() + 600))"
-            }
-          }
-        }
-      },
-      "live_logs": {
-        ".read": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
-        ".indexOn": ["createdAt"],
-        "$logId": {
-          ".write": "auth != null && ((!data.exists() && newData.exists()) || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
-          ".validate": "newData.val() === null || (newData.hasChildren(['uid', 'createdAt']) && newData.child('durationSec').isNumber() && (!newData.hasChild('uid') || newData.child('uid').val() === auth.uid || newData.child('uid').val() === 'anon'))"
-        }
       }
     }
   }
