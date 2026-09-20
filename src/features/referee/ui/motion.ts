@@ -7,5 +7,8 @@ export const MOTION = {
   content: { type: 'spring', stiffness: 320, damping: 31, mass: 0.72 } satisfies Transition,
   gentle: { type: 'spring', stiffness: 240, damping: 27, mass: 0.82 } satisfies Transition,
   overlay: { type: 'spring', stiffness: 400, damping: 34, mass: 0.7 } satisfies Transition,
+  filmReveal: { duration: 0.72, ease: [0.16, 1, 0.3, 1] } satisfies Transition,
+  filmSettle: { type: 'spring', stiffness: 170, damping: 24, mass: 0.95 } satisfies Transition,
+  morph: { type: 'spring', stiffness: 210, damping: 26, mass: 0.86 } satisfies Transition,
   fade: { duration: 0.18, ease: [0.25, 0.1, 0.25, 1] } satisfies Transition,
 } as const;

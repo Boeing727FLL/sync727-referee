@@ -1270,10 +1270,10 @@ export default function PublicRulebookAI() {
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <RefereeBackdrop />
+      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><RefereeBackdrop /></motion.div>
 
       {/* Header - dark glass, premium AI console */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={MOTION.gentle} className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -1478,7 +1478,7 @@ export default function PublicRulebookAI() {
       )}
 
       {/* Chat Area - premium AI console, full screen */}
-      <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
+      <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
         <div className="w-full px-3 md:px-10 py-4 md:py-8 space-y-4 md:space-y-6">
         {heroActive && <ChatHero
           greeting={heroGreeting}
@@ -1530,7 +1530,7 @@ export default function PublicRulebookAI() {
           </motion.div>
         )}
         </div>
-      </div>
+      </motion.div>
 
       <ChatComposer
         replyTo={replyTo}

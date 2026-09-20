@@ -30,10 +30,12 @@ export default function ChatComposer(props: Props) {
       <AnimatePresence>
         {replyTo && (
           <motion.div
-            initial={{ opacity: 0, y: 18, scale: 0.95, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: 14, scale: 0.96, filter: 'blur(8px)' }}
-            transition={MOTION.content}
+            layout
+            initial={{ opacity: 0, y: 12, scaleY: 0.82, clipPath: 'inset(100% 0 0 0 round 16px)' }}
+            animate={{ opacity: 1, y: 0, scaleY: 1, clipPath: 'inset(0% 0 0 0 round 16px)' }}
+            exit={{ opacity: 0, y: 8, scaleY: 0.9, clipPath: 'inset(100% 0 0 0 round 16px)' }}
+            transition={MOTION.morph}
+            style={{ transformOrigin: 'bottom center' }}
             className="w-full max-w-3xl mx-auto mb-2 flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl backdrop-saturate-150 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_32px_rgba(0,0,0,0.4)]"
           >
             <span className="shrink-0 w-8 h-8 rounded-full bg-[#0B6BCB]/25 border border-[#0B6BCB]/50 flex items-center justify-center shadow-[0_0_12px_rgba(11,107,203,0.35)]"><Reply className="w-4 h-4 text-[#7FB8EC]" /></span>
@@ -45,7 +47,7 @@ export default function ChatComposer(props: Props) {
       <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 bg-[#0E1628] border border-white/15 rounded-2xl p-2 md:p-2.5 focus-within:border-[#0B6BCB] focus-within:shadow-[0_0_0_3px_rgba(11,107,203,0.22)] transition-all">
         <AnimatePresence>
           {attachments.length > 0 && (
-            <motion.div initial={{ opacity: 0, height: 0, filter: 'blur(8px)' }} animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)' }} exit={{ opacity: 0, height: 0, filter: 'blur(8px)' }} transition={MOTION.content} className="overflow-hidden">
+            <motion.div initial={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} animate={{ opacity: 1, height: 'auto', clipPath: 'inset(0% 0 0 0 round 12px)' }} exit={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} transition={MOTION.morph} className="overflow-hidden">
               <div className="flex gap-2 px-1 pt-1 pb-1"><AnimatePresence>{attachments.map(item => (
                 <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }} transition={MOTION.control} className="relative w-16 h-16 shrink-0">
                   <img src={item.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/25 shadow-[0_4px_14px_rgba(0,0,0,0.45)]" />

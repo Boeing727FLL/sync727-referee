@@ -20,7 +20,7 @@ type Props = {
 export default function ChatMessageRow({ view, userPicture, userName, onCopy, onReply, t }: Props) {
   const { message, index, thinking, thinkContent, text, typewriting, liveAnswer } = view;
   if (thinking) return (
-    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.985 }} transition={MOTION.content} className="flex gap-2.5 md:gap-3">
+    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.morph} className="flex gap-2.5 md:gap-3">
       <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center"><img src="/logoref.png" alt="" className="w-full h-full object-contain" /></div>
       <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2 max-w-[85%] md:max-w-[75%]">
         <ThinkIndicator />
@@ -30,7 +30,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
   );
   const isUser = message.role === 'user';
   return (
-    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 12, scale: 0.992 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.992 }} transition={MOTION.content} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 18, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, y: 0, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, y: -6, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.filmReveal} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
         {isUser ? (userPicture ? <img src={userPicture} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" /> : <div className="w-full h-full rounded-full bg-[#0B6BCB] flex items-center justify-center"><span className="text-xs md:text-sm font-black text-white">{(userName || 'U').trim().charAt(0)}</span></div>)
           : <div className={`w-full h-full rounded-full bg-white overflow-hidden transition-all duration-500 ${liveAnswer ? 'ring-2 ring-[#E1251B]/80 shadow-[0_0_18px_rgba(225,37,27,0.55)]' : 'ring-1 ring-white/25'}`}><img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" /></div>}
@@ -45,10 +45,10 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
               : <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right"><Suspense fallback={<span>{text}</span>}><MarkdownMessage components={{ em: ({ children, ...props }) => { const value = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null; return value === '▍' ? <span className="typewriter-cursor" aria-hidden>▍</span> : <em {...props}>{children}</em>; } }}>{typewriting ? text + '\u200B*\u258D*' : text}</MarkdownMessage></Suspense></div>}
           </div>
         </div>
-        {!isUser && index > 0 && message.text !== STOPPED_TEXT && <div className="flex items-center gap-1.5 px-0.5">
+        {!isUser && index > 0 && message.text !== STOPPED_TEXT && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...MOTION.filmReveal, delay: liveAnswer ? 0 : 0.12 }} className="flex items-center gap-1.5 px-0.5">
           <button onClick={() => onCopy(text)} className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#E1251B]/50 hover:bg-[#E1251B]/10 hover:shadow-[0_0_12px_rgba(225,37,27,0.25)] cursor-pointer flex items-center gap-1.5"><Copy className="w-3.5 h-3.5" />{t('chat.copy')}</button>
           {!liveAnswer && <button onClick={() => onReply(text)} className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#0B6BCB]/60 hover:bg-[#0B6BCB]/15 hover:shadow-[0_0_12px_rgba(11,107,203,0.3)] cursor-pointer flex items-center gap-1.5"><Reply className="w-3.5 h-3.5" />{t('chat.reply')}</button>}
-        </div>}
+        </motion.div>}
       </div>
     </motion.div>
   );
