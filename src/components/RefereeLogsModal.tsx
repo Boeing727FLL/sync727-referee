@@ -38,6 +38,7 @@ import { onValue, remove, ref, update } from 'firebase/database';
 import { rtdb } from '../lib/firebase';
 import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
+import { filterLogs, fullDate, TIME_FILTERS, timeAgo, toDate, type LogEntry, type TimeFilter } from '../features/referee/logs/model';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -74,87 +75,7 @@ const MONTH_CUTOFF_DAYS = 30;
 const STAGGER_STEP = 0.03;
 const STAGGER_MAX = 0.3;
 
-/** Time-range chips: label shown, days used for filtering (0 = no filter). */
-const TIME_FILTERS = [
-  { key: 'all', label: 'הכל', days: 0 },
-  { key: 'today', label: 'היום', days: 1 },
-  { key: 'week', label: '7 ימים', days: 7 },
-  { key: 'month', label: '30 ימים', days: 30 },
-] as const;
-
-type TimeFilter = typeof TIME_FILTERS[number]['key'];
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface RefereeLogsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-/** One journal entry as stored under RTDB `referee/logs`. */
-type LogEntry = {
-  id: string;
-  question?: string;
-  answer?: string;
-  season?: string;
-  language?: string;
-  uid?: string;
-  model?: string;
-  ok?: boolean;
-  createdAt?: any;
-};
-
-// ---------------------------------------------------------------------------
-// Hebrew display formatting (the file's only "language work": timestamps)
-// ---------------------------------------------------------------------------
-
-/** Accept every timestamp shape the database has ever stored. */
-function toDate(v: any): Date | null {
-  if (!v) return null;
-  try {
-    if (typeof v.toDate === 'function') return v.toDate();
-    if (v.seconds) return new Date(v.seconds * 1000);
-    if (typeof v === 'number') return new Date(v);
-    if (typeof v === 'string') {
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? null : d;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-/** Relative Hebrew clock ("לפני 3 דקות"), calendar date past a month. */
-function timeAgo(v: any): string {
-  const d = toDate(v);
-  if (!d) return '';
-  const diff = Date.now() - d.getTime();
-  const min = Math.floor(diff / MINUTE_MS);
-  if (min < 1) return 'ממש עכשיו';
-  if (min < 60) return `לפני ${min} דקות`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `לפני ${h} שעות`;
-  const days = Math.floor(h / 24);
-  if (days < MONTH_CUTOFF_DAYS) return `לפני ${days} ימים`;
-  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
-}
-
-/** Full Hebrew timestamp for the expanded entry footer. */
-function fullDate(v: any): string {
-  const d = toDate(v);
-  if (!d) return '';
-  return d.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
-/** True when the timestamp falls inside the last `days` days. */
-function inLastDays(v: any, days: number): boolean {
-  const d = toDate(v);
-  if (!d) return false;
-  return Date.now() - d.getTime() <= days * DAY_MS;
-}
+interface RefereeLogsModalProps { isOpen: boolean; onClose: () => void; }
 
 // ---------------------------------------------------------------------------
 // Presentational pieces (no hooks, no logic — pure props in, JSX out)
@@ -535,21 +456,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     return { total: logs.length };
   }, [logs]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const days = TIME_FILTERS.find(f => f.key === filter)?.days || 0;
-    const list = logs.filter((l) => {
-      if (days > 0 && !inLastDays(l.createdAt, days)) return false;
-      if (!q) return true;
-      return (
-        (l.question || '').toLowerCase().includes(q) ||
-        (l.answer || '').toLowerCase().includes(q) ||
-        (l.season || '').toLowerCase().includes(q)
-      );
-    });
-    if (!sortNew) return [...list].reverse();
-    return list;
-  }, [logs, search, filter, sortNew]);
+  const filtered = useMemo(() => filterLogs(logs, search, filter, sortNew), [logs, search, filter, sortNew]);
 
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
