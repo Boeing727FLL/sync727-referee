@@ -80,3 +80,6 @@ The coordinator intentionally retains operations that mutate several domains in 
 - `lib/refereeFlags.ts`: global maintenance and feedback-reset flags, including fail-closed maintenance gating. `analytics.ts` now stays focused on counters, logs, feedback records, presence, sessions and dashboard reads.
 - `features/referee/ai/conversation.ts`: pure history normalization and conversion between chat, Gemini interactions and generate-content shapes.
 - `features/referee/ai/retryPolicy.ts`: deterministic error classification, retry transitions, key rotation order and in-memory key cooldowns. Secret values remain in the service/key vault boundary.
+- `features/referee/ai/requestPlan.ts`: pure active-season, question, critique and final-stage request planning.
+- `features/referee/ai/filePlan.ts`: pure attachment classification and stable image labels.
+- `features/referee/ai/modelRunner.ts`: the two Gemini transport shapes and their streaming collection; orchestration and retry choices remain visible in `geminiService`.

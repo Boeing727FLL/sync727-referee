@@ -3,7 +3,10 @@ import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
 import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
-import { buildHistory, stepsToContents, textStep, toInteractionInput, toInteractionParts, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type InteractionStep, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
+import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
+import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
+import { describeRequestFile, imageLabel } from '../features/referee/ai/filePlan';
+import { runModel } from '../features/referee/ai/modelRunner';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -17,11 +20,7 @@ type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent';
 type PageImage = { pageIndex: number; data: string };
 type RequestFile = UserFile & { isRulebook: boolean };
 type FetchedBlob = { data: Blob; mimeType: string };
-type StreamEvent = {
-  event_type?: string;
-  delta?: { type?: string; text?: string };
-  error?: { message?: string };
-};
+
 
 const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' };
 // When user photos are attached, the self-critique re-sees them so visual
@@ -33,42 +32,6 @@ const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.1-pro-preview', kind: 'interactions', config: { temperature: 1, max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, topP: 0.95, thinking_level: 'high' } },
   { name: 'gemini-3.5-flash-lite', kind: 'generateContent', config: { thinkingConfig: { thinkingLevel: 'HIGH' }, mediaResolution: 'MEDIA_RESOLUTION_HIGH' } },
 ];
-
-async function collectStreamedText(
-  stream: AsyncIterable<unknown>,
-  signal?: AbortSignal,
-  onText?: (text: string) => void,
-): Promise<string> {
-  let text = '';
-  for await (const value of stream) {
-    if (signal?.aborted) break;
-    if (!value || typeof value !== 'object') continue;
-    const event = value as StreamEvent;
-    if (event.event_type === 'error' && event.error) {
-      throw new Error(event.error.message || 'Interaction stream error');
-    }
-    if ((event.event_type === 'step.delta' || event.event_type === 'content.delta') &&
-      event.delta?.type === 'text' && event.delta.text) {
-      text += event.delta.text;
-      onText?.(event.delta.text);
-    }
-  }
-  return text;
-}
-
-function interactionText(interaction: unknown): string {
-  if (!interaction || typeof interaction !== 'object') return '';
-  const response = interaction as { output_text?: unknown; outputs?: unknown };
-  if (typeof response.output_text === 'string' && response.output_text) return response.output_text;
-  if (!Array.isArray(response.outputs)) return '';
-  return response.outputs
-    .filter((output): output is { type: 'text'; text: string } =>
-      !!output && typeof output === 'object' &&
-      (output as { type?: unknown }).type === 'text' &&
-      typeof (output as { text?: unknown }).text === 'string')
-    .map(output => output.text)
-    .join('');
-}
 
 // --- File parts ---
 function resolveR2Url(url: string): string {
@@ -256,9 +219,7 @@ export const GeminiService = {
       const contents = buildHistory(history);
       const currentParts: LegacyPart[] = [];
 
-      const trimmedSeason = seasonName && seasonName.trim();
-      const currentSeason = trimmedSeason && seasonName !== 'UNKNOWN' ? trimmedSeason : null;
-      let activeSystemPrompt = buildSystemPrompt(language, currentSeason);
+      let activeSystemPrompt = buildSystemPrompt(language, activeSeason(seasonName));
 
       // Owner corrections override every other instruction.
       const correctionsText = (await getRefereeCorrections()).trim();
@@ -269,15 +230,8 @@ export const GeminiService = {
       let globalImageIndex = 1;
 
       // Label every image so the model can separate rules, updates and user photos.
-      const pagePrefixText = (fileName: string, isUserPhoto: boolean, pageIndex?: number): string => {
-        if (isUserPhoto) {
-          return `Image ${globalImageIndex++}:\n--- USER PHOTO (Analyze this to see what the user is asking about) | FILE: ${fileName} ---\n`;
-        }
-        if (/update/i.test(fileName)) {
-          return `Image ${globalImageIndex++}:\n--- UPDATES PAGE (Official updates document - overrides the base rulebook) | FILE: ${fileName}${pageIndex ? ` | PAGE: ${pageIndex}` : ''} ---\n`;
-        }
-        return `Image ${globalImageIndex++}:\n--- RULEBOOK PAGE (Use this as reference only) | FILE: ${fileName}${pageIndex ? ` | PAGE: ${pageIndex}` : ''} ---\n`;
-      };
+      const pagePrefixText = (fileName: string, isUserPhoto: boolean, pageIndex?: number) =>
+        imageLabel(globalImageIndex++, fileName, isUserPhoto, pageIndex);
 
       const appendPdfPages = async (
         pdf: Blob | File,
@@ -320,15 +274,9 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         for (const file of allFiles) {
           if (signal?.aborted) return '';
           const partsBefore = currentParts.length;
-          const rawFileName = file.actualFile?.name || file.key || 'file';
-          const fileName = rawFileName.split('/').pop() || rawFileName;
-          const isPdf = file.actualFile?.type === 'application/pdf' || /\.pdf$/i.test(fileName) || file.url?.toLowerCase().endsWith('.pdf');
-          const isText = file.actualFile?.type?.startsWith('text/') || /\.(txt|json|xml)$/i.test(fileName);
-          const isUserPhoto = !file.isRulebook;
+          const { fileName, isPdf, isText, isUserPhoto, isR2Rulebook } = describeRequestFile(file);
 
           if (isPdf) {
-            const isR2Rulebook = !file.actualFile && file.url.includes('fll-rules');
-            
             if (isR2Rulebook) {
               console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
               const uploadedImages = await fetchR2ImageSet(fileName, signal);
@@ -412,24 +360,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         currentParts.push({ text: "\n--- END OF FILES ---\n\n" });
       }
 
-      let modifiedQuestion = question;
-
       const hasUserFiles = Boolean(userFiles?.length);
-
       const expectedRulebook = (rulebookFiles || []).length;
       if (expectedRulebook > 0 && attachedRulebookImages === 0 && !hasUserFiles) {
         return 'שגיאה בטעינת חוברת החוקים. לא הצלחתי לטעון אף עמוד, ולכן אני לא עונה כדי לא להמציא. נסו שוב, ואם זה חוזר, העלו מחדש את קובץ החוקים דרך מסך ההעלאה.';
       }
-      if (hasUserFiles) {
-        modifiedQuestion = `⚠️⚠️⚠️ [הנחיית שיפוט קריטית - ניתוח עצמאי נקי ללא הטיה] ⚠️⚠️⚠️
-עליך לנתח את התמונה/קבצים שהועלו כעת במנותק ובנפרד לחלוטין מכל משימה, חוק או תמונה קודמת שדוברה בצ'אט (כמו משימה 5 או כל נושא קודם). אל תניח בשום אופן שהתמונה הזו קשורה אליהם!
-בצע זיהוי אובייקטיבי ונקי של האובייקטים והדגמים המופיעים בתמונה הזו בפועל, והשב רק לפיה.
-
-השאלה המקורית של המשתמש:
-"${question}"`;
-      }
-
-      modifiedQuestion += COGNITIVE_PROMPT;
+      const modifiedQuestion = buildQuestionText(question, hasUserFiles, COGNITIVE_PROMPT);
 
       currentParts.push({ text: modifiedQuestion });
 
@@ -446,60 +382,9 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       const textOnlyInput = toInteractionTextOnly(contents);
       const effectiveChain = MODEL_CHAIN;
 
-      const callModel = async (
-        client: any,
-        modelEntry: ModelChainEntry,
-        stepInput: InteractionStep[],
-        isStream: boolean,
-        onText?: (text: string) => void,
-      ): Promise<string> => {
-        if (modelEntry.kind === 'interactions') {
-          const prefixed = modelEntry.name.startsWith('models/') ? modelEntry.name : `models/${modelEntry.name}`;
-          const params = {
-            model: prefixed,
-            input: stepInput,
-            generation_config: modelEntry.config,
-            system_instruction: activeSystemPrompt,
-            stream: isStream,
-          };
-          const reqOptions = signal ? { signal } : undefined;
-          if (isStream) {
-            const stream = await client.interactions.create(params, reqOptions);
-            return collectStreamedText(stream as AsyncIterable<unknown>, signal, onText);
-          }
-          return interactionText(await client.interactions.create(params, reqOptions));
-        }
-        const gcContents = stepsToContents(stepInput);
-        const gcConfig: Record<string, unknown> = { thinkingConfig: { thinkingLevel: 'HIGH' } };
-        if (signal) gcConfig.abortSignal = signal;
-        if (stepInput.some(step => step.content.some(part => part.type === 'image'))) {
-          gcConfig.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
-        }
-        if (isStream) {
-          const stream = await client.models.generateContentStream({
-            model: modelEntry.name,
-            config: gcConfig,
-            contents: gcContents,
-            systemInstruction: activeSystemPrompt,
-          });
-          let text = '';
-          for await (const chunk of stream) {
-            if (signal?.aborted) break;
-            if (chunk?.text) {
-              text += chunk.text;
-              onText?.(chunk.text);
-            }
-          }
-          return text;
-        }
-        const result = await client.models.generateContent({
-          model: modelEntry.name,
-          config: gcConfig,
-          contents: gcContents,
-          systemInstruction: activeSystemPrompt,
-        });
-        return (result && result.text) || '';
-      };
+      const callModel = (client: any, model: ModelChainEntry, input: Parameters<typeof runModel>[0]['input'], stream: boolean, onText?: (text: string) => void) =>
+        runModel({ client, model, input, systemInstruction: activeSystemPrompt, stream, signal, onText });
+
 
       let responseText = '';
       let lastFailureKind: ReturnType<typeof classifyFailure>['kind'] | null = null;
@@ -524,27 +409,17 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             let finalAnswer = draftText;
             // The critique re-sees the user's photos (rulebook images stay
             // out to avoid resending them) so visual claims get verified.
-            const critiquePhotoSteps: InteractionStep[] = userPhotoParts.length
-              ? [{ type: 'user_input', content: userPhotoParts.flatMap(toInteractionParts) }]
-              : [];
-            const critiquePrompt = userPhotoParts.length
-              ? CRITIQUE_PROMPT + PHOTO_CRITIQUE_ADDENDUM
-              : CRITIQUE_PROMPT;
-            const critiqueInput: InteractionStep[] = [
-              ...textOnlyInput,
-              ...critiquePhotoSteps,
-              ...(draftText.trim() ? [textStep('model_output', draftText)] : []),
-              textStep('user_input', critiquePrompt),
-            ];
+            const critiqueInput = critiquePlan({
+              textOnlyInput,
+              userPhotoParts,
+              draftText,
+              critiquePrompt: CRITIQUE_PROMPT,
+              photoAddendum: PHOTO_CRITIQUE_ADDENDUM,
+            });
             const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
-            const strippedCritique = critiqueText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
 
-            if (strippedCritique) {
-              const finalInput: InteractionStep[] = [
-                ...critiqueInput,
-                textStep('model_output', critiqueText),
-                textStep('user_input', FINAL_PROMPT),
-              ];
+            if (visibleCritique(critiqueText)) {
+              const finalInput = finalPlan(critiqueInput, critiqueText, FINAL_PROMPT);
               const streamedText = await callModel(client, modelEntry, finalInput, true, onChunk);
               finalAnswer = streamedText || draftText;
             }
