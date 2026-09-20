@@ -68,3 +68,4 @@ The coordinator intentionally retains operations that mutate several domains in 
 ## Locales
 
 `src/locales/<code>.ts` keeps one dictionary per language. They are synchronous by design so a saved non-Hebrew language is available on the first render with no fallback-language flash. `useLanguage.tsx` owns only selection, persistence, direction metadata and fallback behavior.
+- `feedback/model.ts` and `feedback/FeedbackViews.tsx`: pure feedback statistics/formatting and feedback-card/stat/empty/lock presentation. Firebase ownership and destructive operations stay in `FeedbackAdminModal`.
