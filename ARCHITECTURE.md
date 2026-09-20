@@ -27,7 +27,7 @@ This guide explains where behavior lives and what must stay off the startup path
 
 - Do not add static imports of AI, PDF, AWS/R2 or admin modules to `App.tsx`, `main-app.tsx` or the top of `PublicRulebookAI.tsx`.
 - Keep route screens behind `React.lazy`. Keep Firebase imports out of `LandingPage`, `IntroScreen`, and the shared route shell.
-- The landing route uses 40 KB/107 KB responsive backgrounds and 6 KB/3 KB WebP logos with explicit dimensions.
+- The landing route uses 40 KB/107 KB responsive backgrounds and 6 KB/3 KB WebP logos with explicit dimensions. Its original Framer Motion timing, delays, transforms, opacity fades, blur, glass and shadows are preserved; performance work must not remove that choreography.
 - Hash-named `/assets/*` and self-hosted fonts are immutable; HTML and `version.json` are never cached.
 - Do not add a service worker without an explicit offline/update design. The entry removes stale workers left by older releases.
 - Measure both raw and gzip bundle sizes with `npm run build` before merging.
