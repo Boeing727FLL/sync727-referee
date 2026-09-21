@@ -1269,15 +1269,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             <h1 className="min-w-0 truncate text-base md:text-xl font-bold text-white/95 tracking-tight cursor-default select-none leading-tight">
               {t('app.title')}
             </h1>
-            <div className="flex md:hidden items-center shrink-0 rounded-full border border-white/[0.14] bg-white/[0.08] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+            <div className="flex md:hidden items-center shrink-0">
               <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact />
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <div className="rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
-            </div>
+            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
