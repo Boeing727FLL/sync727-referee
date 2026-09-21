@@ -40,6 +40,22 @@ import { safeUserFacingError } from '../features/referee/chat/userFacingError';
 import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from '../features/referee/chat/requestMachine';
 import { decideSendPreflight } from '../features/referee/chat/sendGuards';
 import {
+  beginDeletingAuth,
+  beginRemovingData,
+  beginReauth,
+  cancelDeletion,
+  clearDeletionError,
+  completeDeletion,
+  failDeletion,
+  initialAccountDeletion,
+  isDeleting,
+  isDeletionDialogOpen,
+  openDeletionConfirm,
+  rejectDeletion,
+  setDeletionPassword,
+  type AccountDeletionState,
+} from '../features/referee/session/accountDeletion';
+import {
   chatStarted as entryChatStarted,
   disclaimerConfirm,
   enterFromUrl,
@@ -50,7 +66,7 @@ import {
   showIntro as entryShowIntro,
   type EntryState,
 } from '../features/referee/session/entryFlow';
-import { clearAllChatStates, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
+import { clearAllChatStates, clearChatState, isChatStateEmpty, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
@@ -431,10 +447,10 @@ export default function PublicRulebookAI() {
   };
 
   // ===== 4. Account deletion (password re-auth, then wipe everything).
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
-  const [deletingAccount, setDeletingAccount] = useState<boolean>(false);
-  const [deletePassword, setDeletePassword] = useState<string>('');
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Account deletion as one staged machine (see accountDeletion.ts):
+  // every failure lands in the same legal state - dialog open, not busy,
+  // error shown.
+  const [deletion, setDeletion] = useState<AccountDeletionState>(initialAccountDeletion);
 
   /**
    * Delete the account after password re-authentication: user doc, RTDB
@@ -442,31 +458,30 @@ export default function PublicRulebookAI() {
    * to the intro screen.
    */
   const handleDeleteAccount = async () => {
-    setDeleteError(null);
+    setDeletion(clearDeletionError);
     const current = auth.currentUser;
     if (!current || !current.email) {
-      setDeleteError('אין משתמש מחובר. התחברו ונסו שוב.');
+      setDeletion(s => rejectDeletion(s, 'אין משתמש מחובר. התחברו ונסו שוב.'));
       return;
     }
-    if (!deletePassword) {
-      setDeleteError('יש להזין סיסמה כדי לאשר מחיקה.');
+    if (!deletion.password) {
+      setDeletion(s => rejectDeletion(s, 'יש להזין סיסמה כדי לאשר מחיקה.'));
       return;
     }
-    setDeletingAccount(true);
+    setDeletion(beginReauth);
     try {
-      const cred = EmailAuthProvider.credential(current.email, deletePassword);
+      const cred = EmailAuthProvider.credential(current.email, deletion.password);
       await reauthenticateWithCredential(current, cred);
     } catch {
-      setDeletingAccount(false);
-      setDeleteError('סיסמה שגויה. המחיקה לא בוצעה.');
+      setDeletion(s => failDeletion(s, 'סיסמה שגויה. המחיקה לא בוצעה.'));
       return;
     }
     const uid = current.uid;
+    setDeletion(beginRemovingData);
     try {
       await deleteDoc(doc(db, 'users', uid));
     } catch (e) {
-      setDeletingAccount(false);
-      setDeleteError('מחיקת מסמך המשתמש נכשלה. נסו שוב.');
+      setDeletion(s => failDeletion(s, 'מחיקת מסמך המשתמש נכשלה. נסו שוב.'));
       return;
     }
     // RTDB cleanup must happen BEFORE deleteUser signs us out: afterwards
@@ -476,11 +491,11 @@ export default function PublicRulebookAI() {
       await rtdbRemove(rtdbRef(rtdb, `referee/sessions/${uid}`));
     } catch { /* session may not exist */ }
     await removeRefereeUser(uid);
+    setDeletion(beginDeletingAuth);
     try {
       await deleteUser(current);
     } catch {
-      setDeletingAccount(false);
-      setDeleteError('מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.');
+      setDeletion(s => failDeletion(s, 'מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.'));
       return;
     }
     try { await logout(); } catch { /* ignore */ }
@@ -490,10 +505,7 @@ export default function PublicRulebookAI() {
     localStorage.removeItem('user_name');
     clearAllChatStates();
     setHasGoogleToken(false);
-    setShowDeleteConfirm(false);
-    setDeletingAccount(false);
-    setDeletePassword('');
-    setDeleteError(null);
+    setDeletion(completeDeletion());
     setEntry(exitToIntro());
     navigate('/');
   };
@@ -558,7 +570,13 @@ export default function PublicRulebookAI() {
   // every change, so a refresh restores them. See localHistory.ts for the
   // privacy policy and bounds.
   useEffect(() => {
-    saveChatState(resolveRefereeUid() || 'anon', { messages, draft: input, replyTo });
+    // Sign-out/kick/delete clear the store and then reset state; persisting
+    // that empty reset would resurrect the just-cleared key, so an empty
+    // state REMOVES the record instead of writing it.
+    const uid = resolveRefereeUid() || 'anon';
+    const state = { messages, draft: input, replyTo };
+    if (isChatStateEmpty(state)) clearChatState(uid);
+    else saveChatState(uid, state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, input, replyTo]);
 
@@ -1319,7 +1337,7 @@ export default function PublicRulebookAI() {
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
-                            setShowDeleteConfirm(true);
+                            setDeletion(openDeletionConfirm());
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
                         >
@@ -1600,18 +1618,13 @@ export default function PublicRulebookAI() {
       />
 
       <DeleteAccountDialog
-        open={showDeleteConfirm}
-        password={deletePassword}
-        error={deleteError}
-        deleting={deletingAccount}
-        setPassword={setDeletePassword}
-        clearError={() => setDeleteError(null)}
-        onCancel={() => {
-          if (deletingAccount) return;
-          setShowDeleteConfirm(false);
-          setDeletePassword('');
-          setDeleteError(null);
-        }}
+        open={isDeletionDialogOpen(deletion)}
+        password={deletion.password}
+        error={deletion.error}
+        deleting={isDeleting(deletion)}
+        setPassword={(pw: string) => setDeletion(s => setDeletionPassword(s, pw))}
+        clearError={() => setDeletion(clearDeletionError)}
+        onCancel={() => setDeletion(cancelDeletion)}
         onConfirm={handleDeleteAccount}
       />
 

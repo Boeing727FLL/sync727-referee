@@ -280,7 +280,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: Intro
           </div>
 
           {/* Proof — three cards in calm sequence */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-3xl mb-6 md:mb-8 text-right">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full max-w-3xl mb-6 md:mb-8 text-start">
             {features.map((f, i) => (
               <FeatureCard key={i} feature={f} index={i} />
             ))}

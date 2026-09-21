@@ -20,6 +20,15 @@ import { auth } from '../lib/firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
 import { subscribeMaintenanceGate } from '../lib/refereeFlags';
+import {
+  exitResetView,
+  initialLoginView,
+  isResetView,
+  isSignUpView,
+  showResetView,
+  toggleSignMode,
+  type LoginView,
+} from '../features/auth/loginFlow';
 import { isCurrentUserOwner, isOwnerEmail } from '../lib/owner';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import AuthProgressOverlay from '../features/auth/AuthProgressOverlay';
@@ -77,8 +86,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   // -- form state ------------------------------------------------------------
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [showReset, setShowReset] = useState(false);
+  // One view machine instead of the old isSignUp/showReset boolean pair
+  // (which allowed the illegal sign-up+reset combination).
+  const [view, setView] = useState<LoginView>(initialLoginView);
+  const isSignUp = isSignUpView(view);
+  const showReset = isResetView(view);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -399,7 +411,7 @@ export default function LoginPage() {
                       </p>
                       <button
                         onClick={() => {
-                          setShowReset(false);
+                          setView(exitResetView());
                           setResetSent(false);
                           setResetEmail('');
                           setError(null);
@@ -453,7 +465,7 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setShowReset(false);
+                            setView(exitResetView());
                             setError(null);
                           }}
                           className="text-slate-400 hover:text-white text-sm font-bold cursor-pointer transition-colors"
@@ -576,7 +588,7 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setShowReset(true);
+                            setView(showResetView());
                             setError(null);
                           }}
                           className="text-yellow-400/70 hover:text-yellow-300 text-xs font-bold cursor-pointer transition-colors"
@@ -590,7 +602,7 @@ export default function LoginPage() {
                   <div className="mt-5 text-center">
                     <button
                       onClick={() => {
-                        setIsSignUp(!isSignUp);
+                        setView(toggleSignMode(view));
                         setError(null);
                       }}
                       className="text-sm font-bold cursor-pointer transition-colors bg-gradient-to-l from-blue-300 via-violet-300 to-yellow-300 bg-clip-text text-transparent hover:opacity-80"

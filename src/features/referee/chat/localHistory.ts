@@ -89,6 +89,10 @@ export function saveChatState(uid: string, state: PersistedChatState): void {
   } catch { /* storage full or blocked: history is a convenience, not data */ }
 }
 
+/** Nothing worth keeping: no history, no draft, no reply context. */
+export const isChatStateEmpty = (state: PersistedChatState): boolean =>
+  state.messages.length === 0 && !state.draft && !state.replyTo;
+
 /** Wipe one user's persisted chat on this device. */
 export function clearChatState(uid: string): void {
   const store = storage();

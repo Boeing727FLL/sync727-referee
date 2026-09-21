@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
+import { isChatStateEmpty,
   HISTORY_MESSAGE_LIMIT,
   TEXT_CHAR_LIMIT,
   parseChatState,
@@ -53,4 +53,11 @@ test('parse rejects corrupt and wrong-shaped payloads', () => {
   assert.equal(parseChatState('not json'), null);
   assert.equal(parseChatState('{"messages":"nope"}'), null);
   assert.equal(parseChatState('{"messages":[{"role":"admin","text":"x"}]}'), null);
+});
+
+test('empty chat state is recognized so sign-out does not resurrect a cleared record', () => {
+  assert.equal(isChatStateEmpty({ messages: [], draft: '', replyTo: null }), true);
+  assert.equal(isChatStateEmpty({ messages: [{ role: 'user', text: 'שאלה' }], draft: '', replyTo: null }), false);
+  assert.equal(isChatStateEmpty({ messages: [], draft: 'טיוטה', replyTo: null }), false);
+  assert.equal(isChatStateEmpty({ messages: [], draft: '', replyTo: { text: 'ציטוט' } }), false);
 });

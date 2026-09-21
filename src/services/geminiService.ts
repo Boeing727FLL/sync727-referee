@@ -8,6 +8,7 @@ import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritiq
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
 import { RulebookIncompleteError, RULEBOOK_INCOMPLETE_MESSAGE } from '../features/referee/rulebook/completeness';
+import { ASK_ABORTED } from '../features/referee/ai/askContract';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -188,6 +189,12 @@ export async function getNextApiKey(): Promise<string> {
 
 // --- Core AI logic ---
 export const GeminiService = {
+  /**
+   * Ask the virtual referee. Result contract: see ai/askContract.ts -
+   * resolves ASK_ABORTED when aborted, otherwise user-visible text
+   * (answers and honest Hebrew failure messages alike); never rejects for
+   * expected failures.
+   */
   async askRulebook(
     question: string,
     history: ChatHistoryMessage[],
@@ -261,7 +268,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 \n\n` });
         
         for (const file of allFiles) {
-          if (signal?.aborted) return '';
+          if (signal?.aborted) return ASK_ABORTED;
           const partsBefore = currentParts.length;
           const { fileName, isPdf, isText, isUserPhoto, isR2Rulebook } = describeRequestFile(file);
 
@@ -269,7 +276,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             if (isR2Rulebook) {
               console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
               const fetched = await fetchBlob(file.url, signal);
-              if (signal?.aborted) return '';
+              if (signal?.aborted) return ASK_ABORTED;
               if (!fetched) throw new RulebookIncompleteError({ file: fileName, code: 'source-fetch', detail: 'The source PDF could not be fetched.' });
               let expectedPages: number;
               try {
@@ -281,7 +288,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
               const imageSet = await fetchR2ImageSet(fileName, signal);
               const uploadedImages = imageSet.pages;
-              if (signal?.aborted) return '';
+              if (signal?.aborted) return ASK_ABORTED;
               const expectedInventory = Array.from({ length: expectedPages }, (_, index) => index + 1);
               if (imageSet.listedPages.length && (imageSet.listedPages.length !== expectedPages || imageSet.listedPages.some((page, index) => page !== expectedInventory[index]))) {
                 throw new RulebookIncompleteError({ file: fileName, code: 'missing-page', detail: `Expected pages 1-${expectedPages}; listed [${imageSet.listedPages.join(', ')}].` });
@@ -298,7 +305,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
                     count => `Converted ${count} pages on the fly for ${fileName}`,
                     true,
                   );
-                  if (attached === null) return '';
+                  if (attached === null) return ASK_ABORTED;
                   if (attached !== expectedPages) throw new Error(`Attached ${attached} of ${expectedPages} pages.`);
                   attachedRulebookImages += attached;
                 } catch (err) {
@@ -313,7 +320,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               }
             } else {
               const pdfBlob = await getInlineBlob(file, signal) || (await fetchBlob(file.url, signal))?.data;
-              if (signal?.aborted) return '';
+              if (signal?.aborted) return ASK_ABORTED;
   
               if (pdfBlob) {
                 const attached = await appendPdfPages(
@@ -323,12 +330,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
                   count => `Successfully rendered ${count} visual pages for PDF: ${fileName}`,
                   false,
                 );
-                if (attached === null) return '';
+                if (attached === null) return ASK_ABORTED;
               }
             }
           } else if (isText) {
             const textBlob = await getInlineBlob(file, signal) || (await fetchBlob(file.url, signal))?.data;
-            if (signal?.aborted) return '';
+            if (signal?.aborted) return ASK_ABORTED;
             if (!textBlob) throw new RulebookIncompleteError({ file: fileName, code: 'source-fetch', detail: 'The text rulebook could not be fetched.' });
             const text = await textBlob.text();
             if (!text.trim()) throw new RulebookIncompleteError({ file: fileName, code: 'empty-text', detail: 'The text rulebook is empty.' });
@@ -348,12 +355,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
             }
 
             const inlineBlob = await getInlineBlob(file, signal);
-            if (signal?.aborted) return '';
+            if (signal?.aborted) return ASK_ABORTED;
             if (inlineBlob) {
               blobToUpload = inlineBlob;
             } else if (file.url) {
               const fetched = await fetchBlob(file.url, signal);
-              if (signal?.aborted) return '';
+              if (signal?.aborted) return ASK_ABORTED;
               if (fetched) {
                 mimeType = fetched.mimeType;
                 blobToUpload = fetched.data;
@@ -411,7 +418,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         const candidates = rotateCandidates(availableKeys, rotationIndex);
         localStorage.setItem('gemini_key_rotation_index', String((rotationIndex + 1) % availableKeys.length));
         for (const key of candidates) {
-          if (signal?.aborted) return '';
+          if (signal?.aborted) return ASK_ABORTED;
           const client = new GoogleGenAI({ apiKey: key });
           try {
             const draftText = await callModel(client, modelEntry, interactionInput, false);
@@ -440,7 +447,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           } catch (error: unknown) {
             const decision = classifyFailure(error, signal?.aborted);
             lastFailureKind = decision.kind;
-            if (decision.kind === 'aborted') return '';
+            if (decision.kind === 'aborted') return ASK_ABORTED;
             keyHealth.coolDown(key, decision.cooldownMs);
             if (decision.tryNextKey) continue;
             if (decision.tryNextModel) continue modelLoop;
@@ -456,7 +463,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       return responseText;
 
     } catch (error: unknown) {
-      if (signal?.aborted) return '';
+      if (signal?.aborted) return ASK_ABORTED;
       if (error instanceof RulebookIncompleteError) {
         console.error('Active rulebook completeness check failed:', error.diagnostic);
         return RULEBOOK_INCOMPLETE_MESSAGE;
