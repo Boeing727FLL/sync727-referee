@@ -14,7 +14,7 @@
  * returns ascending, so the list is reversed client-side to newest-first.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -47,6 +47,9 @@ const COPY_FEEDBACK_MS = 1500;
 
 /** How long error banners stay before auto-dismissing. */
 const ERROR_BANNER_MS = 10000;
+
+/** How long the bulk-clean second-tap confirmation stays armed. */
+const CONFIRM_WINDOW_MS = 5000;
 
 /** Bulk cleanup deletes entries older than this. */
 const OLD_LOG_DAYS = 90;
@@ -87,7 +90,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [loadErrorCode, setLoadErrorCode] = useState<string | null>(null);
 
   // -- view state (search, time filter, sort, expanded rows) ---------------------
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -101,6 +103,17 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmOld, setConfirmOld] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+
+  // Every pending timer (banner clears, copy tick, confirm window) is
+  // tracked and cancelled on unmount, so nothing fires into a dead tree.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = (fn: () => void, ms: number) => {
+    timersRef.current.push(setTimeout(fn, ms));
+  };
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
 
   // Deletes require a live owner Firebase session (server rule), so gate
   // the buttons explicitly instead of failing on the server. Reading is
@@ -117,6 +130,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       setSearch('');
       setFilter('all');
       setSortNew(true);
+      setConfirmOld(false);
+      setDeleteError(null);
       return;
     }
   }, [isOpen]);
@@ -126,7 +141,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     if (!unlocked) return;
     setLoading(true);
     setLoadError(false);
-    setLoadErrorCode(null);
     const unsub = onValue(
       logsQuery(LOG_LIMIT),
       (snap) => {
@@ -136,7 +150,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       (err: any) => {
         console.error('referee logs snapshot failed:', err);
         setLoadError(true);
-        setLoadErrorCode(err?.code ? String(err.code) : null);
         setLoading(false);
       }
     );
@@ -175,9 +188,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       });
     } catch (err: any) {
       console.error('referee log delete failed:', err);
-      const code = err?.code ? ` (${String(err.code)})` : '';
-      setDeleteError(`המחיקה נכשלה${code}. בדוק חיבור לאינטרנט וודא שאתה מחובר עם חשבון הבעלים, ונסה שוב.`);
-      setTimeout(() => setDeleteError(null), ERROR_BANNER_MS);
+      setDeleteError('המחיקה נכשלה. בדוק חיבור לאינטרנט וודא שאתה מחובר עם חשבון הבעלים, ונסה שוב.');
+      later(() => setDeleteError(null), ERROR_BANNER_MS);
     } finally {
       setDeletingId(null);
     }
@@ -190,6 +202,9 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   const cleanOldLogs = async () => {
     if (!confirmOld) {
       setConfirmOld(true);
+      // The armed second tap expires like every other two-tap confirm,
+      // instead of staying armed indefinitely.
+      later(() => setConfirmOld(false), CONFIRM_WINDOW_MS);
       return;
     }
     setCleaning(true);
@@ -205,9 +220,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
       }
     } catch (err: any) {
       console.error('referee log bulk clean failed:', err);
-      const code = err?.code ? ` (${String(err.code)})` : '';
-      setDeleteError(`ניקוי הרשומות הישנות נכשל${code}. ודא חיבור כבעלים ונסה שוב.`);
-      setTimeout(() => setDeleteError(null), ERROR_BANNER_MS);
+      setDeleteError('ניקוי הרשומות הישנות נכשל. ודא חיבור כבעלים ונסה שוב.');
+      later(() => setDeleteError(null), ERROR_BANNER_MS);
       return;
     } finally {
       setCleaning(false);
@@ -220,7 +234,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     try {
       await navigator.clipboard.writeText(text);
       setCopiedId(key);
-      setTimeout(() => setCopiedId(null), COPY_FEEDBACK_MS);
+      later(() => setCopiedId(null), COPY_FEEDBACK_MS);
     } catch {
       return;
     }
@@ -394,7 +408,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                   )}
                   {loadError && (
                     <NoticeBanner tone="red">
-                      טעינת היומן מהשרת נכשלה{loadErrorCode ? ` (${loadErrorCode})` : ''} — בדוק חיבור לאינטרנט והרשאות.
+                      טעינת היומן מהשרת נכשלה — בדוק חיבור לאינטרנט והרשאות.
                     </NoticeBanner>
                   )}
                   {deleteError && (

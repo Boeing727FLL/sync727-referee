@@ -11,7 +11,7 @@
  * confirming tap within a few seconds.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Settings, Wrench, Upload, BarChart3, Database,
@@ -229,6 +229,18 @@ export default function SettingsModal({
   const [resetting, setResetting] = useState(false);
   const [fbMsg, setFbMsg] = useState<string | null>(null);
   const [fbWorking, setFbWorking] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
+  // Every pending timer is tracked and cancelled on unmount/close, so a
+  // confirm window or message clear never fires into a dead tree.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = (fn: () => void, ms: number) => {
+    timersRef.current.push(setTimeout(fn, ms));
+  };
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
 
   // Fresh confirmations on every opening; maintenance stays live-subscribed.
   useEffect(() => {
@@ -237,6 +249,7 @@ export default function SettingsModal({
       setConfirmReset(false);
       setFbMsg(null);
       setToggleError(null);
+      setResetMsg(null);
       return;
     }
     return subscribeMaintenance(setMaintenanceState);
@@ -247,7 +260,7 @@ export default function SettingsModal({
     if (toggling) return;
     if (!maintenance && !confirmWorkMode) {
       setConfirmWorkMode(true);
-      setTimeout(() => setConfirmWorkMode(false), CONFIRM_WINDOW_MS);
+      later(() => setConfirmWorkMode(false), CONFIRM_WINDOW_MS);
       return;
     }
     setConfirmWorkMode(false);
@@ -257,27 +270,26 @@ export default function SettingsModal({
       await setMaintenance(!maintenance);
     } catch (e: any) {
       console.warn('setMaintenance failed:', e);
-      const code = e?.code ? ` (${String(e.code)})` : '';
-      setToggleError(`שמירת מצב העבודה נכשלה${code}. בדוק חיבור והתחברות כבעלים ונסה שוב.`);
+      setToggleError('שמירת מצב העבודה נכשלה. בדוק חיבור והתחברות כבעלים ונסה שוב.');
     }
     setToggling(false);
   };
 
-  /** Two-tap wipe of the question counters. */
+  /** Two-tap wipe of the question counters, with an honest outcome line. */
   const handleResetQuestions = async () => {
+    if (resetting) return;
     if (!confirmReset) {
       setConfirmReset(true);
-      setTimeout(() => setConfirmReset(false), CONFIRM_WINDOW_MS);
+      later(() => setConfirmReset(false), CONFIRM_WINDOW_MS);
       return;
     }
     setConfirmReset(false);
     setResetting(true);
-    try {
-      await resetQuestions();
-    } catch (e) {
-      console.warn('resetQuestions failed:', e);
-    }
+    setResetMsg(null);
+    const ok = await resetQuestions();
     setResetting(false);
+    setResetMsg(ok ? 'ספירת השאלות אופסה.' : 'האיפוס נכשל. בדוק חיבור ונסה שוב.');
+    later(() => setResetMsg(null), FB_MSG_MS);
   };
 
   /** Global feedback-timer reset (server flag every client obeys) + local keys. */
@@ -292,7 +304,7 @@ export default function SettingsModal({
       setFbMsg('האיפוס נכשל. בדוק חיבור ונסה שוב.');
     }
     setFbWorking(false);
-    setTimeout(() => setFbMsg(null), FB_MSG_MS);
+    later(() => setFbMsg(null), FB_MSG_MS);
   };
 
   // No early return on purpose: AnimatePresence needs the tree mounted
@@ -383,6 +395,7 @@ export default function SettingsModal({
                         icon={<RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />}
                         tint="red"
                         label={confirmReset ? 'לחצו שוב לאישור האיפוס' : resetting ? 'מאפס...' : 'איפוס ספירת השאלות'}
+                        sub={resetMsg || undefined}
                         onClick={handleResetQuestions}
                         danger
                       />

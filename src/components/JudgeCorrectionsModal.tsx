@@ -9,7 +9,7 @@
  * Writes are additionally enforced by the Firestore rules.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -159,6 +159,13 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // The "saved" tick timer is tracked and cancelled on unmount.
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+  }, []);
 
   // -- view state (search + new-line draft) -------------------------------------------
   const [search, setSearch] = useState('');
@@ -174,6 +181,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setNewLine('');
       setSaved(false);
       setUpdatedAt(null);
+      setActionError(null);
       return;
     }
     // Access is decided by the signed-in account, no code anymore.
@@ -190,8 +198,10 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setLines(parseCorrections(t));
       setInitialText(t);
       setUpdatedAt(u || null);
-    } catch {
-      return;
+      setActionError(null);
+    } catch (e) {
+      console.warn('corrections load failed:', e);
+      setActionError('טעינת התיקונים נכשלה. בדוק חיבור ונסה שוב.');
     } finally {
       setLoading(false);
     }
@@ -216,9 +226,12 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setInitialText(t);
       setUpdatedAt(now);
       setSaved(true);
-      setTimeout(() => setSaved(false), SAVED_TICK_MS);
-    } catch {
-      return;
+      setActionError(null);
+      savedTimerRef.current = setTimeout(() => setSaved(false), SAVED_TICK_MS);
+    } catch (e) {
+      console.warn('corrections save failed:', e);
+      // The draft stays on screen; say the save did not land.
+      setActionError('שמירת התיקונים נכשלה. בדוק חיבור והתחברות כבעלים ונסה שוב.');
     } finally {
       setSaving(false);
     }
@@ -308,6 +321,9 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                     <p className="text-xs text-slate-400 leading-relaxed">
                       לחצו על תיקון כדי לערוך אותו ישירות. כל שורה נשמרת כתיקון אחד שהשופט יקח בחשבון.
                     </p>
+                    {actionError && (
+                      <p className="text-[11px] font-bold text-red-300">{actionError}</p>
+                    )}
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={handleSave}

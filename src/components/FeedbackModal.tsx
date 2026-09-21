@@ -9,7 +9,7 @@
  * stars, a single gold submit pill — nothing blinks, nothing shouts.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, MessageSquareHeart } from 'lucide-react';
 import { logRefereeFeedback } from '../lib/analytics';
@@ -32,6 +32,7 @@ type FeedbackLabels = {
   submit: string;
   later: string;
   thanks: string;
+  error: string;
 };
 
 const LABELS: Record<string, FeedbackLabels> = {
@@ -45,6 +46,7 @@ const LABELS: Record<string, FeedbackLabels> = {
     submit: 'שליחה',
     later: 'בפעם אחרת',
     thanks: 'תודה על הפידבק!',
+    error: 'שליחת הפידבק נכשלה. בדוק חיבור ונסה שוב.',
   },
   en: {
     title: 'How was the Virtual Referee?',
@@ -56,6 +58,7 @@ const LABELS: Record<string, FeedbackLabels> = {
     submit: 'Send',
     later: 'Not now',
     thanks: 'Thanks for your feedback!',
+    error: 'Sending the feedback failed. Check your connection and try again.',
   },
 };
 
@@ -118,6 +121,13 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
   const [improvements, setImprovements] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+
+  // The thank-you auto-close timer is tracked and cancelled on unmount.
+  const thanksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (thanksTimerRef.current) clearTimeout(thanksTimerRef.current);
+  }, []);
 
   /** Wipe transient state (rating draft, thank-you flag). */
   const reset = () => {
@@ -126,6 +136,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
     setImprovements('');
     setSubmitting(false);
     setDone(false);
+    setSubmitError(false);
   };
 
   const handleClose = () => {
@@ -133,20 +144,31 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
     onClose();
   };
 
-  /** Submit requires at least one star; empty notes are simply omitted. */
+  /**
+   * Submit requires at least one star; empty notes are simply omitted.
+   * A failed send keeps the draft and says so - never a fake thank-you.
+   */
   const handleSubmit = async () => {
     if (rating <= 0 || submitting) return;
     setSubmitting(true);
-    await logRefereeFeedback({
-      rating,
-      improvements: improvements.trim() || undefined,
-      uid,
-      season,
-      language,
-    });
+    setSubmitError(false);
+    try {
+      await logRefereeFeedback({
+        rating,
+        improvements: improvements.trim() || undefined,
+        uid,
+        season,
+        language,
+      });
+    } catch (e) {
+      console.warn('feedback submit failed:', e);
+      setSubmitting(false);
+      setSubmitError(true);
+      return;
+    }
     setSubmitting(false);
     setDone(true);
-    setTimeout(() => {
+    thanksTimerRef.current = setTimeout(() => {
       reset();
       onSubmit();
     }, THANKS_DELAY_MS);
@@ -218,6 +240,10 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
                     />
                     <p className="text-[11px] text-slate-500 mt-1.5">{labels.improvementsHint}</p>
                   </div>
+
+                  {submitError && (
+                    <p className="mt-4 text-center text-[12px] font-bold text-red-300">{labels.error}</p>
+                  )}
 
                   <div className="flex gap-2.5 mt-5">
                     <button

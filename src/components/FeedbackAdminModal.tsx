@@ -10,7 +10,7 @@
  * the lock screen. Deletes are additionally enforced by the server rules.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquareHeart, RefreshCw, Trash2, Check } from 'lucide-react';
 import { onValue, get, remove, ref, update } from 'firebase/database';
@@ -62,6 +62,17 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   const [refreshing, setRefreshing] = useState(false);
   const [resettingTimer, setResettingTimer] = useState(false);
   const [timerReset, setTimerReset] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Pending UI timers are tracked and cancelled on unmount.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = (fn: () => void, ms: number) => {
+    timersRef.current.push(setTimeout(fn, ms));
+  };
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
 
   /** Snapshot (live or manual) -> newest-first entries. */
   const applySnapshot = (value: unknown) => {
@@ -88,6 +99,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
       setItems([]);
       setConfirmDeleteId(null);
       setConfirmClearAll(false);
+      setActionError(null);
       return;
     }
     setUnlocked(isCurrentUserOwner());
@@ -110,8 +122,11 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   const handleDelete = async (id: string) => {
     try {
       await remove(ref(rtdb, `referee/feedback/${id}`));
+      setActionError(null);
     } catch (e) {
       console.warn("delete feedback failed:", e);
+      // The entry stays visible, so say so instead of failing silently.
+      setActionError('מחיקת הפידבק נכשלה. בדוק חיבור ונסה שוב.');
     }
     setConfirmDeleteId(null);
   };
@@ -122,8 +137,10 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
       for (const updates of chunkedNullUpdates('referee/feedback', items.map(item => item.id), BULK_CHUNK)) {
         await update(ref(rtdb), updates);
       }
+      setActionError(null);
     } catch (e) {
       console.warn("clear all feedback failed:", e);
+      setActionError('מחיקת כל הפידבקים נכשלה. בדוק חיבור ונסה שוב.');
     }
     setConfirmClearAll(false);
   };
@@ -151,7 +168,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
     } catch { /* storage unavailable */ }
     setResettingTimer(false);
     setTimerReset(true);
-    setTimeout(() => setTimerReset(false), TIMER_CONFIRM_MS);
+    later(() => setTimerReset(false), TIMER_CONFIRM_MS);
   };
 
   const { total, avg, highCount, lowCount } = feedbackStats(items);
@@ -209,6 +226,12 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
             <div className="h-[2px] shrink-0 bg-gradient-to-l from-transparent via-emerald-400/60 to-transparent" aria-hidden />
 
             <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4">
+              {actionError && (
+                <div className="mb-4 px-4 py-3 rounded-2xl bg-red-500/15 border border-red-400/40 text-red-300 text-sm font-bold flex items-center gap-2">
+                  <X className="w-4 h-4 shrink-0" aria-hidden />
+                  {actionError}
+                </div>
+              )}
               {timerReset && (
                 <div className="mb-4 px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 text-sm font-bold flex items-center gap-2">
                   <Check className="w-4 h-4 shrink-0" aria-hidden />

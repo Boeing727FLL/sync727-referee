@@ -180,13 +180,20 @@ export async function removeRefereeUser(uid: string): Promise<void> {
 }
 
 /** Zero the question counters (owner action, two-tap confirmed in the UI). */
-export async function resetQuestions(): Promise<void> {
-  await guard('resetQuestions', async () => {
+export async function resetQuestions(): Promise<boolean> {
+  // The owner waits on this wipe, so the outcome is reported (unlike the
+  // passive writes above): true = both removals landed, false = warn + UI
+  // shows an honest failure line.
+  try {
     // NOTE: writing `{}` would be a no-op merge in RTDB, so the map is
     // removed outright instead of overwritten with an empty object.
     await remove(child(statsRef(), 'perUser'));
     await set(child(statsRef(), 'totalQuestions'), 0);
-  });
+    return true;
+  } catch (e) {
+    console.warn('resetQuestions failed:', e);
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,23 +217,25 @@ export async function logRefereeQA(payload: QuestionLog): Promise<void> {
   );
 }
 
-/** Save one user rating for head-referee review in the feedback viewer. */
+/**
+ * Save one user rating for head-referee review in the feedback viewer.
+ * Unlike passive analytics this THROWS on failure: the user is waiting on
+ * the submit, and a silent drop would show a fake "thank you".
+ */
 export async function logRefereeFeedback(payload: FeedbackLog): Promise<void> {
-  await guard('logRefereeFeedback', () => {
-    const entry: Record<string, unknown> = {
-      rating: payload.rating,
-      uid: payload.uid || 'anon',
-      season: payload.season || '',
-      language: payload.language || '',
-      createdAt: rtdbTimestamp(),
-    };
-    // RTDB rejects undefined values outright, so the optional field is only
-    // added when it actually holds text.
-    if (typeof payload.improvements === 'string' && payload.improvements.trim()) {
-      entry.improvements = payload.improvements;
-    }
-    return push(feedbackRef(), entry);
-  });
+  const entry: Record<string, unknown> = {
+    rating: payload.rating,
+    uid: payload.uid || 'anon',
+    season: payload.season || '',
+    language: payload.language || '',
+    createdAt: rtdbTimestamp(),
+  };
+  // RTDB rejects undefined values outright, so the optional field is only
+  // added when it actually holds text.
+  if (typeof payload.improvements === 'string' && payload.improvements.trim()) {
+    entry.improvements = payload.improvements;
+  }
+  await push(feedbackRef(), entry);
 }
 
 /** Newest-first queries shared by the journal and feedback viewers. */

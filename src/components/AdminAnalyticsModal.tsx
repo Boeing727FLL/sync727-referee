@@ -115,6 +115,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [resetFailed, setResetFailed] = useState(false);
 
   // Fresh gate on every opening; online presence streams regardless.
   useEffect(() => {
@@ -137,14 +138,17 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
 
   /** Two-tap counter wipe (first tap arms, second executes). */
   const handleReset = async () => {
+    if (resetting) return;
     if (!confirmReset) {
       setConfirmReset(true);
       return;
     }
     setResetting(true);
-    await resetQuestions();
+    setResetFailed(false);
+    const ok = await resetQuestions();
     setResetting(false);
     setConfirmReset(false);
+    if (!ok) setResetFailed(true);
   };
 
   /** No early return on purpose: AnimatePresence needs the tree mounted
@@ -207,6 +211,9 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                       {confirmReset ? 'לחצו שוב לאישור' : 'איפוס ספירה'}
                     </ActionButton>
                   </div>
+                  {resetFailed && (
+                    <p className="text-[11px] font-bold text-red-300">איפוס הספירה נכשל. בדוק חיבור ונסה שוב.</p>
+                  )}
                 </div>
               )}
             </div>
