@@ -37,7 +37,7 @@ export default function ChatComposer(props: Props) {
             exit={{ opacity: 0, y: 8, scaleY: 0.9, clipPath: 'inset(100% 0 0 0 round 16px)' }}
             transition={MOTION.morph}
             style={{ transformOrigin: 'bottom center' }}
-            className="w-full max-w-3xl lg:max-w-5xl mx-auto mb-2 flex items-center gap-2.5 rounded-xl border-r-2 border-[rgba(159,216,198,0.5)] bg-white/[0.03] px-3 py-2"
+            className="w-full max-w-3xl lg:max-w-[1400px] mx-auto mb-2 flex items-center gap-2.5 rounded-xl border-r-2 border-[rgba(159,216,198,0.5)] bg-white/[0.03] px-3 py-2"
           >
             <Reply className="shrink-0 w-4 h-4 text-[#9fd8c6]/80" />
             <div className="flex-1 min-w-0 text-right"><div className="text-[10px] font-black text-[#9fd8c6]/80">{t('chat.replyTo')}</div><div className="truncate text-xs text-slate-200">{replyTo.text}</div></div>
@@ -45,7 +45,7 @@ export default function ChatComposer(props: Props) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="w-full max-w-3xl lg:max-w-5xl mx-auto flex flex-col gap-1 rounded-[26px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_14px_40px_rgba(0,0,0,0.4)] px-2 pt-1.5 md:pt-2 focus-within:border-white/[0.3] transition-colors">
+      <div className="w-full max-w-3xl lg:max-w-[1400px] mx-auto flex flex-col gap-1 rounded-[26px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_14px_40px_rgba(0,0,0,0.4)] px-2 pt-1.5 md:pt-2 focus-within:border-white/[0.3] transition-colors">
         <AnimatePresence>
           {attachments.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} animate={{ opacity: 1, height: 'auto', clipPath: 'inset(0% 0 0 0 round 12px)' }} exit={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} transition={MOTION.morph} className="overflow-hidden">

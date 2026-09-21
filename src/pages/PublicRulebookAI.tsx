@@ -1478,7 +1478,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
       {/* Chat Area - premium AI console, full screen */}
       <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
-        <div className="w-full max-w-3xl lg:max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-5 lg:py-4 space-y-4 md:space-y-5">
+        <div className="w-full max-w-3xl lg:max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-5 lg:py-4 space-y-4 md:space-y-5">
         <AnimatePresence>{heroActive && <ChatHero
           greeting={heroGreeting}
           questions={quickQuestions}
