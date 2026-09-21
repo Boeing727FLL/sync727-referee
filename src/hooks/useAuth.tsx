@@ -2,14 +2,14 @@
  * useAuth — the referee app's Firebase session context.
  *
  * WHAT: a thin wrapper around Firebase Auth exposing exactly three things
- * the app uses: the signed-in `user`, Google Drive `connectDrive`, and
+ * the app uses: the signed-in `user`, Google sign-in `signInWithGoogle`, and
  * `logout`. Login/logout screens talk to Firebase directly; this context
  * only keeps the session alive, synced, and reachable.
  *
  * HISTORY NOTE: this file once hosted the main team app's passcode login,
  * whitelist gates, and push-notification stack (~400 lines). None of it is
  * used by the referee app — the only consumer reads
- * { connectDrive, user, logout } — so it was deleted outright. The legacy
+ * { signInWithGoogle, user, logout } — so it was deleted outright. The legacy
  * team system is gone; what remains is the complete live surface.
  */
 
@@ -43,7 +43,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  connectDrive: () => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * is set immediately from the Google profile; the backend session call
    * that follows is best-effort and never blocks the login.
    */
-  const connectDrive = async () => {
+  const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
 
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: "No access token received from Google" };
       }
     } catch (error: any) {
-      console.error("Drive connection error:", error);
+      console.error("Google sign-in error:", error);
       // Unknown failures never leak raw English SDK text to the UI.
       let errorMessage = 'ההתחברות נכשלה. בדוק חיבור ונסה שוב.';
       if (error?.code === 'auth/unauthorized-domain') {
@@ -161,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, connectDrive, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

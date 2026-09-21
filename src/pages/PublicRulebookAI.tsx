@@ -16,7 +16,7 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
+import { LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Globe, ScrollText, Wrench, Check, Settings, MailCheck } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/firestore';
 import { rtdb } from '../lib/firebase/rtdb';
@@ -33,8 +33,7 @@ import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
-import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, TYPEWRITER_TICK_MS } from '../features/referee/config';
-import { stripThinkBlocks } from '../features/referee/chat/text';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS } from '../features/referee/config';
 import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
 import { safeUserFacingError } from '../features/referee/chat/userFacingError';
@@ -57,7 +56,6 @@ import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
 import { selectActiveRulebookSources } from '../features/referee/rulebook/activeFiles';
 import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
-import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useVersionCheck } from '../features/referee/ui/useVersionCheck';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
@@ -82,7 +80,7 @@ import { auth } from '../lib/firebase/auth';
 export default function PublicRulebookAI() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { connectDrive, user, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { t, language, isRTL, setLanguage, languages } = useLanguage();
   
   // ===== 1. Identity & session: who is signed in, kept alive across reloads.
@@ -212,7 +210,6 @@ export default function PublicRulebookAI() {
   };
 
   // ===== 3. Entry flow: intro -> mandatory disclaimer -> chat.
-  const [loginError, setLoginError] = useState<string | null>(null);
   // First paint: if we arrived via ?enter=chat with saved auth in localStorage,
   // start inside the chat immediately so there is no intro flash while
   // Firebase Auth restores asynchronously. The effect below confirms and
@@ -244,7 +241,6 @@ export default function PublicRulebookAI() {
   const [showJudgeCorrections, setShowJudgeCorrections] = useState<boolean>(false);
   const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const deviceType = useDeviceType();
   
   // Persist the Firebase-restored profile photo: the chat bubbles read
   // localStorage, which doesn't roam across devices — without this sync a
@@ -528,7 +524,7 @@ export default function PublicRulebookAI() {
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeRulebookFiles, setActiveRulebookFiles] = useState<RulebookFile[]>([]);
+  const [, setActiveRulebookFiles] = useState<RulebookFile[]>([]);
   const rulebookLoadBarrierRef = useRef(createRulebookLoadBarrier<RulebookFile[]>([]));
   const rulebookMutationRef = useRef<Promise<void> | null>(null);
   const seasonNameRef = useRef(seasonName);
@@ -843,8 +839,6 @@ export default function PublicRulebookAI() {
       
       setShowUploadModal(false);
 
-      const fileUrl = getPublicUrl(fileName);
-
       const extractedSeason = extractSeasonFromFilename(fileName);
       const isNewSeason = extractedSeason !== "UNKNOWN" && extractedSeason !== seasonName;
 
@@ -890,7 +884,6 @@ export default function PublicRulebookAI() {
       const seasonLabel = extractedSeason !== "UNKNOWN" ? extractedSeason : "חדש";
       setMessages(prev => [...prev, { role: 'model', text: `קובץ חוקים חדש (${file.name}) התקבל. עונת ${seasonLabel}. מעבד תמונות...`, isProgress: true }]);
 
-      let uploadedPageCount = -1;
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         try {
           const images = await convertPdfToImages(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
@@ -918,7 +911,6 @@ export default function PublicRulebookAI() {
               return newMsgs;
             });
           }
-          uploadedPageCount = okCount;
           if (images.length === 0) {
             setMessages(prev => {
               const newMsgs = [...prev];
@@ -1228,77 +1220,7 @@ export default function PublicRulebookAI() {
   const heroActive = chatStarted && messages.length === 0 && !loading;
 
 
-  const whistleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (whistleTimerRef.current) clearTimeout(whistleTimerRef.current);
-  }, []);
 
-  const playWhistleSound = () => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(2150, audioCtx.currentTime);
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(2200, audioCtx.currentTime);
-      
-      const modulator = audioCtx.createOscillator();
-      const modulatorGain = audioCtx.createGain();
-      modulator.frequency.setValueAtTime(45, audioCtx.currentTime); // Vibrato
-      modulatorGain.gain.setValueAtTime(90, audioCtx.currentTime);
-      
-      modulator.connect(modulatorGain);
-      modulatorGain.connect(osc1.frequency);
-      modulatorGain.connect(osc2.frequency);
-      
-      osc1.connect(gainNode);
-      osc2.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.04);
-      gainNode.gain.setValueAtTime(0.35, audioCtx.currentTime + 0.12);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-      
-      modulator.start();
-      osc1.start();
-      osc2.start();
-      
-      whistleTimerRef.current = setTimeout(() => {
-        try {
-          osc1.stop();
-          osc2.stop();
-          modulator.stop();
-          audioCtx.close();
-        } catch (err) {}
-      }, 450);
-    } catch (e) {
-      console.warn("AudioContext whistle failed:", e);
-    }
-  };
-
-  const handleWhistleBlow = () => {
-    playWhistleSound();
-    const refereeTips = [
-      "📋 **הנחיית שופט וירטואלי:** רוח ספורטיבית (Gracious Professionalism) קודמת לכל הישג! כבדו את חבריכם ואת קבוצות היריב.",
-      "⏱️ **חוקי הזירה:** ברגע שהגעתם לשולחן, יש לכם בדיוק 2:30 דקות להפעיל את כל המשימות שתרגלתם. בהצלחה!",
-      "⚙️ **טיפ מקצועי:** זכרו, אם הרובוט יוצא מאזור הבית או משתבש במרכז המגרש - החזרתו לבית באקט ידני תגרור סימון עונש (דיסק משימה פנוי שעובר למשבצת העונשים).",
-      "📏 **חוקי המבנה:** כל הציוד שלכם (כולל רובוט, אביזרים חלופיים וחלקי חילוף) חייב להיכנס במלואו לתחום אזור הבית או אזור השיגור קודם תחילת המקצה!",
-      "🎯 **שימו לב:** השופט הווירטואלי מבוסס על בינה מלאכותית ומסתמך על ספר החוקים הרשמי. במקרה של ספק, מומלץ לפנות לשופט זירה אנושי."
-    ];
-    const quote = refereeTips[Math.floor(Math.random() * refereeTips.length)];
-    setMessages(prev => [
-      ...prev,
-      {
-        role: 'model',
-        text: `😗💨🎵 *שריקה חדה מהזירה!* \n\n${quote}`
-      }
-    ]);
-  };
 
 
   return (

@@ -3,7 +3,7 @@ import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
 import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
-import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
+import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';

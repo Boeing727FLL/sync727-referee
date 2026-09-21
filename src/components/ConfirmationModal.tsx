@@ -9,9 +9,8 @@
  * DESIGN: Apple-calm dark. Centered emblem, quiet title, airy actions.
  */
 
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 
 // ---------------------------------------------------------------------------

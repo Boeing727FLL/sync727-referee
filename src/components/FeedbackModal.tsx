@@ -9,7 +9,7 @@
  * stars, a single gold submit pill — nothing blinks, nothing shouts.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, MessageSquareHeart } from 'lucide-react';
 import { logRefereeFeedback } from '../lib/analytics';

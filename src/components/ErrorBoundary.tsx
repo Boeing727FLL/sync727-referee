@@ -7,7 +7,7 @@
  * single reload button. Copy stays plain and kid-readable on purpose.
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types

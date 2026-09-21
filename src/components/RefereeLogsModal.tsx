@@ -61,14 +61,10 @@ const MAX_BULK_DELETE = 400;
 const BULK_CHUNK = 100;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MINUTE_MS = 60_000;
 
 /** Past this age the relative clock gives up and prints a calendar date. */
-const MONTH_CUTOFF_DAYS = 30;
 
 /** Entrance stagger for journal rows (capped so long lists settle fast). */
-const STAGGER_STEP = 0.03;
-const STAGGER_MAX = 0.3;
 
 interface RefereeLogsModalProps { isOpen: boolean; onClose: () => void; }
 
