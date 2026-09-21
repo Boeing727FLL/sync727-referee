@@ -79,7 +79,8 @@ import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
 import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
-import { RefereeBackdrop, SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
+import { SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
+import SpatialBackdrop from '../components/SpatialBackdrop';
 import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
@@ -1255,14 +1256,14 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><RefereeBackdrop /></motion.div>
+      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><SpatialBackdrop /></motion.div>
 
       {/* Header - dark glass, premium AI console */}
-      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/10 bg-slate-900/70 backdrop-blur-xl z-30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#04070d]/55 backdrop-blur-xl z-30 shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 ring-1 ring-white/25 overflow-hidden">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center shrink-0 ring-1 ring-white/15 overflow-hidden">
               <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
             </div>
             <div className="min-w-0">
@@ -1284,7 +1285,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 md:gap-3 p-1 md:p-1.5 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer"
+                  className="flex items-center gap-2 md:gap-2.5 p-1 md:p-1.5 rounded-full hover:bg-white/[0.05] transition-colors cursor-pointer"
                 >
                   <div className="hidden sm:flex flex-col items-end text-right">
                     <span className="text-xs font-black text-white max-w-[120px] truncate leading-none">{displayUser.name}</span>
@@ -1299,8 +1300,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center shadow-[1px_1px_0px_rgba(0,0,0,1)]">
-                      <span className="text-xs md:text-sm font-black text-slate-950">
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-white/15 bg-white/10 flex items-center justify-center">
+                      <span className="text-xs md:text-sm font-black text-white/80">
                         {(displayUser.name || 'U').trim().charAt(0)}
                       </span>
                     </div>
@@ -1314,19 +1315,19 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={MOTION.overlay}
-                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 overflow-hidden z-50"
+                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0a121e]/95 backdrop-blur-xl rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden z-50"
                     >
-                      <div className="p-3 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center gap-3">
+                      <div className="p-3 bg-white/[0.03] border-b border-white/[0.08] flex items-center gap-3">
                         {displayUser.picture || gravatarPic ? (
                           <img src={displayUser.picture || gravatarPic} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full border-2 border-slate-950 bg-yellow-400 flex items-center justify-center">
-                            <span className="text-sm font-black text-slate-950">{(displayUser.name || 'U').trim().charAt(0)}</span>
+                          <div className="w-10 h-10 rounded-full border border-white/15 bg-white/10 flex items-center justify-center">
+                            <span className="text-sm font-black text-white/80">{(displayUser.name || 'U').trim().charAt(0)}</span>
                           </div>
                         )}
                         <div className="flex-1 min-w-0 text-start">
-                          <p className="text-sm font-black text-slate-900 truncate">{displayUser.name}</p>
-                          <p className="text-xs text-slate-500 truncate" dir="ltr">
+                          <p className="text-sm font-black text-white truncate">{displayUser.name}</p>
+                          <p className="text-xs text-white/45 truncate" dir="ltr">
                             {displayUser.email}
                           </p>
                         </div>
@@ -1339,7 +1340,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                           }}
                           className={MENU_ROW_CLASS}
                         >
-                          <LogOut className="w-4 h-4 text-slate-500" />
+                          <LogOut className="w-4 h-4 text-white/40" />
                           {t('auth.logout')}
                         </button>
                         <button
@@ -1347,12 +1348,12 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                             setShowUserMenu(false);
                             setDeletion(openDeletionConfirm());
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-start cursor-pointer"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] text-white/70 hover:text-[#ff7a66] font-bold text-sm transition-colors text-start cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4 text-red-400" />
+                          <Trash2 className="w-4 h-4 text-[#ff7a66]/70" />
                           {t('common.deleteAccount')}
                         </button>
-                        <div className="h-px bg-white/60 my-1" />
+                        <div className="h-px bg-white/[0.08] my-1" />
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
@@ -1360,7 +1361,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                           }}
                           className={MENU_ROW_CLASS}
                         >
-                          <Shield className="w-4 h-4 text-slate-500" />
+                          <Shield className="w-4 h-4 text-white/40" />
                           {t('common.privacy')}
                         </button>
                         {isCurrentUserOwner() && (
@@ -1368,7 +1369,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                             onClick={() => { setShowUserMenu(false); setShowSettings(true); }}
                             className={MENU_ROW_CLASS}
                           >
-                            <Settings className="w-4 h-4 text-slate-500" />
+                            <Settings className="w-4 h-4 text-white/40" />
                             {t('common.settings')}
                           </button>
                         )}
@@ -1389,32 +1390,32 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                             }}
                             className={MENU_ROW_CLASS}
                           >
-                            <MailCheck className="w-4 h-4 text-amber-500" />
+                            <MailCheck className="w-4 h-4 text-amber-400/80" />
                             <span className="flex-1">{t('common.sendOwnerVerification')}</span>
                           </button>
                         )}
-                        <div className="h-px bg-white/60 my-1" />
+                        <div className="h-px bg-white/[0.08] my-1" />
                         <button
                           onClick={() => { setShowUserMenu(false); setShowRefereeLogs(true); }}
                           className={MENU_ROW_CLASS}
                         >
-                          <ScrollText className="w-4 h-4 text-slate-500" />
+                          <ScrollText className="w-4 h-4 text-white/40" />
                           {t('common.refereeLogs')}
                         </button>
-                        <div className="h-px bg-white/60 my-1" />
+                        <div className="h-px bg-white/[0.08] my-1" />
                         <button
                           ref={langBtnRef}
                           onClick={openLangMenu}
                           className={MENU_ROW_CLASS}
                         >
-                          <Globe className="w-4 h-4 text-slate-500" />
+                          <Globe className="w-4 h-4 text-white/40" />
                           <span className="flex-1">{t('common.language')}</span>
-                          <span className="text-[11px] text-slate-500 font-bold">{languages.find(l => l.code === language)?.native}</span>
-                          <ChevronLeft className="w-4 h-4 text-slate-400" />
+                          <span className="text-[11px] text-white/40 font-bold">{languages.find(l => l.code === language)?.native}</span>
+                          <ChevronLeft className="w-4 h-4 text-white/30" />
                         </button>
                       </div>
-                      <div className="px-3 py-2 bg-white/40 border-t border-white/50 text-center">
-                        <span className="text-[10px] font-bold text-slate-500">{t('common.creditBuiltBy')} · {t('common.version')} {
+                      <div className="px-3 py-2 bg-white/[0.03] border-t border-white/[0.08] text-center">
+                        <span className="text-[10px] font-bold text-white/35">{t('common.creditBuiltBy')} · {t('common.version')} {
                           // @ts-ignore build-time define, may be absent in some environments
                           typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '?'
                         }</span>
@@ -1426,17 +1427,16 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             ) : (
               <button
                 onClick={sessionAlive ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
-                className="text-xs bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black px-3 py-2 md:px-3.5 rounded-xl transition-all shadow-[0_4px_16px_rgba(250,204,21,0.3)] active:scale-95 cursor-pointer flex items-center gap-1 whitespace-nowrap"
+                className="text-sm font-black text-white tracking-tight border-b border-yellow-400/60 pb-0.5 hover:border-yellow-300 transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>{sessionAlive ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div className="inline-flex items-center gap-2 md:gap-3 px-2 py-1 md:px-4 md:py-2 bg-gradient-to-l from-yellow-400/10 to-white/[0.04] backdrop-blur-xl rounded-xl border border-yellow-400/25 group hover:bg-yellow-400/15 hover:border-yellow-400/50 hover:shadow-[0_0_20px_rgba(250,204,21,0.25)] transition-all duration-300 whitespace-nowrap shrink-0 select-none">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-6 md:h-10 w-auto object-contain rounded-full ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform" />
-              <div className="hidden sm:block h-4 md:h-8 w-px bg-yellow-400/25" />
+            <div className="inline-flex items-center gap-2 whitespace-nowrap shrink-0 select-none opacity-50 hover:opacity-90 transition-opacity">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-5 w-auto object-contain" />
               <div className="hidden sm:flex flex-col leading-tight">
-                <span className="text-[6px] md:text-[10px] font-black text-yellow-400/80 uppercase tracking-[0.15em] select-none">Developed By</span>
-                <span className="text-[9px] md:text-base font-black text-white italic leading-tight">Boeing <span className="text-red-500">727</span><span className="text-slate-500 font-bold text-[7px] md:text-xs mx-px">&</span><span className="text-slate-400 font-bold not-italic text-[7px] md:text-xs">Yuval Margalit</span></span>
+                <span className="text-[8px] md:text-[9px] font-bold text-white/40 uppercase tracking-[0.18em] select-none">Developed By</span>
+                <span className="text-[10px] md:text-xs font-black text-white/70 italic leading-tight">Boeing <span className="text-red-500/90">727</span><span className="text-white/30 font-bold text-[8px] md:text-[10px] mx-px">&</span><span className="text-white/50 font-bold not-italic text-[8px] md:text-[10px]">Yuval Margalit</span></span>
               </div>
             </div>
 
@@ -1457,7 +1457,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
       {/* Chat Area - premium AI console, full screen */}
       <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
-        <div className="w-full px-3 md:px-10 py-4 md:py-8 space-y-4 md:space-y-6">
+        <div className="w-full max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
         {heroActive && <ChatHero
           greeting={heroGreeting}
           questions={quickQuestions}
@@ -1504,7 +1504,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="bg-[#0E1628] border border-white/10 px-4 py-3 rounded-2xl flex flex-col items-center gap-2">
+            <div className="bg-white/[0.02] border border-white/[0.07] px-4 py-3 rounded-2xl flex flex-col items-center gap-2">
               <ThinkIndicator />
             </div>
           </motion.div>
@@ -1684,23 +1684,23 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={MOTION.overlay}
               style={{ top: langPos.top, right: langPos.right }}
-              className="fixed z-[70] w-52 max-w-[70vw] bg-white/70 backdrop-blur-2xl border border-white/60 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] overflow-hidden"
+              className="fixed z-[70] w-52 max-w-[70vw] bg-[#0a121e]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden"
               dir={isRTL ? 'rtl' : 'ltr'}
               role="dialog"
               aria-label={t('common.language')}
             >
-              <div className="py-1 divide-y divide-slate-900/10 max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(15,23,42,0.25)_transparent]">
+              <div className="py-1 divide-y divide-white/[0.07] max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent]">
                 {languages.map((lang) => {
                   const active = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       onClick={() => { setLanguage(lang.code); setShowLangMenu(false); setShowUserMenu(false); }}
-                      className="relative w-full px-4 py-3 text-slate-700 hover:text-slate-900 font-bold text-sm text-center hover:bg-white/70 transition-colors cursor-pointer"
+                      className="relative w-full px-4 py-3 text-white/70 hover:text-white font-bold text-sm text-center hover:bg-white/[0.05] transition-colors cursor-pointer"
                     >
                       {lang.native}
                       {active && (
-                        <span className="absolute bottom-2 right-4 left-4 h-[2.5px] rounded-full bg-sky-500" aria-hidden />
+                        <span className="absolute bottom-2 right-4 left-4 h-[2px] rounded-full bg-yellow-400/70" aria-hidden />
                       )}
                     </button>
                   );

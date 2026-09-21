@@ -1,10 +1,9 @@
-/** Empty-chat hero and its four starter questions. */
+/** Empty-chat hero and its four starter questions — in the intro's
+ *  language: quiet logo with its halo, display type, hairline rows.
+ *  No cards, no accent boxes, no glow pills. */
 import { motion } from 'framer-motion';
 import { MOTION } from '../ui/motion';
-import { Cog, Hand, ListOrdered, Users } from 'lucide-react';
-import { MISSION_ACCENTS } from '../config';
-
-const ICONS = [ListOrdered, Hand, Cog, Users];
+import { useLanguage } from '../../../hooks/useLanguage';
 
 type Props = {
   greeting: string;
@@ -15,39 +14,46 @@ type Props = {
 };
 
 export default function ChatHero({ greeting, questions, disabled, onQuestion, t }: Props) {
+  const { isRTL } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={MOTION.gentle}
-      className="relative flex flex-col items-center text-center max-w-2xl mx-auto"
+      className="relative flex flex-col items-center text-center max-w-2xl mx-auto pt-4 md:pt-10"
     >
-      <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full bg-[#FFC400]/10 blur-3xl" />
+      {/* the intact logo on its quiet halo, exactly the intro's mark */}
+      <div className="relative mb-5 md:mb-7">
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+          style={{ width: 190, height: 190, background: 'radial-gradient(closest-side, rgba(143,214,194,0.10) 0%, rgba(255,122,102,0.045) 55%, transparent 78%)' }}
+        />
+        <img src="/logoref.png" alt={t('app.title')} className="relative w-16 h-16 md:w-20 md:h-20 object-contain select-none drop-shadow-[0_10px_28px_rgba(0,0,0,0.5)]" draggable={false} />
       </div>
-      <div className="relative mb-5">
-        <div className="absolute inset-0 -m-2 rounded-full bg-[#FFC400]/[0.07] blur-xl" aria-hidden />
-        <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[24px] bg-white ring-1 ring-white/30 overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
-          <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
-        </div>
-      </div>
-      <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC]" dir="ltr">
+      <p className="text-[10px] md:text-[11px] font-bold tracking-[0.34em] text-white/40 uppercase" dir="ltr">
         FIRST&nbsp;LEGO&nbsp;LEAGUE&nbsp;·&nbsp;VIRTUAL&nbsp;REFEREE
       </p>
-      {greeting && <p className="text-sm md:text-base font-bold text-amber-300/90 mt-3">{greeting}</p>}
-      <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-2">{t('intro.subtitle')}</h2>
-      <p className="text-sm md:text-base text-slate-300 font-medium mt-2 max-w-lg leading-relaxed px-2">{t('intro.descFull')}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7 w-full">
-        {questions.map((question, index) => {
-          const Icon = ICONS[index % ICONS.length];
-          const accent = MISSION_ACCENTS[index % MISSION_ACCENTS.length];
-          return (
-            <motion.button key={index} whileHover={{ y: -1 }} whileTap={{ scale: 0.985 }} transition={MOTION.tap} onClick={() => onQuestion(question)} disabled={disabled} style={{ borderTopColor: accent }} className="group relative flex items-center gap-4 text-right px-5 py-4 rounded-2xl bg-[#0E2238] border border-t-[3px] border-x-white/10 border-b-white/10 hover:bg-[#142a47] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-              <span style={{ color: accent }} className="shrink-0 w-11 h-11 rounded-xl bg-white/[0.06] border border-white/15 flex items-center justify-center"><Icon className="w-6 h-6" /></span>
-              <span className="text-[15px] md:text-base font-bold text-white leading-relaxed">{question}</span>
-            </motion.button>
-          );
-        })}
+      {greeting && <p className="text-sm font-bold text-white/55 mt-3">{greeting}</p>}
+      <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mt-2" style={{ textWrap: 'balance' } as React.CSSProperties}>{t('intro.subtitle')}</h2>
+      <p className="text-sm md:text-[15px] text-slate-400 font-medium mt-3 max-w-md leading-relaxed px-2" style={{ textWrap: 'pretty' } as React.CSSProperties}>{t('intro.descFull')}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 mt-7 md:mt-9 w-full max-w-xl border-b border-white/[0.09]">
+        {questions.map((question, index) => (
+          <motion.button
+            key={index}
+            whileTap={{ scale: 0.99 }}
+            transition={MOTION.tap}
+            onClick={() => onQuestion(question)}
+            disabled={disabled}
+            className="group flex items-center justify-between gap-3 text-start border-t border-white/[0.09] px-1 py-3.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="text-[14px] md:text-[15px] font-bold text-white/80 leading-snug transition-colors group-hover:text-white">{question}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              className={`w-4 h-4 shrink-0 text-white/25 transition-all duration-300 group-hover:text-[#9fd8c6] group-hover:translate-x-0.5 ${isRTL ? 'rotate-180' : ''}`} aria-hidden>
+              <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+            </svg>
+          </motion.button>
+        ))}
       </div>
     </motion.div>
   );

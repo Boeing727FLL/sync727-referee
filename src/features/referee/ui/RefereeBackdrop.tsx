@@ -19,16 +19,15 @@ export function RefereeBackdrop() {
 type SeasonStatusProps = { learning: boolean; season: string; label: string; compact?: boolean };
 export function SeasonStatus({ learning, season, label, compact = false }: SeasonStatusProps) {
   if (!learning && season === 'UNKNOWN') return null;
-  const glow = learning ? 'bg-gradient-to-l from-amber-300/40 via-yellow-400/10 to-amber-300/40' : 'bg-gradient-to-l from-emerald-300/40 via-teal-400/10 to-cyan-300/40';
-  const border = learning ? 'bg-gradient-to-l from-amber-300/80 via-yellow-200/30 to-amber-300/80' : 'bg-gradient-to-l from-emerald-300/80 via-teal-200/30 to-cyan-300/80';
+  // A node from the association language: small light, quiet text, no pill.
   return (
-    <motion.div layout transition={MOTION.control} className={`relative whitespace-nowrap ${compact ? '' : ''}`}>
-      <div aria-hidden className={`absolute -inset-1 rounded-full blur-md ${glow}`} />
-      <div className={`relative rounded-full p-px ${border}`}>
-        <div className={`rounded-full bg-[#0B1526] ${compact ? 'px-2 py-px' : 'px-4 py-1.5'}`}>
-          <span className={`${compact ? 'text-[10px]' : 'text-sm'} font-black text-slate-100 ${learning || compact ? '' : 'tracking-[0.18em]'}`} dir={compact ? undefined : 'ltr'}>{learning ? label : season}</span>
-        </div>
-      </div>
+    <motion.div layout transition={MOTION.control} className="flex items-center gap-2 whitespace-nowrap">
+      <span
+        aria-hidden
+        className={`w-[5px] h-[5px] rounded-full ${learning ? 'bg-amber-300 animate-pulse' : 'bg-[#9fd8c6]'}`}
+        style={{ boxShadow: learning ? '0 0 8px rgba(250,204,21,0.55)' : '0 0 8px rgba(159,216,198,0.5)' }}
+      />
+      <span className={`${compact ? 'text-[10px]' : 'text-xs'} font-bold text-white/55 ${learning || compact ? '' : 'tracking-[0.18em]'}`} dir={compact ? undefined : 'ltr'}>{learning ? label : season}</span>
     </motion.div>
   );
 }
