@@ -112,22 +112,15 @@ function pathTo(h: Halo, startDeg: number, nodeDeg: number, isRTL: boolean): str
 // Presentational pieces
 // ---------------------------------------------------------------------------
 
-/** Minimal brand presence: plane mark + wordmark, no bar. */
+/** Minimal brand presence: the wordmark alone, no bar. The Boeing 727 logo
+    asset carries its own baked-in lettering, so next to this wordmark it
+    rendered as a duplicated, illegible smear at header size. */
 function BrandMark() {
   return (
     <header className="intro-rise relative z-20 flex items-center justify-between px-5 md:px-8 py-5" style={{ animationDelay: '0.1s' }}>
-      <div className="flex items-center gap-2.5">
-        <img
-          src="/boeing-plane.webp"
-          width="160" height="160"
-          alt="Boeing 727"
-          className="h-6 md:h-7 w-auto object-contain opacity-90"
-          draggable={false}
-        />
-        <span className="text-white/85 font-black tracking-tight text-base italic">
-          Boeing <span className="text-primary not-italic">727</span>
-        </span>
-      </div>
+      <span className="text-white/85 font-black tracking-tight text-base italic">
+        Boeing <span className="text-primary not-italic">727</span>
+      </span>
     </header>
   );
 }
