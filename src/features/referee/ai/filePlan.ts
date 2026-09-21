@@ -1,4 +1,4 @@
-export type RequestFileDescriptor = {
+type RequestFileDescriptor = {
   fileName: string;
   isPdf: boolean;
   isText: boolean;

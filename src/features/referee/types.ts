@@ -1,5 +1,5 @@
 /** Shared domain types for the referee conversation. */
-export type ChatFile = {
+type ChatFile = {
   url: string;
   key: string;
   name?: string;

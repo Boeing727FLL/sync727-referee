@@ -51,7 +51,7 @@ export function DangerButton({ onClick, children }: { onClick: () => void; child
 }
 
 /** Five-star row; filled stars follow the rating. */
-export function StarRow({ rating }: { rating: number }) {
+function StarRow({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5" dir="ltr" aria-label={`דירוג ${rating} מתוך 5`}>
       {[1, 2, 3, 4, 5].map(star => (

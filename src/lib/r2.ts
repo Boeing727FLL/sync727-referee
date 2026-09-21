@@ -5,7 +5,7 @@
  * URL/key translators between public download links and bucket keys.
  * Used by rulebook listing, owner uploads, and AI page-image fetching.
  */
-import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 export { PutObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { R2_PUBLIC_URL } from './r2Config';
 
@@ -44,25 +44,3 @@ export async function listRulebookImagePages(fileName: string): Promise<number[]
     .sort((a, b) => a - b);
 }
 
-/** Delete by public URL, proxied URL, or raw key. Never throws. */
-export const deleteFileFromR2 = async (publicUrl: string) => {
-  if (!publicUrl) return;
-  let key = '';
-  if (publicUrl.startsWith(R2_PUBLIC_URL)) {
-    key = publicUrl.replace(`${R2_PUBLIC_URL}/`, '');
-  } else if (publicUrl.includes('/api/r2/file/')) {
-    key = publicUrl.substring(publicUrl.indexOf('/api/r2/file/') + '/api/r2/file/'.length);
-  } else {
-    // Relative key or unknown format
-    key = publicUrl;
-  }
-  
-  try {
-    await s3Client.send(new DeleteObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: key,
-    }));
-  } catch (error) {
-    console.error('Error deleting file from R2:', error);
-  }
-};

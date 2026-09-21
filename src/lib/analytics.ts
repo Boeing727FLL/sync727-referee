@@ -18,7 +18,6 @@
 import {
   ref,
   child,
-  get,
   set,
   update,
   remove,
@@ -36,7 +35,6 @@ import { rtdb } from './firebase/rtdb';
 import { db } from './firebase/firestore';
 import {
   collection,
-  getDocs as fsGetDocs,
   onSnapshot as fsOnSnapshot,
 } from 'firebase/firestore';
 
@@ -377,26 +375,6 @@ export function watchSession(uid: string, myDeviceId: string, onKicked: () => vo
  * map is deliberately excluded because it also holds test and social
  * logins with no signup doc, which once inflated this number with ghosts.
  */
-async function countRegisteredUsers(): Promise<number> {
-  try {
-    const usersSnap = await fsGetDocs(collection(db, 'users'));
-    let n = 0;
-    for (const d of usersSnap.docs) {
-      if (!isTeamAppId(d.id)) n++;
-    }
-    return n;
-  } catch (e) {
-    console.warn('registered users count failed:', e);
-    return 0;
-  }
-}
-
-/** One-shot dashboard snapshot. */
-export async function getAnalytics(): Promise<AnalyticsStats> {
-  const snap = await get(statsRef());
-  const stats = snap.exists() ? (snap.val() as any) : {};
-  return deriveStats(stats, await countRegisteredUsers());
-}
 
 /** Live dashboard: re-emits whenever counters or the user list change. */
 export function subscribeAnalytics(callback: (stats: AnalyticsStats) => void): () => void {

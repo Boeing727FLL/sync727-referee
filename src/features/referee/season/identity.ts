@@ -24,7 +24,7 @@ const cacheKey = (season: string) => `season_identity_${season}`;
 const attemptKey = (season: string) => `season_identity_attempt_${season}`;
 const inFlight = new Set<string>();
 
-export function readCachedIdentity(season: string): SeasonIdentity | null {
+function readCachedIdentity(season: string): SeasonIdentity | null {
   try {
     const raw = localStorage.getItem(cacheKey(season));
     return raw ? parseSeasonIdentity(JSON.parse(raw), season) : null;
@@ -35,7 +35,7 @@ export function readCachedIdentity(season: string): SeasonIdentity | null {
 
 /** Firestore wins over cache so a regenerated identity propagates; the seed
  *  is the instant fallback for the shipped season. */
-export async function loadSeasonIdentity(season: string): Promise<SeasonIdentity | null> {
+async function loadSeasonIdentity(season: string): Promise<SeasonIdentity | null> {
   if (!season || season === 'UNKNOWN') return null;
   try {
     const snap = await getDoc(doc(db, 'season_identities', season));

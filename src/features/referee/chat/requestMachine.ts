@@ -10,7 +10,7 @@
  * a dead request ignorable.
  */
 
-export type RequestPhase =
+type RequestPhase =
   /** No send in flight; the composer may submit. */
   | 'idle'
   /** Optimistic bubble is up; preflight guards are running. */

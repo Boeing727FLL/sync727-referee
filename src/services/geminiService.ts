@@ -161,7 +161,7 @@ export async function getAllApiKeys(): Promise<string[]> {
 // --- Referee corrections ---
 let REFEREE_CORRECTIONS: string | null = null;
 
-export async function getRefereeCorrections(): Promise<string> {
+async function getRefereeCorrections(): Promise<string> {
   if (REFEREE_CORRECTIONS !== null) return REFEREE_CORRECTIONS;
   try {
     const { doc, getDoc } = await import('firebase/firestore');
@@ -176,16 +176,6 @@ export async function getRefereeCorrections(): Promise<string> {
 
 export function invalidateCorrectionsCache(): void {
   REFEREE_CORRECTIONS = null;
-}
-
-export async function getNextApiKey(): Promise<string> {
-  const keys = await getAllApiKeys();
-  const available = keyHealth.available(keys);
-  const candidates = available.length ? available : keys;
-  const index = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
-  const key = candidates[index % candidates.length];
-  localStorage.setItem('gemini_key_rotation_index', String((index + 1) % candidates.length));
-  return key;
 }
 
 // --- Core AI logic ---

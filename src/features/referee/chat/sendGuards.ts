@@ -9,11 +9,11 @@
  * chain order and messages are test-locked.
  */
 
-export type GuardDecision =
+type GuardDecision =
   | { kind: 'proceed' }
   | { kind: 'reject'; notice: string };
 
-export interface GuardInput {
+interface GuardInput {
   /** Number of active rulebook sources loaded for this request. */
   rulebookCount: number;
   /** Fast browser anti-spam check result. */

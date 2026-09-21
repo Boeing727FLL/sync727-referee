@@ -18,10 +18,6 @@ export function buildQuestionText(question: string, hasUserFiles: boolean, cogni
   return prompt + cognitivePrompt;
 }
 
-export function appendCurrentTurn(history: LegacyPart[][], currentParts: LegacyPart[]): LegacyPart[][] {
-  return [...history, currentParts];
-}
-
 export function critiquePlan(options: {
   textOnlyInput: InteractionStep[];
   userPhotoParts: LegacyPart[];

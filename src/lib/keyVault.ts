@@ -17,7 +17,7 @@
  *   + per-minute quotas + budget alerts. See scripts/vault-encrypt.mjs.
  */
 
-export const VAULT_PREFIX = 'ENC1.';
+const VAULT_PREFIX = 'ENC1.';
 
 const PBKDF2_ITERATIONS = 210000;
 
@@ -30,24 +30,11 @@ const PEPPER: readonly number[] = [
 
 type VaultEnvelope = { s: string; i: string; c: string };
 
-function bytesToB64(bytes: Uint8Array): string {
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
 function b64ToBytes(b64: string): Uint8Array {
   const binary = atob(b64);
   const out = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
   return out;
-}
-
-function b64ToB64Url(b64: string): string {
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function b64UrlToB64(url: string): string {
@@ -118,7 +105,7 @@ function parseEnvelope(entry: string): VaultEnvelope | null {
 }
 
 /** Unwrap one pool entry. Returns the plaintext key or null. */
-export async function unwrapPoolEntry(entry: unknown): Promise<string | null> {
+async function unwrapPoolEntry(entry: unknown): Promise<string | null> {
   if (typeof entry !== 'string' || !entry) return null;
   // Legacy plaintext entries keep working during the transition.
   if (entry.startsWith('AIza')) return entry;
@@ -151,6 +138,3 @@ export async function decryptPoolEntries(values: unknown[]): Promise<string[]> {
   }
   return out;
 }
-
-/** Exposed for tests/diagnostics only — not used by the app at runtime. */
-export const __vaultInternals = { bytesToB64, b64ToBytes, b64ToB64Url, b64UrlToB64, PBKDF2_ITERATIONS };

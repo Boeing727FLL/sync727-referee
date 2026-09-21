@@ -17,17 +17,6 @@ function connection() {
   }).connection;
 }
 
-export function routeFor(pathname: string) {
-  if (pathname === '/app') return routeImports.app;
-  if (pathname === '/privacy') return routeImports.privacy;
-  return routeImports.login;
-}
-
-/** Warm only what the next navigation needs, in parallel. */
-export function warmRoute(pathname: string) {
-  return Promise.all([routeImports.router(), routeFor(pathname)()]);
-}
-
 /**
  * On a healthy connection, use otherwise-idle time to warm public routes in
  * parallel. Keep the large signed-in app out unless it is the likely target.

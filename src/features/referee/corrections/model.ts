@@ -1,4 +1,4 @@
-export type CorrectionLine = { line: string; index: number };
+type CorrectionLine = { line: string; index: number };
 export function parseCorrections(text: string): string[] { return text ? text.split('\n') : []; }
 export function serializeCorrections(lines: string[]): string { return lines.join('\n'); }
 export function correctionCount(lines: string[]): number { return lines.filter(line => line.trim()).length; }

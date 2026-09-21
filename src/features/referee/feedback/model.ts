@@ -1,4 +1,4 @@
 export type FeedbackEntry = { id: string; rating?: number; improvements?: string; uid?: string; season?: string; language?: string; createdAt?: any };
-export function toMs(value: any): number | null { if (value == null) return null; if (typeof value === 'number') return value < 1e11 ? value * 1000 : value; if (typeof value.seconds === 'number') return value.seconds * 1000; return null; }
+function toMs(value: any): number | null { if (value == null) return null; if (typeof value === 'number') return value < 1e11 ? value * 1000 : value; if (typeof value.seconds === 'number') return value.seconds * 1000; return null; }
 export function formatTime(value: any): string { const ms = toMs(value); if (!ms) return ''; try { return new Date(ms).toLocaleString('he-IL'); } catch { return ''; } }
 export function feedbackStats(items: FeedbackEntry[]) { const total=items.length; const avg=total ? items.reduce((sum,item)=>sum+(item.rating||0),0)/total : 0; return { total, avg, highCount: items.filter(item=>(item.rating||0)>=4).length, lowCount: items.filter(item=>(item.rating||0)<=2).length }; }

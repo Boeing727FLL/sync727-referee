@@ -1,6 +1,6 @@
 export type HistoryMessage = { role: 'user' | 'model'; text: string; files?: unknown[] };
 export type LegacyPart = { text?: string; inlineData?: { data: string; mimeType?: string }; fileData?: { fileUri: string; mimeType?: string } };
-export type LegacyMessage = { role: 'user' | 'model'; parts: LegacyPart[] };
+type LegacyMessage = { role: 'user' | 'model'; parts: LegacyPart[] };
 export type InteractionPart = { type: 'text'; text: string } | { type: 'image'; data?: string; uri?: string; mime_type?: string; resolution?: 'high' };
 export type InteractionStep = { type: 'user_input' | 'model_output'; content: InteractionPart[] };
 

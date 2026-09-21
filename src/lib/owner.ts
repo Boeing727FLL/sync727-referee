@@ -16,7 +16,7 @@ export function isOwnerEmail(email?: string | null): boolean {
 
 // The signed-in user's email, from Firebase Auth first,
 // falling back to the saved auth_user from the login page.
-export function getCurrentEmail(): string {
+function getCurrentEmail(): string {
   try {
     const fbEmail = auth.currentUser?.email;
     if (fbEmail) return fbEmail;

@@ -10,7 +10,7 @@
  * every failure lands in the same legal state: dialog open, not busy,
  * error shown.
  */
-export type DeletionStage =
+type DeletionStage =
   | 'idle'
   | 'confirming'
   | 'reauthenticating'
