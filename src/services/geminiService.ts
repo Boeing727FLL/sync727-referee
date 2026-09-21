@@ -178,6 +178,22 @@ export function invalidateCorrectionsCache(): void {
   REFEREE_CORRECTIONS = null;
 }
 
+/**
+ * Health-aware round-robin over the pooled Gemini keys. Shared by every
+ * caller (ask path, season-identity generation) so no path pins keys[0] or
+ * burns a cooled-down key. Returns null when every key is cooling or the
+ * pool is empty; callers must treat null as "try later", never as fatal.
+ */
+export async function acquireApiKey(): Promise<string | null> {
+  const keys = await getAllApiKeys();
+  const available = keyHealth.available(keys);
+  if (!available.length) return null;
+  const raw = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+  const index = Number.isInteger(raw) && raw >= 0 ? raw : 0;
+  localStorage.setItem('gemini_key_rotation_index', String((index + 1) % available.length));
+  return available[index % available.length];
+}
+
 // --- Core AI logic ---
 export const GeminiService = {
   /**

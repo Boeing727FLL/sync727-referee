@@ -70,12 +70,10 @@ export function useSeasonIdentity(season: string): SeasonIdentity | null {
 }
 
 async function generateSeasonIdentity(season: string, evidence?: SeasonIdentityEvidence): Promise<SeasonIdentity | null> {
-  const [{ GoogleGenAI }, { getAllApiKeys }] = await Promise.all([
+  const [{ GoogleGenAI }, { acquireApiKey }] = await Promise.all([
     import('@google/genai'),
     import('../../../services/geminiService'),
   ]);
-  const keys = await getAllApiKeys();
-  const client = new GoogleGenAI({ apiKey: keys[0] });
   const prompt = buildIdentityPrompt(season);
   const parts: Record<string, unknown>[] = [{ text: evidence?.imageBase64 ? `${prompt}\nThe season's rulebook cover is attached; prefer its branding over web results.` : prompt }];
   if (evidence?.imageBase64) {
@@ -84,6 +82,11 @@ async function generateSeasonIdentity(season: string, evidence?: SeasonIdentityE
   const contents = [{ role: 'user', parts }];
   // Grounding first; if the tool or the reply fails, one plain retry.
   for (const useSearch of [true, false]) {
+    // A fresh health-aware key per attempt: the plain retry never re-burns
+    // a key that just failed, and an exhausted pool stops the loop cleanly.
+    const apiKey = await acquireApiKey();
+    if (!apiKey) return null;
+    const client = new GoogleGenAI({ apiKey });
     try {
       const response = await client.models.generateContent({
         model: GENERATION_MODEL,
@@ -119,8 +122,14 @@ export async function ensureSeasonIdentity(season: string, evidence?: SeasonIden
   try {
     const identity = await generateSeasonIdentity(season, evidence);
     if (!identity) return;
-    await setDoc(doc(db, 'season_identities', season), { ...identity, season, updatedAt: Date.now(), model: GENERATION_MODEL });
+    // Cache locally first: non-owners cannot write the shared doc, and a
+    // failed save must never trigger a fresh model call next session.
     try { localStorage.setItem(cacheKey(season), JSON.stringify(identity)); } catch {}
+    try {
+      await setDoc(doc(db, 'season_identities', season), { ...identity, season, updatedAt: Date.now(), model: GENERATION_MODEL });
+    } catch (err) {
+      console.warn('Season identity save failed (kept locally):', err);
+    }
   } catch (err) {
     console.warn('Season identity generation failed:', err);
   } finally {

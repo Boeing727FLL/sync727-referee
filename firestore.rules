@@ -22,7 +22,10 @@ service cloud.firestore {
       allow get: if isOwner() || isSelf(userId);
       allow list: if isOwner();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update: if isOwner() || isSelf(userId);
+      allow update: if isOwner()
+        || (isSelf(userId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role);
       allow delete: if isOwner() || isSelf(userId);
     }
 
@@ -30,6 +33,13 @@ service cloud.firestore {
     // writes for the owner only.
     match /app_config/{docId} {
       allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Season visual identities: everyone signed in reads the shared badge;
+    // only the owner publishes it (clients cache their own copy locally).
+    match /season_identities/{season} {
+      allow read: if isSignedIn();
       allow write: if isOwner();
     }
 
@@ -82,7 +92,8 @@ service cloud.firestore {
         && request.resource.data.question.size() > 0
         && request.resource.data.question.size() < 2000
         && (!('answer' in request.resource.data) || request.resource.data.answer is string)
-        && (!('answer' in request.resource.data) || request.resource.data.answer.size() < 20000);
+        && (!('answer' in request.resource.data) || request.resource.data.answer.size() < 20000)
+        && (!('uid' in request.resource.data) || request.resource.data.uid in [request.auth.uid, 'anon']);
       allow update: if false;
       allow delete: if isOwner();
     }
@@ -95,7 +106,8 @@ service cloud.firestore {
           ['rating', 'improvements', 'uid', 'season', 'language', 'createdAt'])
         && request.resource.data.rating is int
         && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5;
+        && request.resource.data.rating <= 5
+        && (!('uid' in request.resource.data) || request.resource.data.uid in [request.auth.uid, 'anon']);
       allow update: if false;
       allow delete: if isOwner();
     }

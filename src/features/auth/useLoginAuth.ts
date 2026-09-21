@@ -32,7 +32,7 @@ const FIREBASE_AUTH_MESSAGES: Record<string, string> = {
   'auth/email-already-in-use': 'כבר קיים חשבון עם האימייל הזה. נסה להתחבר.',
   'auth/user-not-found': 'אימייל או סיסמה שגויים.',
   'auth/invalid-credential': 'אימייל או סיסמה שגויים.',
-  'auth/wrong-password': 'סיסמה שגויה.',
+  'auth/wrong-password': 'אימייל או סיסמה שגויים.',
   'auth/weak-password': 'הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.',
   'auth/invalid-email': 'כתובת אימייל לא תקינה.',
   'auth/too-many-requests': 'יותר מדי ניסיונות. נסה שוב מאוחר יותר.',
