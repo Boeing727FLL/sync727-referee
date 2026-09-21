@@ -39,6 +39,18 @@ import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
 import { safeUserFacingError } from '../features/referee/chat/userFacingError';
 import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from '../features/referee/chat/requestMachine';
+import { decideSendPreflight } from '../features/referee/chat/sendGuards';
+import {
+  chatStarted as entryChatStarted,
+  disclaimerConfirm,
+  enterFromUrl,
+  exitToIntro,
+  initialEntryState,
+  introContinue,
+  showDisclaimer as entryShowDisclaimer,
+  showIntro as entryShowIntro,
+  type EntryState,
+} from '../features/referee/session/entryFlow';
 import { clearAllChatStates, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
@@ -212,10 +224,12 @@ export default function PublicRulebookAI() {
       return hasSavedRefereeSession();
     } catch { return false; }
   });
-  const [showIntro, setShowIntro] = useState<boolean>(() => !autoEnter);
-  const [chatStarted, setChatStarted] = useState<boolean>(() => autoEnter);
-  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(() => autoEnter);
-  const [pendingEnterChat, setPendingEnterChat] = useState<boolean>(() => autoEnter);
+  // Entry flow (intro -> disclaimer -> chat) as one state machine; the
+  // render tree reads derived booleans (see entryFlow.ts).
+  const [entry, setEntry] = useState<EntryState>(() => initialEntryState(autoEnter));
+  const showIntro = entryShowIntro(entry);
+  const chatStarted = entryChatStarted(entry);
+  const showDisclaimer = entryShowDisclaimer(entry);
   // Golden reveal flash: completes the divine login transition. Fades out
   // over the freshly mounted chat while the disclaimer descends above it.
   const [enterFlash, setEnterFlash] = useState<boolean>(() => autoEnter);
@@ -293,34 +307,25 @@ export default function PublicRulebookAI() {
     const params = new URLSearchParams(location.search);
     if (params.has('enter') && params.get('enter') === 'chat' && sessionAlive) {
       window.history.replaceState({}, '', '/');
-      setShowIntro(false);
-      setChatStarted(true);
-      setPendingEnterChat(true);
-      setShowDisclaimer(true);
+      setEntry(enterFromUrl);
     }
   }, [user, hasGoogleToken, sessionAlive, location.search]);
 
-  const [typewriterReady, setTypewriterReady] = useState<boolean>(false);
+  const typewriterReady = entry.typewriterReady;
 
   const handleDisclaimerConfirm = () => {
     // No animation on the chat itself. The disclaimer modal slides down
     // beautifully and the chat is simply already there underneath it.
-    if (pendingEnterChat) {
+    if (entry.pendingEnterChat) {
       window.history.replaceState({}, '', '/');
-      setPendingEnterChat(false);
     }
-    setShowDisclaimer(false);
-    setShowIntro(false);
-    setChatStarted(true);
-    setTypewriterReady(true);
+    setEntry(disclaimerConfirm);
   };
 
   const handleIntroContinue = () => {
-    if (sessionAlive) {
-      setShowDisclaimer(true);
-    } else {
-      navigate('/login');
-    }
+    const step = introContinue(entry, sessionAlive);
+    if (step.navigateToLogin) navigate('/login');
+    else setEntry(step.next);
   };
 
   // Resolve the real logged-in referee user uid (from auth context or the new LoginPage's localStorage)
@@ -425,8 +430,7 @@ export default function PublicRulebookAI() {
     setMessages([]);
     setInput('');
     setReplyTo(null);
-    setChatStarted(false);
-    setTypewriterReady(false);
+    setEntry(exitToIntro());
     navigate('/');
   };
 
@@ -494,8 +498,7 @@ export default function PublicRulebookAI() {
     setDeletingAccount(false);
     setDeletePassword('');
     setDeleteError(null);
-    setShowIntro(true);
-    setChatStarted(false);
+    setEntry(exitToIntro());
     navigate('/');
   };
 
@@ -531,7 +534,9 @@ export default function PublicRulebookAI() {
   const seasonNameRef = useRef(seasonName);
   seasonNameRef.current = seasonName;
 
-  const [isLearning, setIsLearning] = useState(true);
+  // True only while a rulebook load/upload is actually running - never a
+  // fake "learning" delay.
+  const [rulebookLoading, setRulebookLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -590,14 +595,6 @@ export default function PublicRulebookAI() {
   };
 
   useEffect(() => {
-    if (activeRulebookFiles.length === 0) return;
-    setIsLearning(true);
-    // Removed local/proxy indexing - using official Gemini with direct context
-    const t = setTimeout(() => setIsLearning(false), 1500);
-    return () => clearTimeout(t);
-  }, [activeRulebookFiles]);
-
-  useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -616,10 +613,6 @@ export default function PublicRulebookAI() {
     requestRef.current = finishRender(requestRef.current);
     abortControllerRef.current = null;
   }, []);
-  useEffect(() => {
-    if (!chatStarted) setTypewriterReady(false);
-  }, [chatStarted]);
-
   const typewriter = useTypewriter({
     ready: typewriterReady,
     chatStarted,
@@ -661,6 +654,7 @@ export default function PublicRulebookAI() {
    * from their filenames, syncing it back to the shared config when it changes.
    */
   const fetchLatestRulebook = async () => {
+    setRulebookLoading(true);
     try {
       let files = [];
       try {
@@ -710,15 +704,16 @@ export default function PublicRulebookAI() {
             });
           } catch (e) {}
         }
+        setRulebookLoading(false);
         return loadedFiles;
       } else {
         setActiveRulebookFiles([]);
-        setIsLearning(false);
+        setRulebookLoading(false);
         return [];
       }
     } catch (err) {
       console.error("Failed to fetch rulebook:", err);
-      setIsLearning(false);
+      setRulebookLoading(false);
       throw err;
     }
   };
@@ -780,7 +775,7 @@ export default function PublicRulebookAI() {
     uploadingRef.current = true;
     setUploading(true);
     setUploadProgress(0);
-    setIsLearning(true);
+    setRulebookLoading(true);
     let resolveMutation!: () => void;
     let rejectMutation!: (reason?: unknown) => void;
     const mutation = new Promise<void>((resolve, reject) => {
@@ -941,9 +936,9 @@ export default function PublicRulebookAI() {
         }
       }
 
-      setIsLearning(true);
+      setRulebookLoading(true);
       await refreshLatestRulebook();
-      setIsLearning(false);
+      setRulebookLoading(false);
       setUploading(false);
       uploadingRef.current = false;
       setUploadProgress(0);
@@ -968,7 +963,7 @@ export default function PublicRulebookAI() {
       setUploading(false);
       uploadingRef.current = false;
       setUploadProgress(0);
-      setIsLearning(false);
+      setRulebookLoading(false);
       rejectMutation(error);
       if (rulebookMutationRef.current === mutation) rulebookMutationRef.current = null;
     }
@@ -1099,34 +1094,37 @@ export default function PublicRulebookAI() {
         return;
       }
 
-      // Never answer blind: with no rulebook files loaded at all, the model
-      // would fabricate. Tell the user instead of guessing.
-      if (requestRulebookFiles.length === 0) {
-        rejectWithNotice('אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.');
-        return;
-      }
-
-      // Fast browser guard first; Firestore's daily quota remains authoritative.
+      // Guard chain (pure decisions; order test-locked in sendGuards.ts):
+      // blind-answer guard -> client rate limit -> server daily quota.
+      // The quota unit is consumed only when the cheaper guards passed.
       const clientLimit = consumeClientRateLimit();
-      if (!clientLimit.allowed) {
-        rejectWithNotice(clientLimit.message || 'נסו שוב מאוחר יותר.');
-        return;
-      }
-
-      // Server-enforced daily budget: consumes one unit from chat_quota/{uid}.
-      // Rules enforce strictly-+1 inside a rolling 24h window with a hard cap,
-      // so clearing localStorage or switching devices cannot dodge it.
+      let quotaError: { exhausted: boolean; resetAtMs?: number | null } | null = null;
       const quotaUid = resolveRefereeUid();
-      if (quotaUid) {
+      if (quotaUid && requestRulebookFiles.length > 0 && clientLimit.allowed) {
         try {
+          // Server-enforced daily budget: consumes one unit from
+          // chat_quota/{uid}. Rules enforce strictly-+1 inside a rolling
+          // 24h window with a hard cap, so clearing localStorage or
+          // switching devices cannot dodge it.
           await consumeChatQuota(quotaUid);
         } catch (error) {
-          const text = error instanceof ChatQuotaExhaustedError
-            ? quotaMessage('chat.quotaExhausted', error.resetAtMs)
-            : quotaMessage('chat.quotaUnavailable');
-          rejectWithNotice(text);
-          return;
+          quotaError = error instanceof ChatQuotaExhaustedError
+            ? { exhausted: true, resetAtMs: error.resetAtMs }
+            : { exhausted: false };
         }
+      }
+      const guard = decideSendPreflight(
+        { rulebookCount: requestRulebookFiles.length, clientLimit, quotaError },
+        {
+          rulebookLoadFailed: 'טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.',
+          noRulebook: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.',
+          genericRateLimited: 'נסו שוב מאוחר יותר.',
+          quotaExhausted: quotaMessage('chat.quotaExhausted', quotaError?.resetAtMs),
+          quotaUnavailable: quotaMessage('chat.quotaUnavailable'),
+        });
+      if (guard.kind === 'reject') {
+        rejectWithNotice(guard.notice);
+        return;
       }
 
       requestRef.current = beginStream(requestRef.current);
@@ -1324,13 +1322,13 @@ export default function PublicRulebookAI() {
                   {t('app.title')}
                 </h1>
               <div className="flex md:hidden items-center gap-1.5 mt-1">
-                <SeasonStatus learning={isLearning} season={seasonName} label={t('chat.updating')} compact />
+                <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact />
               </div>
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <SeasonStatus learning={isLearning} season={seasonName} label={t('chat.updating')} />
+            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
@@ -1515,7 +1513,7 @@ export default function PublicRulebookAI() {
         {heroActive && <ChatHero
           greeting={heroGreeting}
           questions={quickQuestions}
-          disabled={isAiBusy || isLearning}
+          disabled={isAiBusy || rulebookLoading}
           onQuestion={question => handleSend(question)}
           t={t}
         />}
@@ -1578,7 +1576,7 @@ export default function PublicRulebookAI() {
         setInput={setInput}
         resize={autoresizeComposer}
         busy={isAiBusy}
-        learning={isLearning}
+        learning={rulebookLoading}
         onSend={() => handleSend()}
         onStop={handleStop}
         t={t}
