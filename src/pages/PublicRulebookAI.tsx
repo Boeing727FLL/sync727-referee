@@ -1332,7 +1332,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 rounded-[12px] border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
+                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 min-h-[44px] sm:min-h-[40px] rounded-[12px] border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
                 >
                   <div className="hidden sm:flex items-center ps-1.5">
                     <span className="text-xs font-bold text-white/85 max-w-[120px] truncate leading-none">{displayUser.name}</span>
