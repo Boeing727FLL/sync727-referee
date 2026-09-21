@@ -67,8 +67,8 @@ export default function ChatComposer(props: Props) {
             : <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onSend} disabled={busy || learning || (!input.trim() && !attachments.length)} aria-label={t('chat.send')} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-[#0a84ff] hover:bg-[#2f95ff] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(10,132,255,0.45)] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><ArrowUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.6} /></motion.button>}
         </div>
       </div>
-      {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-slate-400" aria-live="polite">{quotaText}</div>}
-      <div className="flex items-center justify-center gap-1.5 mt-2"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" /><p className="text-[11px] text-slate-500 font-medium">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
+      {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-white/55 [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]" aria-live="polite">{quotaText}</div>}
+      <div className="flex items-center justify-center gap-1.5 mt-2"><span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span><p className="text-[11px] text-white/65 font-medium [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
     </div>
   );
 }

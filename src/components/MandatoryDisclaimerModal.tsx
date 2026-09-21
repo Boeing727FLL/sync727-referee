@@ -13,6 +13,11 @@
  * MOTION: paths are measured (getTotalLength) and drawn once with WAAPI;
  * every other beat is a staged CSS rise. Reduced motion lands directly on
  * the final state: logo, folded paths, node and content all present.
+ *
+ * EXIT: on confirm the page mounts a ParticleBurst above everything - the
+ * gate's own elements dissolve into blue/red embers matching the chat
+ * backdrop - while this stage plays its slow fade/slide exit over the live
+ * chat underneath. Reduced motion confirms without the burst.
  */
 
 import { useEffect, useRef } from 'react';
@@ -137,9 +142,10 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               role="dialog"
               aria-modal="true"
             >
-              <FoldCluster t={t} />
+              <div data-burst><FoldCluster t={t} /></div>
 
               <h3
+                data-burst
                 className="intro-rise text-xl md:text-2xl font-black text-white leading-tight tracking-tight text-center"
                 style={{ animationDelay: '1.25s' }}
               >
@@ -147,6 +153,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               </h3>
 
               <div
+                data-burst
                 className="intro-rise mt-4 w-full text-start text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap rounded-2xl border border-white/[0.09] bg-white/[0.03] backdrop-blur-sm p-4"
                 style={{ animationDelay: '1.4s' }}
               >
@@ -158,7 +165,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               </p>
 
               {/* confirm: the intro's hairline control, not a banner button */}
-              <div className="intro-rise mt-4" style={{ animationDelay: '1.6s' }}>
+              <div className="intro-rise mt-4" style={{ animationDelay: '1.6s' }} data-burst>
                 <button
                   onClick={onConfirm}
                   className="group flex items-center gap-2.5 cursor-pointer py-2"

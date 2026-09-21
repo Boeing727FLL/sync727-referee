@@ -1,6 +1,7 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
 import { Suspense, lazy, useEffect, useState } from 'react';
 import IntroScreen from '../components/IntroScreen';
+import ParticleBurst from '../components/ParticleBurst';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 import { LanguageProvider } from '../hooks/useLanguage';
 
@@ -62,6 +63,19 @@ function LandingContent() {
 
   const chatLive = stage === 'entering' || stage === 'chat';
 
+  // Particle handoff: confirming the gate bursts the disclaimer's own
+  // elements into blue/red embers (the chat backdrop's energy colors) on a
+  // canvas ABOVE the exiting stage and the entering chat. Reduced motion
+  // skips the burst and goes straight to the entrance.
+  const [entryBurst, setEntryBurst] = useState(false);
+  const confirmDisclaimer = () => {
+    const reduce = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) setEntryBurst(true);
+    setStage('entering');
+  };
+
   return (
     <div data-stage={stage}>
       {(stage === 'intro' || stage === 'login' || stage === 'disclaimer') && (
@@ -90,9 +104,10 @@ function LandingContent() {
             </Suspense>
           </div>
           <Suspense fallback={null}>
-            <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={() => setStage('entering')} />
+            <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={confirmDisclaimer} />
           </Suspense>
           {stage === 'entering' && <div className="enter-bloom" aria-hidden />}
+          {entryBurst && <ParticleBurst onDone={() => setEntryBurst(false)} />}
         </>
       )}
     </div>

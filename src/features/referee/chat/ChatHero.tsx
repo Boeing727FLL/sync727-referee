@@ -18,7 +18,7 @@ const TINTS = ['#9fd8c6', '#ff7a66', '#ffc400', '#5e9bff'];
 const SPRING = { type: 'spring', stiffness: 240, damping: 22 } as const;
 
 const CARD_MATERIAL =
-  'rounded-[20px] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 border border-white/[0.13] ' +
+  'rounded-[20px] bg-[#04060c]/40 backdrop-blur-xl backdrop-saturate-150 border border-white/[0.13] ' +
   'shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_10px_30px_rgba(0,0,0,0.35)]';
 
 export default function ChatHero({ greeting, questions, disabled, onQuestion, t }: Props) {
@@ -54,7 +54,7 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING, delay: 0.3 }}
-        className="mt-3 md:mt-4 text-sm md:text-base text-white/50 font-medium leading-relaxed max-w-md"
+        className="mt-3 md:mt-4 text-sm md:text-base text-white font-semibold leading-relaxed max-w-md [text-shadow:0_0_3px_rgba(0,0,0,0.95),0_1px_4px_rgba(0,0,0,0.9),0_3px_16px_rgba(0,0,0,0.75)]"
       >
         {t('chat.heroDesc')}
       </motion.p>
@@ -71,15 +71,15 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
               transition={{ ...SPRING, delay: 0.4 + index * 0.07 }}
               onClick={() => onQuestion(question)}
               disabled={disabled}
-              className={`${CARD_MATERIAL} group p-3.5 md:p-4 flex flex-col items-start gap-2.5 md:gap-3 text-start cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/[0.11] hover:border-white/[0.22] transition-colors duration-300`}
+              className={`${CARD_MATERIAL} group p-3.5 md:p-4 flex flex-col items-start gap-2.5 md:gap-3 text-start cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#04060c]/30 hover:border-white/[0.22] transition-colors duration-300`}
             >
               <span
                 className="w-8 h-8 md:w-9 md:h-9 rounded-[11px] flex items-center justify-center shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
-                style={{ backgroundColor: `${tint}26`, color: tint }}
+                style={{ backgroundColor: `${tint}33`, color: tint }}
               >
                 <Icon className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={2.2} />
               </span>
-              <span className="text-[13px] md:text-sm font-semibold text-white/85 group-hover:text-white transition-colors duration-300 leading-snug">{question}</span>
+              <span className="text-[13px] md:text-sm font-semibold text-white/95 group-hover:text-white transition-colors duration-300 leading-snug">{question}</span>
             </motion.button>
           );
         })}

@@ -10,7 +10,7 @@ const en: TranslationMap = {
     'chat.quotaRemaining': '{remaining} of {limit} questions left per 24 hours',
     'chat.quotaExhausted': 'You have reached the {limit}-question limit for 24 hours. Try again after {time}.',
     'chat.quotaUnavailable': 'The question limit cannot be verified right now. Try again shortly.',
-        'chat.heroDesc': "Any rule, at any stage, from anywhere - just ask.",
+        'chat.heroDesc': "Your field referee, 24/7 - for every Robot Game question.",
     'chat.suggestion1': 'Do missions have to be done in order?',
     'chat.suggestion2': 'What happens if you touch the robot outside home?',
     'chat.suggestion3': 'How many motors are allowed on the robot?',

@@ -31,6 +31,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
+import ParticleBurst from '../components/ParticleBurst';
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
@@ -333,9 +334,18 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
   const typewriterReady = entry.typewriterReady;
 
+  // Particle handoff: confirming the gate bursts the disclaimer's own
+  // elements into blue/red embers (the chat backdrop's energy colors) on a
+  // canvas ABOVE the exiting stage, so they keep drifting over the freshly
+  // revealed chat. Reduced motion skips the burst.
+  const [entryBurst, setEntryBurst] = useState(false);
   const handleDisclaimerConfirm = () => {
     // No animation on the chat itself. The disclaimer modal slides down
     // beautifully and the chat is simply already there underneath it.
+    const reduce = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) setEntryBurst(true);
     if (entry.pendingEnterChat) {
       window.history.replaceState({}, '', '/');
     }
@@ -1454,9 +1464,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                 <span>{sessionAlive ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div className="hidden md:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 select-none opacity-45 hover:opacity-80 transition-opacity">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain" />
-              <span className="text-[10px] font-semibold text-white/40 tracking-wide">Boeing <span className="text-red-500/80">727</span> <span className="text-white/25">&</span> Yuval Margalit</span>
+            <div className="hidden md:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 select-none">
+              <span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span>
+              <span className="text-[10px] font-semibold text-white tracking-wide [text-shadow:0_1px_8px_rgba(0,0,0,0.75)]">Boeing <span className="text-red-300">727</span> <span className="text-white/60">&</span> Yuval Margalit</span>
             </div>
 
           </div>
@@ -1582,6 +1592,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       </AnimatePresence>
 
       <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
+      {entryBurst && <ParticleBurst onDone={() => setEntryBurst(false)} />}
       <Suspense fallback={null}>
       {showPrivacy && <PrivacyModal isOpen onClose={() => setShowPrivacy(false)} />}
       {showSettings && <SettingsModal
