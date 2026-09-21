@@ -1,9 +1,9 @@
-/** Empty-chat start: the match sheet's letterhead. Greeting in ink, a quiet
- *  description, and the starter questions as docket lines with score-sheet
- *  checkboxes that fill on hover. Nobody has spoken yet - the conversation
- *  begins only when the user asks or picks a line. */
+/** Empty-chat start: personal greeting above a 2x2 grid of suggestion cards
+ *  in an Apple Liquid Glass material - translucent, specular-edged, each
+ *  with a tinted icon tile. Nobody has spoken yet; the conversation begins
+ *  only when the user asks or taps a card. */
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { Bot, Cog, ListOrdered, Users } from 'lucide-react';
 
 type Props = {
   greeting: string;
@@ -13,7 +13,13 @@ type Props = {
   t: (key: string) => string;
 };
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const ICONS = [ListOrdered, Bot, Cog, Users];
+const TINTS = ['#9fd8c6', '#ff7a66', '#ffc400', '#5e9bff'];
+const SPRING = { type: 'spring', stiffness: 240, damping: 22 } as const;
+
+const CARD_MATERIAL =
+  'rounded-[20px] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 border border-white/[0.13] ' +
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_10px_30px_rgba(0,0,0,0.35)]';
 
 export default function ChatHero({ greeting, questions, disabled, onQuestion, t }: Props) {
   return (
@@ -22,56 +28,61 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.25 } }}
       transition={{ duration: 0.3 }}
-      className="relative flex flex-col justify-start select-none pt-6 md:pt-10"
+      className="relative min-h-[58vh] flex flex-col items-center justify-center text-center select-none py-6 md:py-8"
     >
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.5, ease: EASE }}
-        className="flex items-center gap-2.5 mb-4 md:mb-5"
-      >
-        <img src="/logoref.png" alt="" className="w-5 h-5 md:w-6 md:h-6 object-contain" draggable={false} />
-        <span className="w-6 h-px bg-[#1b2434]/30" aria-hidden />
-        <span className="text-[10px] md:text-[11px] font-bold tracking-[0.22em] uppercase text-[#1b2434]/45">{t('chat.refereeTag')}</span>
-      </motion.div>
+      <motion.img
+        src="/logoref.png"
+        alt={t('app.title')}
+        draggable={false}
+        initial={{ opacity: 0, scale: 0.7 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ ...SPRING, delay: 0.08 }}
+        className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.4)]"
+      />
       {greeting && (
-        <h2 className="text-[2.4rem] md:text-[3.5rem] font-black tracking-[-0.02em] leading-[1.08] text-[#141d2e]">
-          <span className="block overflow-hidden pb-1">
-            <motion.span
-              className="block"
-              initial={{ y: '110%' }}
-              animate={{ y: 0 }}
-              transition={{ duration: 0.75, delay: 0.18, ease: EASE }}
-            >
-              {greeting}
-            </motion.span>
-          </span>
-        </h2>
+        <motion.h2
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...SPRING, delay: 0.18 }}
+          className="mt-4 md:mt-5 text-[2rem] md:text-[3rem] font-bold tracking-tight leading-[1.1] text-white/95"
+          style={{ textWrap: 'balance' } as React.CSSProperties}
+        >
+          {greeting}
+        </motion.h2>
       )}
       <motion.p
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.42, duration: 0.5, ease: EASE }}
-        className="mt-3 md:mt-4 text-sm md:text-[15px] text-[#141d2e]/55 font-medium leading-relaxed max-w-md"
+        transition={{ ...SPRING, delay: 0.3 }}
+        className="mt-3 text-sm md:text-[15px] text-white/45 font-medium leading-relaxed max-w-md"
       >
         {t('intro.descFull')}
       </motion.p>
-      <div className="mt-7 md:mt-9 w-full max-w-xl">
-        {questions.map((question, index) => (
-          <motion.button
-            key={index}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + index * 0.07, duration: 0.45, ease: EASE }}
-            onClick={() => onQuestion(question)}
-            disabled={disabled}
-            className={`group w-full flex items-center gap-3 md:gap-4 py-3 md:py-3.5 border-t border-[#1b2434]/12 ${index === questions.length - 1 ? 'border-b' : ''} text-start cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[rgba(250,204,21,0.16)] transition-colors duration-200`}
-          >
-            <span className="w-3.5 h-3.5 shrink-0 rounded-[4px] border-[1.5px] border-[#1b2434]/35 group-hover:border-[#c2372f] group-hover:bg-[#c2372f] transition-colors duration-200" aria-hidden />
-            <span className="flex-1 text-[14px] md:text-[15px] font-semibold text-[#1b2434]/75 group-hover:text-[#141d2e] transition-colors duration-200 leading-snug">{question}</span>
-            <ArrowRight className="w-4 h-4 shrink-0 text-[#c2372f] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 rtl:-scale-x-100 transition-all duration-200" aria-hidden />
-          </motion.button>
-        ))}
+      <div className="mt-8 md:mt-10 grid grid-cols-2 gap-2.5 md:gap-3 w-full max-w-xl md:max-w-2xl">
+        {questions.map((question, index) => {
+          const Icon = ICONS[index % ICONS.length];
+          const tint = TINTS[index % TINTS.length];
+          return (
+            <motion.button
+              key={index}
+              initial={{ opacity: 0, y: 16, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ ...SPRING, delay: 0.4 + index * 0.07 }}
+              onClick={() => onQuestion(question)}
+              disabled={disabled}
+              className={`${CARD_MATERIAL} group p-3.5 md:p-4 flex flex-col items-start gap-2.5 md:gap-3 text-start cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/[0.11] hover:border-white/[0.22] transition-colors duration-300`}
+            >
+              <span
+                className="w-8 h-8 md:w-9 md:h-9 rounded-[11px] flex items-center justify-center shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]"
+                style={{ backgroundColor: `${tint}26`, color: tint }}
+              >
+                <Icon className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={2.2} />
+              </span>
+              <span className="text-[13px] md:text-sm font-semibold text-white/85 group-hover:text-white transition-colors duration-300 leading-snug">{question}</span>
+            </motion.button>
+          );
+        })}
       </div>
     </motion.div>
   );
