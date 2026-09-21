@@ -1,6 +1,5 @@
-/** Empty-chat opening: the referee speaks first, like an incoming message,
- *  and the starter questions sit beneath as tappable suggestion chips.
- *  Conversation-native: no hero, no display title, no list rows. */
+/** Empty-chat start: a quiet Gemini-like greeting with soft suggestion cards.
+ *  Nobody has spoken yet - the conversation begins only when the user asks. */
 import { motion } from 'framer-motion';
 import { MOTION } from '../ui/motion';
 
@@ -18,31 +17,35 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={MOTION.gentle}
-      className="flex gap-2.5 md:gap-3"
+      className="flex flex-col items-center text-center max-w-xl mx-auto pt-8 md:pt-16"
     >
-      <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/15 overflow-hidden flex items-center justify-center">
-        <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain" draggable={false} />
+      <div className="relative">
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+          style={{ width: 120, height: 120, background: 'radial-gradient(closest-side, rgba(143,214,194,0.10) 0%, transparent 75%)' }}
+        />
+        <img src="/logoref.png" alt={t('app.title')} className="relative w-10 h-10 md:w-12 md:h-12 object-contain select-none opacity-95" draggable={false} />
       </div>
-      <div className="min-w-0 max-w-[88%] md:max-w-[80%]">
-        <p className="text-[10px] font-bold tracking-wide text-white/30 mb-1 px-0.5">{t('chat.refereeTag')}</p>
-        <div className="text-[15px] md:text-[16px] leading-relaxed text-slate-100">
-          {greeting && <p className="font-bold text-white mb-1">{greeting}</p>}
-          <p className="text-slate-300">{t('intro.descFull')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 mt-3.5">
-          {questions.map((question, index) => (
-            <motion.button
-              key={index}
-              whileTap={{ scale: 0.97 }}
-              transition={MOTION.tap}
-              onClick={() => onQuestion(question)}
-              disabled={disabled}
-              className="rounded-full border border-white/[0.12] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/25 px-4 py-2 text-[13px] md:text-sm font-bold text-white/75 hover:text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-start"
-            >
-              {question}
-            </motion.button>
-          ))}
-        </div>
+      {greeting && (
+        <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight mt-4 md:mt-5" style={{ textWrap: 'balance' } as React.CSSProperties}>
+          {greeting}
+        </h2>
+      )}
+      <p className="text-[13px] md:text-sm text-white/40 font-medium mt-2 md:mt-2.5 max-w-sm leading-relaxed px-2">{t('intro.descFull')}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-7 md:mt-9 w-full">
+        {questions.map((question, index) => (
+          <motion.button
+            key={index}
+            whileTap={{ scale: 0.98 }}
+            transition={MOTION.tap}
+            onClick={() => onQuestion(question)}
+            disabled={disabled}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 px-4 py-3.5 text-start text-[13px] md:text-sm font-bold text-white/70 hover:text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed leading-snug"
+          >
+            {question}
+          </motion.button>
+        ))}
       </div>
     </motion.div>
   );
