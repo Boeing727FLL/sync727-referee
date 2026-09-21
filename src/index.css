@@ -532,17 +532,10 @@
   100% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
 }
 
-.bloom-slice {
-  animation: bloom-slice-shear 0.75s both cubic-bezier(0.3, 0.7, 0.3, 1);
-  animation-delay: var(--sd, 0s);
-  filter: drop-shadow(0 0 7px rgba(143, 214, 194, 0.55));
-}
-@keyframes bloom-slice-shear {
-  0%   { transform: translateX(0); opacity: 0; }
-  8%   { opacity: 1; }
-  30%  { transform: translateX(var(--shear)); }
-  55%  { transform: translateX(var(--shear)); }
-  80%  { transform: translateX(calc(var(--shear) * -0.4)); opacity: 1; }
-  92%  { transform: translateX(0); opacity: 1; }
-  100% { transform: translateX(0); opacity: 1; }
+/* The logo flies as six slices: the lines cut it apart while it is still
+   large, the pieces travel together, and the same edges reassemble it once
+   it is small on the ground. Both phases are one continuous transition. */
+.flyer-slice {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 6px rgba(143, 214, 194, 0.45));
 }

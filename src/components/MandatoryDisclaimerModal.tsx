@@ -167,30 +167,9 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, budTr
         width="770" height="770"
         alt={t('app.title')}
         className="absolute object-contain select-none drop-shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
-        style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)', opacity: logoHidden ? 0 : 1, transition: 'opacity 0.22s ease' }}
+        style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)', opacity: logoHidden ? 0 : 1 }}
         draggable={false}
       />
-
-      {/* the shear: the logo splits into light slices, then snaps back */}
-      {slicing && (
-        <div aria-hidden className="absolute pointer-events-none" style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)' }}>
-          {Array.from({ length: SLICE_COUNT }, (_, i) => (
-            <img
-              key={i}
-              src="/logoref.png"
-              width="770" height="770"
-              alt=""
-              className="bloom-slice absolute inset-0 w-full h-full object-contain select-none"
-              style={{
-                clipPath: `inset(${(i * 100) / SLICE_COUNT}% 0 ${((SLICE_COUNT - 1 - i) * 100) / SLICE_COUNT}% 0)`,
-                ['--shear' as string]: `${(i % 2 === 0 ? 1 : -1) * (6 + i * 2.5)}px`,
-                ['--sd' as string]: `${i * 0.022}s`,
-              }}
-              draggable={false}
-            />
-          ))}
-        </div>
-      )}
 
       {/* the point the associations gather into */}
       <span
@@ -219,26 +198,28 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
   const [flightFrom, setFlightFrom] = useState<DOMRect | null>(null);
   const [flightTo, setFlightTo] = useState<{ x: number; y: number; scale: number } | null>(null);
   const [flightDone, setFlightDone] = useState(false);
-  const [sliceDone, setSliceDone] = useState(false);
-  const [logoBack, setLogoBack] = useState(false);
+  const [cut, setCut] = useState(false);
+  const [landedDone, setLandedDone] = useState(false);
+  const [glowDone, setGlowDone] = useState(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   useEffect(() => {
-    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setSliceDone(false); setLogoBack(false); return; }
+    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setCut(false); setLandedDone(false); setGlowDone(false); return; }
     const el = document.querySelector('.assoc-logo-wrap');
     const r = el?.getBoundingClientRect();
     if (r && r.width > 0) {
       setFlightFrom(r);
       setFlightTo(null);
       setFlightDone(false);
-      setSliceDone(false);
-      setLogoBack(false);
+      setCut(false);
+      setLandedDone(false);
+      setGlowDone(false);
     } else {
       setFlightFrom(null);
       setFlightDone(true);
-      setSliceDone(true);
-      setLogoBack(true);
+      setLandedDone(true);
+      setGlowDone(true);
     }
   }, [isOpen, handoff, reduce]);
 
@@ -246,7 +227,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
     if (!flightFrom || flightTo) return;
     const id = requestAnimationFrame(() => {
       const box = clusterRef.current?.getBoundingClientRect();
-      if (!box || box.width === 0) { setFlightDone(true); setSliceDone(true); setLogoBack(true); return; }
+      if (!box || box.width === 0) { setFlightDone(true); setLandedDone(true); setGlowDone(true); return; }
       const tx = box.left + (110 / 220) * box.width;
       const ty = box.top + (62 / 170) * box.height;
       const size = 64;
@@ -255,11 +236,18 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
     return () => cancelAnimationFrame(id);
   }, [flightFrom, flightTo]);
 
-  const flying = Boolean(handoff && flightFrom && !flightDone);
-  const slicing = Boolean(handoff && flightFrom && flightDone && !sliceDone);
-  // The gate's staged content waits for the landing; the bloom runs on the
-  // landing frame, the fold paths and copy settle behind it.
-  const landed = !handoff || !flightFrom || flightDone;
+  // The cut: the slice lines split the logo while it is still large.
+  useEffect(() => {
+    if (!flightFrom || flightDone) return;
+    const t = setTimeout(() => setCut(true), 80);
+    return () => clearTimeout(t);
+  }, [flightFrom, flightDone]);
+
+  const flying = Boolean(handoff && flightFrom && !landedDone);
+  const slicing = Boolean(handoff && flightFrom && flightDone && !glowDone);
+  // The gate's staged content waits until the small logo is visibly rebuilt;
+  // only then do the same line elements grow into the header geometry.
+  const landed = !handoff || !flightFrom || landedDone;
 
   const foldAt = handoff ? FOLD_AT_HANDOFF : FOLD_AT;
   const nodeDelay = handoff ? '0.47s' : '0.62s';
@@ -301,7 +289,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
                   t={t}
                   foldAt={foldAt}
                   nodeDelay={nodeDelay}
-                  logoHidden={flying || (slicing && !logoBack)}
+                  logoHidden={flying}
                   slicing={slicing}
                   drawNow={landed}
                   budTravel={handoff}
@@ -349,9 +337,9 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
             </motion.div>
           </motion.div>
 
-          {/* the logo in flight: takes off from the intro/login logo's exact
-              rect, swells as it travels, and lands in the fold cluster -
-              which then blooms and grows the gate. */}
+          {/* the logo in flight: the slice lines cut it apart while it is
+              still large, the pieces travel and shrink together, and the same
+              edges reassemble it at the cluster - then the gate grows. */}
           {flying && flightFrom && (
             <motion.div
               className="fixed z-30 pointer-events-none"
@@ -367,23 +355,35 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
               transition={{ type: 'spring', stiffness: 105, damping: 16, mass: 0.9 }}
               onAnimationComplete={() => {
                 setFlightDone(true);
-                // the slices re-form into the whole logo by ~700ms; fade the
-                // base logo in underneath, then unmount the identical stack.
-                timersRef.current.push(setTimeout(() => setLogoBack(true), 700));
-                timersRef.current.push(setTimeout(() => setSliceDone(true), 900));
+                // small now: the same slice edges reassemble the logo on the
+                // ground, then the flyer hands over to the base logo.
+                setCut(false);
+                timersRef.current.push(setTimeout(() => setLandedDone(true), 300));
+                timersRef.current.push(setTimeout(() => setGlowDone(true), 1000));
               }}
             >
-              <motion.img
-                src="/logoref.png"
-                width="770" height="770"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="w-full h-full object-contain select-none drop-shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+              <motion.div
+                className="relative w-full h-full drop-shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
                 initial={{ scale: 1, rotate: 0 }}
-                animate={flightTo ? { scale: [1, 1.35, 1], rotate: [0, -3, 0] } : {}}
+                animate={flightTo ? { scale: [1, 1.22, 1], rotate: [0, -3, 0] } : {}}
                 transition={{ duration: 0.75, times: [0, 0.5, 1], ease: [0.22, 1, 0.36, 1] }}
-              />
+              >
+                {Array.from({ length: SLICE_COUNT }, (_, i) => (
+                  <img
+                    key={i}
+                    src="/logoref.png"
+                    width="770" height="770"
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="flyer-slice absolute inset-0 w-full h-full object-contain select-none"
+                    style={{
+                      clipPath: `inset(${(i * 100) / SLICE_COUNT}% 0 ${((SLICE_COUNT - 1 - i) * 100) / SLICE_COUNT}% 0)`,
+                      transform: `translateX(${cut ? (i % 2 === 0 ? 1 : -1) * (8 + i * 4) : 0}px)`,
+                    }}
+                  />
+                ))}
+              </motion.div>
             </motion.div>
           )}
         </motion.div>
