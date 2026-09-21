@@ -1,12 +1,13 @@
 import { db } from '../lib/firebase';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
-import { convertPdfToImages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
+import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
 import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
 import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
+import { RulebookIncompleteError, RULEBOOK_INCOMPLETE_MESSAGE } from '../features/referee/rulebook/completeness';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -81,34 +82,26 @@ function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: st
   parts.push({ inlineData: { data, mimeType } });
 }
 
-async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<PageImage[]> {
-  let pageNumbers: number[] = [];
+async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<{ pages: PageImage[]; listedPages: number[] }> {
+  let pageNumbers: number[];
   try {
     pageNumbers = await listRulebookImagePages(fileName);
   } catch (error) {
-    console.warn('Could not list rendered R2 pages; using PDF fallback:', error);
-    return [];
+    throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page listing failed: ${error instanceof Error ? error.message : String(error)}` });
   }
-  // Bounded parallel fetch (order preserved) — much faster than serial.
   const results = await mapPool(pageNumbers, 6, async (pageIndex) => {
     if (signal?.aborted) return null;
-    try {
-      const encodedFileName = encodeURIComponent(fileName);
-      const imageUrl = `${R2_PUBLIC_URL}/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
-      const response = await fetch(imageUrl, { signal });
-      if (!response.ok) return null;
-      const imageData = await response.arrayBuffer();
-      const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
-        new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
-      if (isHtmlError) return null;
-
-      const blob = new Blob([imageData], { type: 'image/jpeg' });
-      return { pageIndex, data: await fileToBase64(blob) };
-    } catch {
-      return null;
-    }
+    const encodedFileName = encodeURIComponent(fileName);
+    const imageUrl = `${R2_PUBLIC_URL}/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
+    const response = await fetch(imageUrl, { signal });
+    if (!response.ok) throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page ${pageIndex} returned HTTP ${response.status}.` });
+    const imageData = await response.arrayBuffer();
+    const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
+      new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
+    if (!imageData.byteLength || isHtmlError) throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page ${pageIndex} is empty or corrupt.` });
+    return { pageIndex, data: await fileToBase64(new Blob([imageData], { type: 'image/jpeg' })) };
   });
-  return results.filter((p): p is PageImage => p !== null);
+  return { pages: results.filter((page): page is PageImage => page !== null), listedPages: pageNumbers };
 }
 
 /** Bounded-concurrency map that preserves input order. */
@@ -246,12 +239,8 @@ export const GeminiService = {
         for (let pageIndex = 1; pageIndex <= pages.length; pageIndex++) {
           if (signal?.aborted) return null;
           const page = pages[pageIndex - 1];
-          try {
-            await appendImagePart(currentParts, pagePrefixText(fileName, isUserPhoto, pageIndex), page.data);
-            if (countAsRulebook) attached++;
-          } catch (error) {
-            console.error(`Failed to attach PDF page ${page.name}:`, error);
-          }
+          await appendImagePart(currentParts, pagePrefixText(fileName, isUserPhoto, pageIndex), page.data);
+          if (countAsRulebook) attached++;
         }
         return attached;
       };
@@ -279,29 +268,42 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           if (isPdf) {
             if (isR2Rulebook) {
               console.log(`Fetching pre-processed PDF images from R2 for ${fileName} dynamically...`);
-              const uploadedImages = await fetchR2ImageSet(fileName, signal);
+              const fetched = await fetchBlob(file.url, signal);
               if (signal?.aborted) return '';
-              
-              console.log(`Loaded ${uploadedImages.length} pages for ${fileName}`);
+              if (!fetched) throw new RulebookIncompleteError({ file: fileName, code: 'source-fetch', detail: 'The source PDF could not be fetched.' });
+              let expectedPages: number;
+              try {
+                expectedPages = await countPdfPages(fetched.data);
+                if (!Number.isInteger(expectedPages) || expectedPages < 1) throw new Error(`Invalid page count ${expectedPages}`);
+              } catch (error) {
+                throw new RulebookIncompleteError({ file: fileName, code: 'invalid-pdf', detail: error instanceof Error ? error.message : String(error) });
+              }
 
-              if (uploadedImages.length === 0 && file.url) {
-                console.log(`No pre-processed images found for ${fileName}, converting PDF on the fly...`);
+              const imageSet = await fetchR2ImageSet(fileName, signal);
+              const uploadedImages = imageSet.pages;
+              if (signal?.aborted) return '';
+              const expectedInventory = Array.from({ length: expectedPages }, (_, index) => index + 1);
+              if (imageSet.listedPages.length && (imageSet.listedPages.length !== expectedPages || imageSet.listedPages.some((page, index) => page !== expectedInventory[index]))) {
+                throw new RulebookIncompleteError({ file: fileName, code: 'missing-page', detail: `Expected pages 1-${expectedPages}; listed [${imageSet.listedPages.join(', ')}].` });
+              }
+
+              console.log(`Loaded ${uploadedImages.length} of ${expectedPages} pages for ${fileName}`);
+              if (uploadedImages.length === 0) {
+                console.log(`No pre-processed images found for ${fileName}, converting the complete PDF on the fly...`);
                 try {
-                  const fetched = await fetchBlob(file.url, signal);
-                  if (signal?.aborted) return '';
-                  if (fetched) {
-                    const attached = await appendPdfPages(
-                      fetched.data,
-                      fileName,
-                      isUserPhoto,
-                      count => `Converted ${count} pages on the fly for ${fileName}`,
-                      true,
-                    );
-                    if (attached === null) return '';
-                    attachedRulebookImages += attached;
-                  }
+                  const attached = await appendPdfPages(
+                    fetched.data,
+                    fileName,
+                    isUserPhoto,
+                    count => `Converted ${count} pages on the fly for ${fileName}`,
+                    true,
+                  );
+                  if (attached === null) return '';
+                  if (attached !== expectedPages) throw new Error(`Attached ${attached} of ${expectedPages} pages.`);
+                  attachedRulebookImages += attached;
                 } catch (err) {
-                  console.error(`Failed to fetch/convert PDF for ${fileName}:`, err);
+                  if (err instanceof RulebookIncompleteError) throw err;
+                  throw new RulebookIncompleteError({ file: fileName, code: 'fallback-render', detail: err instanceof Error ? err.message : String(err) });
                 }
               }
 
@@ -327,13 +329,11 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           } else if (isText) {
             const textBlob = await getInlineBlob(file, signal) || (await fetchBlob(file.url, signal))?.data;
             if (signal?.aborted) return '';
-            if (textBlob) {
-              const text = await textBlob.text();
-              if (text.trim()) {
-                currentParts.push({ text: textRulebookLabel(fileName, text) });
-                if (file.isRulebook) attachedRulebookImages++;
-              }
-            }
+            if (!textBlob) throw new RulebookIncompleteError({ file: fileName, code: 'source-fetch', detail: 'The text rulebook could not be fetched.' });
+            const text = await textBlob.text();
+            if (!text.trim()) throw new RulebookIncompleteError({ file: fileName, code: 'empty-text', detail: 'The text rulebook is empty.' });
+            currentParts.push({ text: textRulebookLabel(fileName, text) });
+            if (file.isRulebook) attachedRulebookImages++;
           } else {
             let mimeType = 'image/jpeg';
             let blobToUpload: Blob | File | null = null;
@@ -457,6 +457,10 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
     } catch (error: unknown) {
       if (signal?.aborted) return '';
+      if (error instanceof RulebookIncompleteError) {
+        console.error('Active rulebook completeness check failed:', error.diagnostic);
+        return RULEBOOK_INCOMPLETE_MESSAGE;
+      }
       const errMsg = errorText(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {

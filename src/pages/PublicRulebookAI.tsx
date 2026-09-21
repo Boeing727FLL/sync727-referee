@@ -38,6 +38,7 @@ import { stripThinkBlocks } from '../features/referee/chat/text';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
+import { selectActiveRulebookSources } from '../features/referee/rulebook/activeFiles';
 import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
@@ -662,7 +663,7 @@ export default function PublicRulebookAI() {
   }, [chatStarted, seasonName]);
 
   /**
-   * Load the newest rulebook files from R2 (latest 5) and detect the season
+   * Load every rulebook source for the active season and detect the season
    * from their filenames, syncing it back to the shared config when it changes.
    */
   const fetchLatestRulebook = async () => {
@@ -682,24 +683,10 @@ export default function PublicRulebookAI() {
       }
 
       if (files.length > 0) {
-        const relevantFiles = files.filter((f: any) => 
-          f.Key && f.Key !== 'fll-rules/'
-        ).sort((a: any, b: any) => (new Date(b.LastModified).getTime() || 0) - (new Date(a.LastModified).getTime() || 0));
-        
-        const filesToLoad = relevantFiles.slice(0, 5);
-        
-        const loadedFiles: { name: string, url: string }[] = [];
-
-        for (const file of filesToLoad) {
-           if (!file.Key) continue;
-           const fileName = file.Key.replace('fll-rules/', '');
-           const fileUrl = getPublicUrl(file.Key);
-           
-           loadedFiles.push({
-             name: fileName,
-             url: fileUrl
-           });
-        }
+        // Include every source that belongs to the currently displayed active
+        // season. Never truncate by upload recency: omitting the sixth file is
+        // indistinguishable from a complete rulebook to the model.
+        const loadedFiles = selectActiveRulebookSources(files, seasonNameRef.current, getPublicUrl);
         
         setActiveRulebookFiles(loadedFiles);
 

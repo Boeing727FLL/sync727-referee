@@ -19,6 +19,17 @@ export async function fileToBase64(file: File | Blob): Promise<string> {
   });
 }
 
+export async function countPdfPages(pdfInput: File | Blob): Promise<number> {
+  const mupdf = await getMupdfLib();
+  const data = new Uint8Array(await pdfInput.arrayBuffer());
+  const doc = mupdf.Document.openDocument(data, 'application/pdf');
+  try {
+    return doc.countPages();
+  } finally {
+    doc.destroy();
+  }
+}
+
 // Render PDF pages so diagrams and symbols remain visible to the model.
 export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor = 2, specificPage?: number): Promise<{ data: Blob; name: string }[]> {
   try {
@@ -38,7 +49,6 @@ export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor = 2,
       const colorspace = mupdf.ColorSpace.DeviceRGB;
 
       for (let i = startPage; i <= endPage; i++) {
-        try {
           const page = doc.loadPage(i - 1);
           const pixmap = page.toPixmap(mupdf.Matrix.scale(scaleFactor, scaleFactor), colorspace, false, true);
           const jpegBytes = pixmap.asJPEG(scaleFactor >= 5.0 ? 100 : 85);
@@ -50,9 +60,6 @@ export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor = 2,
           });
           pixmap.destroy();
           page.destroy();
-        } catch (pageErr) {
-          console.error(`Error rendering PDF page ${i} to visual image:`, pageErr);
-        }
       }
       return images;
     } finally {
@@ -60,7 +67,7 @@ export async function convertPdfToImages(pdfInput: File | Blob, scaleFactor = 2,
     }
   } catch (err) {
     console.error("Error in convertPdfToImages:", err);
-    return [];
+    throw err;
   }
 }
 
