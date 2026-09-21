@@ -1,17 +1,25 @@
 /**
- * MandatoryDisclaimerModal — the must-approve gate before the chat.
+ * MandatoryDisclaimerModal — the gate, folded out of the intro system.
  *
- * WHAT: descends from the top on entry (fast, opaque panel over a quickly
- * dimmed backdrop so texts never smear), and exits downward over 2.25s on
- * confirm, revealing the live chat underneath. Timings are product
- * behavior — never "cleaned up".
+ * WHAT: the same space as the intro (SpatialBackdrop), the same intact
+ * logo. On entry, three hairline paths leave the logo's halo and FOLD
+ * INWARD into a single coral node — the associations gathering into one
+ * point of attention — and the disclaimer content settles beneath it.
+ * Not a card dropped over the app: the intro's elements reorganized.
  *
  * COPY: all copy arrives translated via t(); direction follows isRTL.
+ * The composition is horizontally symmetric, so RTL needs no mirroring.
+ *
+ * MOTION: paths are measured (getTotalLength) and drawn once with WAAPI;
+ * every other beat is a staged CSS rise. Reduced motion lands directly on
+ * the final state: logo, folded paths, node and content all present.
  */
 
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import SpatialBackdrop from './SpatialBackdrop';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +32,83 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
-// The modal
+// The fold: three halo paths gathering into one node (fixed 220x170 space)
+// ---------------------------------------------------------------------------
+
+/** Halo ellipse: cx 110, cy 62, rx 84, ry 46. Paths start on the halo at
+ *  150 / 90 / 30 degrees and converge on the node at (110, 140). */
+const FOLD_PATHS = [
+  'M 37.3 85 Q 63 127 110 140',
+  'M 110 108 Q 110 126 110 140',
+  'M 182.7 85 Q 157 127 110 140',
+];
+
+const FOLD_AT = [0.55, 0.75, 0.95]; // seconds, staggered
+
+function FoldCluster({ t }: { t: (key: string) => string }) {
+  const lineRefs = useRef<(SVGPathElement | null)[]>([]);
+
+  // Draw the folding paths once when the gate opens. Reduced motion lands
+  // on the fully drawn state immediately.
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const anims: Animation[] = [];
+    lineRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const len = el.getTotalLength();
+      el.style.strokeDasharray = `${len}`;
+      if (reduce) {
+        el.style.strokeDashoffset = '0';
+        return;
+      }
+      el.style.strokeDashoffset = `${len}`;
+      anims.push(el.animate(
+        [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
+        { duration: 700, delay: FOLD_AT[i] * 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'both' },
+      ));
+    });
+    return () => anims.forEach(a => a.cancel());
+  }, []);
+
+  return (
+    <div className="intro-rise relative w-[220px] h-[170px] mx-auto" style={{ animationDelay: '0.15s' }}>
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 170" aria-hidden>
+        <ellipse cx="110" cy="62" rx="84" ry="46" fill="none" stroke="rgba(159,216,198,0.10)" strokeWidth="1" strokeDasharray="2 7" />
+        {FOLD_PATHS.map((d, i) => (
+          <path key={i} ref={el => { lineRefs.current[i] = el; }} className="assoc-line" d={d} />
+        ))}
+      </svg>
+      {/* quiet halo glow behind the logo */}
+      <div
+        aria-hidden
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          left: 110, top: 62, width: 120, height: 120, transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(closest-side, rgba(143,214,194,0.12) 0%, rgba(255,122,102,0.05) 55%, transparent 78%)',
+        }}
+      />
+      <img
+        src="/logoref.png"
+        width="770" height="770"
+        alt={t('app.title')}
+        className="absolute object-contain select-none drop-shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
+        style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)' }}
+        draggable={false}
+      />
+      {/* the point the associations gather into */}
+      <span
+        aria-hidden
+        className="assoc-node absolute w-[6px] h-[6px] rounded-full"
+        style={{ left: 110, top: 140, background: '#ff7a66', boxShadow: '0 0 10px rgba(255,122,102,0.7)', animationDelay: '1.3s' }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The gate
 // ---------------------------------------------------------------------------
 
 export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props) {
@@ -34,55 +118,61 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
   return (
     <AnimatePresence>
       {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 1.2, ease: [0.22, 1, 0.36, 1] } }}
+          className="fixed inset-0 z-[10001]"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          <SpatialBackdrop />
+          <div className="absolute inset-0 bg-[#020408]/45" aria-hidden />
+
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
-            exit={{ opacity: 0, transition: { duration: 1.4, ease: [0.22, 1, 0.36, 1] } }}
-            className="fixed inset-0 z-[10001] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
-            dir={isRTL ? 'rtl' : 'ltr'}
+            className="relative h-full overflow-y-auto"
+            exit={{ y: 60, transition: { duration: 1.2, ease: [0.22, 1, 0.36, 1] } }}
           >
-            <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: -120 }}
-            animate={{ scale: [0.95, 1.01, 1], opacity: [0, 1, 1], y: [-120, 8, 0], transition: { duration: 1.0, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
-            exit={{ scale: [1, 0.99, 0.94], opacity: [1, 1, 0], y: [0, 45, 170], transition: { duration: 2.25, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } }}
-            className="bg-slate-900/95 backdrop-blur-2xl border-2 border-yellow-400/25 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(250,204,21,0.08)] w-full max-w-md overflow-hidden"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="p-6 md:p-7 text-center">
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <motion.div
-                  className="absolute -inset-3 bg-yellow-400/25 blur-xl rounded-full pointer-events-none"
-                  aria-hidden
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: [0, 0.9, 0.5], scale: [0.6, 1.2, 1] }}
-                  transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] }}
-                />
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 p-[2px] shadow-[0_4px_16px_rgba(250,204,21,0.4)]">
-                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                    <Check className="w-8 h-8 text-amber-600 stroke-[3]" />
-                  </div>
-                </div>
-                <div className="absolute -inset-1 rounded-full border border-yellow-400/20 pointer-events-none" aria-hidden />
-              </div>
-              <h3 className="text-xl md:text-2xl font-black text-white mb-3 leading-tight tracking-tight">
+            <div
+              className="min-h-full flex flex-col items-center justify-center px-6 py-8 w-full max-w-md mx-auto"
+              role="dialog"
+              aria-modal="true"
+            >
+              <FoldCluster t={t} />
+
+              <h3
+                className="intro-rise text-xl md:text-2xl font-black text-white leading-tight tracking-tight text-center"
+                style={{ animationDelay: '1.25s' }}
+              >
                 {t('disclaimerPopup.title')}
               </h3>
-              <div className="text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap text-start bg-slate-950/40 rounded-2xl p-4 border border-white/10">
+
+              <div
+                className="intro-rise mt-4 w-full text-start text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap rounded-2xl border border-white/[0.09] bg-white/[0.03] backdrop-blur-sm p-4"
+                style={{ animationDelay: '1.4s' }}
+              >
                 {t('disclaimerPopup.body')}
               </div>
-              <p className="text-[11px] text-slate-400 mt-3 font-medium">
+
+              <p className="intro-rise text-[11px] text-white/35 mt-3 font-medium text-center" style={{ animationDelay: '1.5s' }}>
                 {t('disclaimerPopup.hint')}
               </p>
-              <button
-                onClick={onConfirm}
-                className="mt-4 w-full bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-3.5 md:py-4 px-6 rounded-2xl transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:shadow-[0_12px_28px_rgba(250,204,21,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer text-base"
-              >
-                {t('disclaimerPopup.confirm')}
-              </button>
-              <div className="mt-3 flex items-center justify-center gap-1.5">
+
+              {/* confirm: the intro's hairline control, not a banner button */}
+              <div className="intro-rise mt-4" style={{ animationDelay: '1.6s' }}>
+                <button
+                  onClick={onConfirm}
+                  className="group flex items-center gap-2.5 cursor-pointer py-2"
+                >
+                  <Check className="w-4 h-4 text-yellow-300 stroke-[2.5] transition-transform duration-300 group-hover:scale-110" aria-hidden />
+                  <span className="text-[15px] md:text-base font-black text-white tracking-tight border-b border-yellow-400/60 pb-1 transition-colors group-hover:border-yellow-300">
+                    {t('disclaimerPopup.confirm')}
+                  </span>
+                </button>
+              </div>
+
+              <div className="intro-rise mt-3 flex items-center justify-center gap-1.5" style={{ animationDelay: '1.75s' }}>
                 <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain opacity-70" />
-                <span className="text-[10px] font-bold text-slate-500">{t('common.creditBuiltBy')}</span>
+                <span className="text-[10px] font-bold text-white/30">{t('common.creditBuiltBy')}</span>
               </div>
             </div>
           </motion.div>
