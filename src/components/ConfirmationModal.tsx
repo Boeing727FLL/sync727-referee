@@ -12,6 +12,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +79,7 @@ export default function ConfirmationModal({
   cancelText = 'ביטול',
   variant = 'danger'
 }: ConfirmationModalProps) {
+  const { isRTL } = useLanguage();
   const color = VARIANTS[variant];
 
   // No early return on purpose: AnimatePresence needs the tree mounted
@@ -90,7 +92,7 @@ export default function ConfirmationModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
-          dir="rtl"
+          dir={isRTL ? 'rtl' : 'ltr'}
         >
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 20 }}

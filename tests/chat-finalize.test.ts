@@ -37,3 +37,12 @@ test('finalize keeps a streamed bubble that already holds the answer', () => {
   const next = finalizeModelResponse([question, streamed], '<think>x</think>תשובה מלאה', COMM);
   assert.deepEqual(next, [question, streamed]);
 });
+
+test('safeUserFacingError keeps Hebrew service messages and hides raw technical text', async () => {
+  const { safeUserFacingError } = await import('../src/features/referee/chat/userFacingError.ts');
+  assert.equal(safeUserFacingError(new Error('השופט עמוס כרגע'), 'fallback'), 'השופט עמוס כרגע');
+  assert.equal(safeUserFacingError(new Error('429 RESOURCE_EXHAUSTED: quota'), 'fallback'), 'fallback');
+  assert.equal(safeUserFacingError(new Error('fetch failed'), 'fallback'), 'fallback');
+  assert.equal(safeUserFacingError({}, 'fallback'), 'fallback');
+  assert.equal(safeUserFacingError(null, 'fallback'), 'fallback');
+});

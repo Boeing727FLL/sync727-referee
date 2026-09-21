@@ -199,7 +199,7 @@ export default function LoginPage() {
       return true;
     } catch (err: any) {
       setLoading(false);
-      setError(authErrorMessage(err?.code, err.message));
+      setError(authErrorMessage(err?.code, 'שגיאת התחברות. בדוק את הפרטים ונסה שוב.'));
       return false;
     }
   };
@@ -282,7 +282,6 @@ export default function LoginPage() {
         // Don't leak existence — still show success
         setResetSent(true);
       } else {
-        // Fallback: show raw message for debugging, but also handle enumeration
         console.error('sendPasswordResetEmail failed:', err);
         setError(authErrorMessage(code, err?.message || 'שגיאה בשליחת אימייל. נסה שוב.'));
       }

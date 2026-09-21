@@ -114,7 +114,7 @@ function StarsInput({ rating, hovered, onRate, onHover }: {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }: FeedbackModalProps) {
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const labels = LABELS[language] || LABELS.he;
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -184,7 +184,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9998] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4"
-          dir="rtl"
+          dir={isRTL ? 'rtl' : 'ltr'}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}

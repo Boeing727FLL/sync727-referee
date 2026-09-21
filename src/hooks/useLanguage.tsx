@@ -65,10 +65,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(code);
     localStorage.setItem('app_language', code);
     document.documentElement.lang = code;
+    document.documentElement.dir = rtlLanguages.includes(code) ? 'rtl' : 'ltr';
   };
 
   useEffect(() => {
     document.documentElement.lang = language;
+    // Layout direction follows the language: Hebrew/Arabic RTL, every
+    // other supported language LTR.
+    document.documentElement.dir = rtlLanguages.includes(language) ? 'rtl' : 'ltr';
   }, [language]);
 
   const t = (key: string): string => {

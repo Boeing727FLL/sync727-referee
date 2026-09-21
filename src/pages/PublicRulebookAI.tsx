@@ -36,6 +36,7 @@ import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_
 import { stripThinkBlocks } from '../features/referee/chat/text';
 import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
+import { safeUserFacingError } from '../features/referee/chat/userFacingError';
 import { clearAllChatStates, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
@@ -146,34 +147,6 @@ export default function PublicRulebookAI() {
     return t(key).replace('{name}', first);
   }, [displayUser, t, language]);
   // Force reload when a new version is deployed so cached outdated clients get App Check
-  useEffect(() => {
-    // @ts-ignore
-    const localVer = typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '';
-    if (!localVer) return;
-    const checkVersion = async () => {
-      try {
-        const r = await fetch('/version.json?cb=' + Date.now(), { cache: 'no-store' });
-        if (!r.ok) return;
-        const j = await r.json();
-        const serverVer = String(j.version || '');
-        if (serverVer && localVer && serverVer !== localVer) {
-          window.location.reload();
-        }
-      } catch {}
-    };
-    const t1 = setTimeout(checkVersion, 5000);
-    const iv = setInterval(checkVersion, 60000);
-    const onVis = () => {
-      if (document.visibilityState === 'visible') checkVersion();
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => {
-      clearTimeout(t1);
-      clearInterval(iv);
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  }, []);
-
   // ===== 2. Overlays, menus & toast: open/close state only, no data.
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
@@ -560,6 +533,7 @@ export default function PublicRulebookAI() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -609,15 +583,16 @@ export default function PublicRulebookAI() {
   // Upload modal is for rulebook files only. Judge corrections live in
   // the dedicated JudgeCorrectionsModal (Boeing badge), not here.
   const openUploadModal = () => {
+    setUploadError(null);
     setShowUploadModal(true);
   };
 
   useEffect(() => {
-    if (activeRulebookFiles.length > 0) {
-      setIsLearning(true);
-      // Removed local/proxy indexing - using official Gemini with direct context
-      setTimeout(() => setIsLearning(false), 1500);
-    }
+    if (activeRulebookFiles.length === 0) return;
+    setIsLearning(true);
+    // Removed local/proxy indexing - using official Gemini with direct context
+    const t = setTimeout(() => setIsLearning(false), 1500);
+    return () => clearTimeout(t);
   }, [activeRulebookFiles]);
 
   useEffect(() => {
@@ -978,7 +953,9 @@ export default function PublicRulebookAI() {
 
     } catch (error: any) {
       console.error('Upload error:', error);
-      alert('שגיאה בהעלאת הקובץ: ' + error.message);
+      // The dialog stays open with a clean inline error - no blocking
+      // alert, no raw technical message.
+      setUploadError('העלאת הקובץ נכשלה. בדוק חיבור ונסו שוב.');
       setUploading(false);
       setUploadProgress(0);
       setIsLearning(false);
@@ -1208,7 +1185,7 @@ export default function PublicRulebookAI() {
         if (controller.signal.aborted) {
           handleStop();
         } else {
-          const errMsg = error?.message || t('chat.connectionLost');
+          const errMsg = safeUserFacingError(error, t('chat.connectionLost'));
           logRefereeQA({
             question: userMessage,
             answer: errMsg,
@@ -1239,6 +1216,11 @@ export default function PublicRulebookAI() {
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
 
+
+  const whistleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (whistleTimerRef.current) clearTimeout(whistleTimerRef.current);
+  }, []);
 
   const playWhistleSound = () => {
     try {
@@ -1275,7 +1257,7 @@ export default function PublicRulebookAI() {
       osc1.start();
       osc2.start();
       
-      setTimeout(() => {
+      whistleTimerRef.current = setTimeout(() => {
         try {
           osc1.stop();
           osc2.stop();
@@ -1311,7 +1293,7 @@ export default function PublicRulebookAI() {
   return (
     <motion.div
       initial={false}
-      className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir="rtl"
+      className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
       <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><RefereeBackdrop /></motion.div>
@@ -1597,6 +1579,7 @@ export default function PublicRulebookAI() {
         open={showUploadModal}
         uploading={uploading}
         progress={uploadProgress}
+        error={uploadError}
         inputRef={fileInputRef}
         onFile={handleFileUpload}
         onClose={() => setShowUploadModal(false)}
@@ -1654,7 +1637,7 @@ export default function PublicRulebookAI() {
       {/* In-site green toast (copy / like confirmations) */}
       <AnimatePresence>
         {toast && (
-          <div className="fixed inset-x-0 bottom-24 md:bottom-28 z-[80] flex justify-center pointer-events-none px-4" dir="rtl">
+          <div className="fixed inset-x-0 bottom-24 md:bottom-28 z-[80] flex justify-center pointer-events-none px-4" dir={isRTL ? 'rtl' : 'ltr'}>
             <motion.div
               initial={{ opacity: 0, y: 16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -11,6 +11,7 @@
  */
 
 import type {SVGProps} from 'react';
+import { useLanguage } from '../hooks/useLanguage';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (single calm entrance ladder, then stillness)
@@ -218,12 +219,13 @@ function EntryButton({ label, onContinue, onWarm }: { label: string; onContinue:
 // ---------------------------------------------------------------------------
 
 export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: IntroScreenProps) {
+  const { isRTL } = useLanguage();
   const features = buildFeatures(t);
 
   return (
     <div
       className="intro-screen fixed inset-0 z-[9999] bg-slate-950 flex flex-col overflow-y-auto no-scrollbar"
-      dir="rtl"
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
       <Backdrop />
       {/* ===== Content ===== */}

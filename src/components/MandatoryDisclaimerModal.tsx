@@ -12,6 +12,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +29,7 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props) {
+  const { isRTL } = useLanguage();
   // No early return here on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation. Returning null would kill it instantly.
   return (
@@ -38,7 +40,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
             exit={{ opacity: 0, transition: { duration: 1.4, ease: [0.22, 1, 0.36, 1] } }}
             className="fixed inset-0 z-[10001] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
-            dir="rtl"
+            dir={isRTL ? 'rtl' : 'ltr'}
           >
             <motion.div
             initial={{ scale: 0.95, opacity: 0, y: -120 }}

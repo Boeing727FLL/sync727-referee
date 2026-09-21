@@ -118,7 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.error("Drive connection error:", error);
-      let errorMessage = error.message;
+      // Unknown failures never leak raw English SDK text to the UI.
+      let errorMessage = 'ההתחברות נכשלה. בדוק חיבור ונסה שוב.';
       if (error?.code === 'auth/unauthorized-domain') {
         errorMessage = "שגיאה: הדומיין של Netlify לא מורשה ב-Firebase. יש להיכנס למסוף Firebase -> Authentication -> Settings -> Authorized domains ולהוסיף את הדומיין של האתר.";
       } else if (error?.code === 'auth/popup-closed-by-user' || error?.code?.includes('cross-origin')) {
