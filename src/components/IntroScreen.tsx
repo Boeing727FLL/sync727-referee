@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+
 import { useLanguage } from '../hooks/useLanguage';
 import SpatialBackdrop from './SpatialBackdrop';
 
@@ -32,8 +33,9 @@ interface IntroScreenProps {
   isLoggedIn: boolean;
   onContinue: () => void;
   onWarm?: () => void;
-  /** 'login' folds the association system away so the inline login stage can take over the same page. */
-  mode?: 'intro' | 'login';
+  /** 'login' folds the association system away so the inline login stage can take over the same page;
+   *  'disclaimer' yields the stage to the gate (its logo flies in from this wrap's exact spot). */
+  mode?: 'intro' | 'login' | 'disclaimer';
   t: (key: string) => string;
 }
 
@@ -195,8 +197,16 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
   // state (CSS data-settled rules), never a second reveal.
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    if (mode === 'login') setSettled(true);
+    if (mode !== 'intro') setSettled(true);
   }, [mode]);
+
+  // When the disclaimer stage takes over, its flying logo takes off from
+  // this wrap's frozen position - which differs by path (folded up after
+  // login, center-stage after a signed-in CTA). Track the previous mode
+  // synchronously during render so the freeze is correct on the same commit.
+  const modeRef = useRef(mode);
+  const fromMode = modeRef.current;
+  useEffect(() => { if (mode !== 'disclaimer') modeRef.current = mode; }, [mode]);
 
   const logoPx = stageSize.w >= 768 ? 196 : 144;
   const halo = stageSize.w > 0 ? haloOf(stageSize.w, stageSize.h, logoPx) : null;
@@ -244,6 +254,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
       className="intro-screen fixed inset-0 z-[9999] flex flex-col overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
       data-mode={mode}
+      data-from={mode === 'disclaimer' ? fromMode : undefined}
       data-settled={settled ? '' : undefined}
     >
       <SpatialBackdrop />

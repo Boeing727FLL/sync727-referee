@@ -23,7 +23,7 @@
  * chat underneath. Reduced motion confirms without the burst.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
@@ -37,6 +37,14 @@ interface Props {
   isOpen: boolean;
   onConfirm: () => void;
   t: (key: string) => string;
+  /**
+   * Landing handoff mode: the intro/login logo is still on screen when the
+   * gate opens. The gate's logo FLIES from that exact spot into the fold
+   * cluster (one continuous organism, no cut), the fold paths draw out of
+   * the landed logo, and the copy stages behind them. Without handoff the
+   * gate keeps its original spring-pop entrance.
+   */
+  handoff?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,8 +60,16 @@ const FOLD_PATHS = [
 ];
 
 const FOLD_AT = [0.15, 0.28, 0.41]; // seconds, staggered
+/** Handoff timing: the fold begins once the flying logo has landed. */
+const FOLD_AT_HANDOFF = [0.45, 0.58, 0.71];
 
-function FoldCluster({ t }: { t: (key: string) => string }) {
+function FoldCluster({ t, foldAt, nodeDelay, logoHidden, clusterRef }: {
+  t: (key: string) => string;
+  foldAt: readonly number[];
+  nodeDelay: string;
+  logoHidden: boolean;
+  clusterRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const lineRefs = useRef<(SVGPathElement | null)[]>([]);
 
   // Draw the folding paths once when the gate opens. Reduced motion lands
@@ -74,14 +90,14 @@ function FoldCluster({ t }: { t: (key: string) => string }) {
       el.style.strokeDashoffset = `${len}`;
       anims.push(el.animate(
         [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-        { duration: 480, delay: FOLD_AT[i] * 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'both' },
+        { duration: 480, delay: foldAt[i] * 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'both' },
       ));
     });
     return () => anims.forEach(a => a.cancel());
-  }, []);
+  }, [foldAt]);
 
   return (
-    <div className="intro-rise relative w-[220px] h-[170px] mx-auto" style={{ animationDelay: '0.05s' }}>
+    <div ref={clusterRef} className="intro-rise relative w-[220px] h-[170px] mx-auto" style={{ animationDelay: '0.05s' }}>
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 170" aria-hidden>
         <ellipse cx="110" cy="62" rx="84" ry="46" fill="none" stroke="rgba(159,216,198,0.10)" strokeWidth="1" strokeDasharray="2 7" />
         {FOLD_PATHS.map((d, i) => (
@@ -102,14 +118,14 @@ function FoldCluster({ t }: { t: (key: string) => string }) {
         width="770" height="770"
         alt={t('app.title')}
         className="absolute object-contain select-none drop-shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
-        style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)' }}
+        style={{ left: 110, top: 62, width: 64, height: 64, transform: 'translate(-50%, -50%)', opacity: logoHidden ? 0 : 1 }}
         draggable={false}
       />
       {/* the point the associations gather into */}
       <span
         aria-hidden
         className="assoc-node absolute w-[6px] h-[6px] rounded-full"
-        style={{ left: 110, top: 140, background: '#ff7a66', boxShadow: '0 0 10px rgba(255,122,102,0.7)', animationDelay: '0.62s' }}
+        style={{ left: 110, top: 140, background: '#ff7a66', boxShadow: '0 0 10px rgba(255,122,102,0.7)', animationDelay: nodeDelay }}
       />
     </div>
   );
@@ -119,11 +135,53 @@ function FoldCluster({ t }: { t: (key: string) => string }) {
 // The gate
 // ---------------------------------------------------------------------------
 
-export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props) {
+export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff = false }: Props) {
   const { isRTL } = useLanguage();
   const reduce = typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // -- the logo flight (handoff only) ----------------------------------------
+  // The intro/login logo wrap is still mounted when the gate opens; measure
+  // it, then fly the gate's own logo from that exact rect into the cluster.
+  const clusterRef = useRef<HTMLDivElement | null>(null);
+  const [flightFrom, setFlightFrom] = useState<DOMRect | null>(null);
+  const [flightTo, setFlightTo] = useState<{ x: number; y: number; scale: number } | null>(null);
+  const [flightDone, setFlightDone] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); return; }
+    const el = document.querySelector('.assoc-logo-wrap');
+    const r = el?.getBoundingClientRect();
+    if (r && r.width > 0) {
+      setFlightFrom(r);
+      setFlightTo(null);
+      setFlightDone(false);
+    } else {
+      setFlightFrom(null);
+      setFlightDone(true);
+    }
+  }, [isOpen, handoff, reduce]);
+
+  useEffect(() => {
+    if (!flightFrom || flightTo) return;
+    const id = requestAnimationFrame(() => {
+      const box = clusterRef.current?.getBoundingClientRect();
+      if (!box || box.width === 0) { setFlightDone(true); return; }
+      const tx = box.left + (110 / 220) * box.width;
+      const ty = box.top + (62 / 170) * box.height;
+      const size = 64;
+      setFlightTo({ x: tx - size / 2 - flightFrom.left, y: ty - size / 2 - flightFrom.top, scale: size / flightFrom.width });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [flightFrom, flightTo]);
+
+  const flying = Boolean(handoff && flightFrom && !flightDone);
+  const foldAt = handoff ? FOLD_AT_HANDOFF : FOLD_AT;
+  const nodeDelay = handoff ? '0.85s' : '0.62s';
+  const copyDelay = handoff
+    ? { title: '0.8s', body: '0.9s', hint: '1s', confirm: '1.08s', credit: '1.18s' }
+    : { title: '0.5s', body: '0.62s', hint: '0.72s', confirm: '0.82s', credit: '0.94s' };
   // No early return here on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation. Returning null would kill it instantly.
   return (
@@ -144,19 +202,19 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
             exit={{ y: 60, transition: { duration: 1.2, ease: [0.22, 1, 0.36, 1] } }}
           >
             <motion.div
-              initial={reduce ? false : { opacity: 0, scale: 0.92, y: 24, filter: 'blur(10px)' }}
+              initial={reduce ? false : handoff ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 24, filter: 'blur(10px)' }}
               animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ type: 'spring', stiffness: 170, damping: 22, mass: 0.9 }}
+              transition={handoff ? { duration: 0.3, ease: [0.22, 1, 0.36, 1] } : { type: 'spring', stiffness: 170, damping: 22, mass: 0.9 }}
               className="min-h-full flex flex-col items-center justify-center px-6 py-8 w-full max-w-md mx-auto"
               role="dialog"
               aria-modal="true"
             >
-              <div data-burst><FoldCluster t={t} /></div>
+              <div data-burst><FoldCluster t={t} foldAt={foldAt} nodeDelay={nodeDelay} logoHidden={flying} clusterRef={clusterRef} /></div>
 
               <h3
                 data-burst
                 className="intro-rise text-xl md:text-2xl font-black text-white leading-tight tracking-tight text-center"
-                style={{ animationDelay: '0.5s' }}
+                style={{ animationDelay: copyDelay.title }}
               >
                 {t('disclaimerPopup.title')}
               </h3>
@@ -164,17 +222,17 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               <div
                 data-burst
                 className="intro-rise mt-4 w-full text-start text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap rounded-2xl border border-white/[0.09] bg-white/[0.03] backdrop-blur-sm p-4"
-                style={{ animationDelay: '0.62s' }}
+                style={{ animationDelay: copyDelay.body }}
               >
                 {t('disclaimerPopup.body')}
               </div>
 
-              <p className="intro-rise text-[11px] text-white/35 mt-3 font-medium text-center" style={{ animationDelay: '0.72s' }}>
+              <p className="intro-rise text-[11px] text-white/35 mt-3 font-medium text-center" style={{ animationDelay: copyDelay.hint }}>
                 {t('disclaimerPopup.hint')}
               </p>
 
               {/* confirm: the intro's hairline control, not a banner button */}
-              <div className="intro-rise mt-4" style={{ animationDelay: '0.82s' }} data-burst>
+              <div className="intro-rise mt-4" style={{ animationDelay: copyDelay.confirm }} data-burst>
                 <button
                   onClick={onConfirm}
                   className="group flex items-center gap-2.5 cursor-pointer py-2"
@@ -186,12 +244,36 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
                 </button>
               </div>
 
-              <div className="intro-rise mt-3 flex items-center justify-center gap-1.5" style={{ animationDelay: '0.94s' }}>
+              <div className="intro-rise mt-3 flex items-center justify-center gap-1.5" style={{ animationDelay: copyDelay.credit }}>
                 <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain opacity-70" />
                 <span className="text-[10px] font-bold text-white/30">{t('common.creditBuiltBy')}</span>
               </div>
             </motion.div>
           </motion.div>
+
+          {/* the logo in flight: takes off from the intro/login logo's exact
+              rect and lands in the fold cluster, which then grows the gate. */}
+          {flying && flightFrom && (
+            <motion.img
+              src="/logoref.png"
+              width="770" height="770"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="fixed z-30 object-contain select-none pointer-events-none drop-shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+              style={{
+                left: flightFrom.left,
+                top: flightFrom.top,
+                width: flightFrom.width,
+                height: flightFrom.height,
+                transformOrigin: 'top left',
+              }}
+              initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+              animate={flightTo ? { x: flightTo.x, y: flightTo.y, scale: flightTo.scale } : {}}
+              transition={{ type: 'spring', stiffness: 130, damping: 19, mass: 0.85 }}
+              onAnimationComplete={() => setFlightDone(true)}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>

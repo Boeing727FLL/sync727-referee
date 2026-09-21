@@ -11,10 +11,9 @@
  * success the caller navigates.
  */
 
-import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, Check, CheckCircle2 } from 'lucide-react';
 import { useLoginAuth } from '../auth/useLoginAuth';
 import { exitResetView, showResetView, toggleSignMode } from '../auth/loginFlow';
-import AuthProgressOverlay from '../auth/AuthProgressOverlay';
 import MaintenanceScreen from '../../components/MaintenanceScreen';
 
 const LABEL_CLASS = 'block text-[11px] font-bold text-white/40 mb-1 text-right tracking-wide';
@@ -28,15 +27,21 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
     email, setEmail, password, setPassword, name, setName,
     resetEmail, setResetEmail, showPassword, setShowPassword,
     loading, error, setError, resetSent, setResetSent,
-    authOverlay, authLeaving, welcomeName,
+    welcomeName, inlinePhase,
     gated, handleSecretTap,
     handleSubmit, handleResetPassword,
-  } = useLoginAuth({ onSuccess });
+  } = useLoginAuth({ onSuccess, handoff: 'inline' });
+  // The inline handoff: on success the rows gather upward into the space
+  // (fast staggered fade/blur/rise) while the action row becomes a quiet
+  // welcome beat; the gate then grows out of the logo. One organism, no
+  // intermediate screen.
+  const gathering = inlinePhase === 'gather';
+  const d = (entrance: string, gather: string) => ({ animationDelay: gathering ? gather : entrance });
 
   return (
     <div className="absolute inset-0 z-[10001] pointer-events-none" dir="rtl">
-      <div className="absolute left-1/2 -translate-x-1/2 w-[min(84vw,340px)]" style={{ top: '30.5%' }}>
-        <div className="max-h-[62vh] overflow-y-auto pointer-events-auto">
+      <div className={`login-anchor${gathering ? ' login-gather' : ''}`}>
+        <div className="login-scroll pointer-events-auto">
           {gated ? (
             <div className="login-stage"><MaintenanceScreen onLogoTap={handleSecretTap} /></div>
           ) : showReset ? (
@@ -82,27 +87,27 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
             </>
           ) : (
             <>
-              <h1 className="login-stage text-2xl font-black text-white text-center mb-1.5" style={{ animationDelay: '0.4s' }}>
+              <h1 className="login-stage login-row text-2xl font-black text-white text-center mb-1.5" style={d('0.4s', '0s')}>
                 {isSignUp ? 'יצירת חשבון' : 'התחברות'}
               </h1>
-              <p className="login-stage text-white/45 text-xs text-center mb-7" style={{ animationDelay: '0.5s' }}>
+              <p className="login-stage login-row login-sub text-white/45 text-xs text-center mb-7" style={d('0.5s', '0.03s')}>
                 {isSignUp ? 'צור חשבון כדי להשתמש בשופט הווירטואלי' : 'התחבר עם אימייל וסיסמה'}
               </p>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {isSignUp && (
-                  <div className="login-field login-stage pb-2" style={{ animationDelay: '0.55s' }}>
+                  <div className="login-field login-stage login-row pb-2" style={d('0.55s', '0.06s')}>
                     <label className={LABEL_CLASS}>שם מלא</label>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="השם שלך" className={INPUT_CLASS + ' text-right'} dir="auto" />
                   </div>
                 )}
-                <div className="login-field login-stage pb-2" style={{ animationDelay: '0.62s' }}>
+                <div className="login-field login-stage pb-2 login-row" style={d('0.62s', '0.08s')}>
                   <label className={LABEL_CLASS}>אימייל</label>
                   <div className="relative">
                     <Mail className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
                   </div>
                 </div>
-                <div className="login-field login-stage pb-2" style={{ animationDelay: '0.7s' }}>
+                <div className="login-field login-stage pb-2 login-row" style={d('0.7s', '0.1s')}>
                   <label className={LABEL_CLASS}>סיסמה</label>
                   <div className="relative">
                     <Lock className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -112,32 +117,38 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
                     </button>
                   </div>
                 </div>
-                {error && <div className={FORM_ERROR_CLASS}>{error}</div>}
-                <div className="login-stage pt-3" style={{ animationDelay: '0.8s' }}>
-                  <button type="submit" disabled={loading} className="w-full text-white font-black py-2 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[15px] transition-colors">
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="border-b border-yellow-400/60 hover:border-yellow-300 transition-colors pb-1">{isSignUp ? 'צור חשבון' : 'התחבר'}</span>}
-                  </button>
-                  <div className="flex items-center justify-between mt-4 text-xs font-bold">
-                    <button type="button" onClick={() => { setView(showResetView()); setError(null); }} className="text-white/45 hover:text-white cursor-pointer transition-colors">
-                      שכחתי סיסמה
-                    </button>
-                    <button type="button" onClick={() => { setView(toggleSignMode(view)); setError(null); }} className="text-white/45 hover:text-white cursor-pointer transition-colors">
-                      {isSignUp ? 'כבר יש לי חשבון' : 'צור חשבון חדש'}
-                    </button>
+                {error && <div className={FORM_ERROR_CLASS + ' login-row'}>{error}</div>}
+                {gathering ? (
+                  <div className="login-stage pt-3 flex items-center justify-center gap-2 py-2" style={{ animationDelay: '0s' }}>
+                    <Check className="w-5 h-5 text-[#8fd6c2] stroke-[2.5]" aria-hidden />
+                    <span className="text-white font-black text-[15px]">ברוך הבא{welcomeName ? `, ${welcomeName}` : ''}!</span>
                   </div>
-                </div>
+                ) : (
+                  <div className="login-stage login-row pt-3" style={d('0.8s', '0.12s')}>
+                    <button type="submit" disabled={loading} className="w-full text-white font-black py-2 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[15px] transition-colors">
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="border-b border-yellow-400/60 hover:border-yellow-300 transition-colors pb-1">{isSignUp ? 'צור חשבון' : 'התחבר'}</span>}
+                    </button>
+                    <div className="flex items-center justify-between mt-4 text-xs font-bold">
+                      <button type="button" onClick={() => { setView(showResetView()); setError(null); }} className="text-white/45 hover:text-white cursor-pointer transition-colors">
+                        שכחתי סיסמה
+                      </button>
+                      <button type="button" onClick={() => { setView(toggleSignMode(view)); setError(null); }} className="text-white/45 hover:text-white cursor-pointer transition-colors">
+                        {isSignUp ? 'כבר יש לי חשבון' : 'צור חשבון חדש'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </form>
             </>
           )}
-          <div className="login-stage text-center mt-6" style={{ animationDelay: '0.95s' }}>
-            <button type="button" onClick={onBack} className="text-white/35 hover:text-white/70 text-[11px] font-bold cursor-pointer transition-colors">
-              חזרה
-            </button>
-          </div>
+          {!gathering && (
+            <div className="login-stage login-row login-back text-center mt-6" style={d('0.95s', '0.14s')}>
+              <button type="button" onClick={onBack} className="text-white/35 hover:text-white/70 text-[11px] font-bold cursor-pointer transition-colors">
+                חזרה
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-      <div className="pointer-events-auto">
-        <AuthProgressOverlay stage={authOverlay} leaving={authLeaving} welcomeName={welcomeName} />
       </div>
     </div>
   );

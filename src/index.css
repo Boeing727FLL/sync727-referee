@@ -262,9 +262,12 @@
   stroke-dashoffset: 1;
   animation: assoc-draw 1s both cubic-bezier(0.4, 0, 0.2, 1);
 }
-.assoc-node { animation: assoc-pop 0.45s both cubic-bezier(0.34, 1.56, 0.64, 1); }
-.assoc-card { animation: assoc-card-in 0.7s both cubic-bezier(0.22, 1, 0.36, 1); }
-.assoc-card-top { animation-name: assoc-card-top-in; }
+/* Base transforms mirror each entrance keyframe's final frame, so the
+   animation:none states (login fold, settled return) hold the exact settled
+   geometry instead of dropping to the un-centered anchor point. */
+.assoc-node { animation: assoc-pop 0.45s both cubic-bezier(0.34, 1.56, 0.64, 1); transform: translate(-50%, -50%); }
+.assoc-card { animation: assoc-card-in 0.7s both cubic-bezier(0.22, 1, 0.36, 1); transform: translate(-50%, -50%); }
+.assoc-card-top { animation-name: assoc-card-top-in; transform: translate(-50%, 0); }
 .intro-drift-a { animation: intro-drift-a-kf 38s ease-in-out infinite; }
 .intro-drift-b { animation: intro-drift-b-kf 46s ease-in-out infinite; }
 .intro-drift-c { animation: intro-drift-c-kf 52s ease-in-out infinite; }
@@ -283,22 +286,36 @@
   transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
-.intro-screen[data-mode="login"] .assoc-halo-svg {
+.intro-screen[data-mode="login"] .assoc-halo-svg,
+.intro-screen[data-mode="disclaimer"] .assoc-halo-svg {
   opacity: 0;
 }
 /* animation: none first: the fill-mode entrance animations would otherwise
    keep overriding opacity and pin the cards/nodes visible. */
 .intro-screen[data-mode="login"] .assoc-card,
-.intro-screen[data-mode="login"] .assoc-node {
+.intro-screen[data-mode="login"] .assoc-node,
+.intro-screen[data-mode="disclaimer"] .assoc-card,
+.intro-screen[data-mode="disclaimer"] .assoc-node {
   animation: none;
   opacity: 0;
 }
-.intro-screen[data-mode="login"] .intro-copy {
+.intro-screen[data-mode="login"] .intro-copy,
+.intro-screen[data-mode="disclaimer"] .intro-copy {
   opacity: 0;
   transform: translateY(12px);
   pointer-events: none;
 }
 .intro-screen[data-mode="login"] .assoc-logo-wrap {
+  transform: translate(-50%, -50%) translateY(-17vh) scale(0.58) !important;
+}
+/* Disclaimer stage: the gate's own logo flies in from the wrap's exact last
+   position (see MandatoryDisclaimerModal), so the wrap yields with a fast
+   fade and never moves - the transform is frozen at the stage it came from. */
+.intro-screen[data-mode="disclaimer"] .assoc-logo-wrap {
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.intro-screen[data-mode="disclaimer"][data-from="login"] .assoc-logo-wrap {
   transform: translate(-50%, -50%) translateY(-17vh) scale(0.58) !important;
 }
 
@@ -383,4 +400,47 @@
   0%   { opacity: 0; transform: scale(0.92); }
   35%  { opacity: 1; }
   100% { opacity: 0; transform: scale(1.06); }
+}
+
+
+/* ===== Inline login stage container ======================================= */
+/* Positioned under the folded logo; scrolls only as a last resort on tiny
+   screens, and then with no visible scrollbar (the old native track read as
+   a bug, not a control). */
+.login-anchor {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 30.5%;
+  width: min(84vw, 340px);
+}
+.login-scroll {
+  overflow-y: auto;
+  max-height: calc(100vh - 30.5% - 20px);
+  scrollbar-width: none;
+}
+.login-scroll::-webkit-scrollbar { display: none; }
+/* Short viewports: lift the form under the logo and tighten the rhythm so
+   the whole flow fits without scrolling. */
+@media (max-height: 780px) {
+  .login-anchor { top: 25%; }
+  .login-scroll { max-height: calc(100vh - 25% - 16px); }
+  .login-scroll .login-sub { margin-bottom: 1.1rem !important; }
+  .login-scroll form > * + * { margin-top: 1rem !important; }
+  .login-scroll .login-back { margin-top: 1rem !important; }
+}
+@media (max-height: 600px) {
+  .login-anchor { top: 14px; }
+  .login-scroll { max-height: calc(100vh - 28px); }
+}
+
+/* Successful inline handoff: the form's rows gather upward into the space
+   (fast, staggered) while the action row becomes the welcome beat. The gate
+   then builds itself out of the flying logo - one continuous organism, no
+   intermediate screen. */
+@keyframes login-gather-out {
+  to { opacity: 0; transform: translateY(-18px) scale(0.98); filter: blur(6px); }
+}
+.login-gather .login-row {
+  animation: login-gather-out 0.38s both cubic-bezier(0.22, 1, 0.36, 1);
 }

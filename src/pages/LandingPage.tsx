@@ -97,7 +97,7 @@ function LandingContent() {
       {(stage === 'intro' || stage === 'login' || stage === 'disclaimer') && (
         <IntroScreen
           isLoggedIn={signedIn}
-          mode={stage === 'intro' ? 'intro' : 'login'}
+          mode={stage === 'intro' ? 'intro' : stage === 'login' ? 'login' : 'disclaimer'}
           onContinue={() => (signedIn ? beginEntry() : setStage('login'))}
           onWarm={() => void (signedIn ? refereeImport() : loginStageImport())}
           t={t}
@@ -120,7 +120,7 @@ function LandingContent() {
             </Suspense>
           </div>
           <Suspense fallback={null}>
-            <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={confirmDisclaimer} />
+            <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={confirmDisclaimer} handoff />
           </Suspense>
           {stage === 'entering' && <div className="enter-bloom" aria-hidden />}
           {entryBurst && <ParticleBurst seeds={burstSeeds} onDone={() => setEntryBurst(false)} />}

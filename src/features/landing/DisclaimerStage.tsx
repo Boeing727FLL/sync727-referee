@@ -12,7 +12,7 @@
 import MandatoryDisclaimerModal from '../../components/MandatoryDisclaimerModal';
 import { useLanguage } from '../../hooks/useLanguage';
 
-export default function DisclaimerStage({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) {
+export default function DisclaimerStage({ isOpen, onConfirm, handoff = false }: { isOpen: boolean; onConfirm: () => void; handoff?: boolean }) {
   const { t } = useLanguage();
-  return <MandatoryDisclaimerModal isOpen={isOpen} onConfirm={onConfirm} t={t} />;
+  return <MandatoryDisclaimerModal isOpen={isOpen} onConfirm={onConfirm} t={t} handoff={handoff} />;
 }
