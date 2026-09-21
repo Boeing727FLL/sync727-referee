@@ -205,10 +205,13 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   useEffect(() => {
-    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setCut(false); setLandedDone(false); setGlowDone(false); return; }
+    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setCut(false); setLandedDone(false); setGlowDone(false); delete document.documentElement.dataset.flyer; return; }
     const el = document.querySelector('.assoc-logo-wrap');
     const r = el?.getBoundingClientRect();
     if (r && r.width > 0) {
+      // The source wrap yields ONLY now: before the flyer owns the logo's
+      // rect the wrap stays fully opaque, so the logo never dips.
+      document.documentElement.dataset.flyer = 'on';
       setFlightFrom(r);
       setFlightTo(null);
       setFlightDone(false);
@@ -258,6 +261,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
   // No early return here on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation. Returning null would kill it instantly.
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -336,14 +340,19 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
               </div>
             </motion.div>
           </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
 
-          {/* the logo in flight: the slice lines cut it apart while it is
-              still large, the pieces travel and shrink together, and the same
-              edges reassemble it at the cluster - then the gate grows. */}
-          {flying && flightFrom && (
-            <motion.div
-              className="fixed z-30 pointer-events-none"
-              style={{
+    {/* the logo in flight: the slice lines cut it apart while it is still
+        large, the pieces travel and shrink together, and the same edges
+        reassemble it at the cluster - then the gate grows. Rendered OUTSIDE
+        the gate's fade (and above it) so the logo is fully visible from the
+        very first frame - it never vanishes between the form and the gate. */}
+    {isOpen && flying && flightFrom && (
+      <motion.div
+        className="fixed z-[10002] pointer-events-none"
+        style={{
                 left: flightFrom.left,
                 top: flightFrom.top,
                 width: flightFrom.width,
@@ -384,10 +393,8 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
                   />
                 ))}
               </motion.div>
-            </motion.div>
-          )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    )}
+  </>
   );
 }

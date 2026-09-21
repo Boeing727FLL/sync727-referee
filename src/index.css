@@ -312,8 +312,13 @@
    position (see MandatoryDisclaimerModal), so the wrap yields with a fast
    fade and never moves - the transform is frozen at the stage it came from. */
 .intro-screen[data-mode="disclaimer"] .assoc-logo-wrap {
+  transition: opacity 0.3s ease;
+}
+/* The wrap yields only once the gate's flyer actually owns the logo's rect
+   (data-flyer is set in the same effect that measures it) - the logo never
+   dips or blanks between the stages, whatever the mount latency. */
+[data-flyer="on"] .intro-screen[data-mode="disclaimer"] .assoc-logo-wrap {
   opacity: 0;
-  transition: opacity 0.32s ease;
 }
 .intro-screen[data-mode="disclaimer"][data-from="login"] .assoc-logo-wrap {
   transform: translate(-50%, -50%) translateY(-17vh) scale(0.58) !important;
@@ -362,7 +367,9 @@
 .login-field:focus-within::after { background: rgba(159, 216, 198, 0.6); }
 
 /* Login stage folding away behind the arriving disclaimer. */
-.login-stage-out { opacity: 0; transition: opacity 0.35s ease; }
+/* The login stage only fades once the gate's backdrop is already opaque
+   (0.35s cover + margin) - the form never visibly folds or collapses. */
+.login-stage-out { opacity: 0; pointer-events: none; transition: opacity 0.35s ease 0.25s; }
 
 /* Chat stage: the referee app mounts hidden behind the disclaimer and is
    revealed by the entrance choreography — an iOS-style de-blur and settle
@@ -526,4 +533,8 @@
 .flyer-slice {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(0 0 6px rgba(143, 214, 194, 0.45));
+  /* promote once at mount: the cut transition and the flight then composite
+     without a mid-flight re-raster of the clip+shadow (which could blink on
+     software rendering). */
+  will-change: transform;
 }

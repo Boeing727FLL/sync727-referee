@@ -98,12 +98,17 @@ function LandingContent() {
         <IntroScreen
           isLoggedIn={signedIn}
           mode={stage === 'intro' ? 'intro' : stage === 'login' ? 'login' : 'disclaimer'}
-          onContinue={() => (signedIn ? beginEntry() : setStage('login'))}
+          onContinue={() => {
+            if (signedIn) { beginEntry(); return; }
+            void loginStageImport();
+            void disclaimerStageImport();
+            setStage('login');
+          }}
           onWarm={() => void (signedIn ? refereeImport() : loginStageImport())}
           t={t}
         />
       )}
-      {!signedIn && (stage === 'login' || stage === 'disclaimer') && (
+      {(stage === 'login' || stage === 'disclaimer') && (
         <div className={stage === 'login' ? undefined : 'login-stage-out'}>
           <Suspense fallback={null}>
             <LoginStage onBack={() => setStage('intro')} onSuccess={beginEntry} />
