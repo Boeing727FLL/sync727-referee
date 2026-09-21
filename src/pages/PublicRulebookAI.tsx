@@ -1283,7 +1283,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop /></motion.div>
+      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop tint={seasonIdentity?.via} /></motion.div>
 
       {/* Header - Liquid Glass bar */}
       <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="mx-2.5 mt-2.5 md:mx-4 md:mt-3.5 rounded-[16px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_16px_44px_rgba(0,0,0,0.45)] z-30 shrink-0 relative">

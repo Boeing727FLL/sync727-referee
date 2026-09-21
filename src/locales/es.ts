@@ -10,7 +10,7 @@ const es: TranslationMap = {
     'chat.quotaRemaining': 'Quedan {remaining} de {limit} preguntas cada 24 horas',
     'chat.quotaExhausted': 'Has alcanzado el límite de {limit} preguntas en 24 horas. Inténtalo de nuevo después de las {time}.',
     'chat.quotaUnavailable': 'No se puede verificar el límite de preguntas ahora. Inténtalo de nuevo en breve.',
-        'chat.heroDesc': "Pregunta sobre cualquier regla, misión o decisión y obtén un fallo claro en segundos.",
+        'chat.heroDesc': "Cualquier regla, en cualquier momento, desde donde sea - solo pregunta.",
     'chat.suggestion1': '¿Hay que hacer las misiones en orden?',
     'chat.suggestion2': '¿Qué pasa si tocas el robot fuera de casa?',
     'chat.suggestion3': '¿Cuántos motores se permiten en el robot?',
