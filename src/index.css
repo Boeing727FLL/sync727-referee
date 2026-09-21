@@ -190,6 +190,7 @@
   *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
+    animation-delay: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
@@ -299,6 +300,18 @@
 }
 .intro-screen[data-mode="login"] .assoc-logo-wrap {
   transform: translate(-50%, -50%) translateY(-17vh) scale(0.58) !important;
+}
+
+/* Back from the login fold: the reveal already played once this visit, so
+   the logo, cards, nodes and copy land in their settled state - only the
+   quick fold transitions run, never the staged entrance again. */
+.intro-screen[data-settled] .assoc-card,
+.intro-screen[data-settled] .assoc-node,
+.intro-screen[data-settled] .intro-rise {
+  animation: none;
+}
+.intro-screen[data-settled] .assoc-logo {
+  animation: assoc-float 7s ease-in-out infinite;
 }
 
 /* ===== Inline login stage =============================================== */

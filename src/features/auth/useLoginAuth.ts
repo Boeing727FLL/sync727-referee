@@ -19,8 +19,8 @@ import { initialLoginView, isResetView, isSignUpView, type LoginView } from './l
 
 /** Staged timings of the post-login departure (tuned as one choreography). */
 const VERIFY_DELAY_MS = 650;
-const SUCCESS_HOLD_MS = 1600;
-const NAVIGATE_AFTER_LEAVE_MS = 1150;
+const SUCCESS_HOLD_MS = 1050;
+const NAVIGATE_AFTER_LEAVE_MS = 520;
 
 /** Firebase Auth error code -> Hebrew message (single source of truth). */
 const FIREBASE_AUTH_MESSAGES: Record<string, string> = {
@@ -188,8 +188,9 @@ export function useLoginAuth({ onSuccess }: { onSuccess: () => void }) {
 
   /**
    * Submit handler: freeze credentials, show the verifying overlay, then run
-   * auth after a beat so the animation reads. On success the golden veil
-   * plays and navigation happens INSIDE peak brightness (invisible swap).
+   * auth after a beat so the animation reads. On success the content plays a
+   * dark dissolve and navigation happens while the stage is still opaque
+   * (invisible swap); the disclaimer springs in as the next beat.
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

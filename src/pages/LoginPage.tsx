@@ -4,8 +4,8 @@
  * FLOW (top to bottom):
  *   1. Form        — login / signup / password-reset, one card, animated swaps
  *   2. Verify      — "מתחבר..." overlay while Firebase answers
- *   3. Celebrate   — golden veil departure that navigates INSIDE the flash,
- *                    so the route swap to /?enter=chat is invisible
+ *   3. Celebrate   — dark dissolve departure that navigates while the stage
+ *                    is still opaque, so the route swap is invisible
  *   4. Gate        — during maintenance mode non-owners see MaintenanceScreen
  *                    (5 rapid logo taps reveal the form as an owner bypass)
  *

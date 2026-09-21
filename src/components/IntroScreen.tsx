@@ -190,6 +190,13 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
   const lineRefs = useRef<(SVGPathElement | null)[]>([]);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  // The staged reveal plays once per visit: after the login fold, coming
+  // back lands the logo, halo, cards and copy directly in their settled
+  // state (CSS data-settled rules), never a second reveal.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (mode === 'login') setSettled(true);
+  }, [mode]);
 
   const logoPx = stageSize.w >= 768 ? 196 : 144;
   const halo = stageSize.w > 0 ? haloOf(stageSize.w, stageSize.h, logoPx) : null;
@@ -237,6 +244,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
       className="intro-screen fixed inset-0 z-[9999] flex flex-col overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
       data-mode={mode}
+      data-settled={settled ? '' : undefined}
     >
       <SpatialBackdrop />
       <BrandMark />

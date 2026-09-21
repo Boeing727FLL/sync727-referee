@@ -252,8 +252,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   const showIntro = entryShowIntro(entry);
   const chatStarted = entryChatStarted(entry);
   const showDisclaimer = entryShowDisclaimer(entry);
-  // Golden reveal flash: completes the divine login transition. Fades out
-  // over the freshly mounted chat while the disclaimer descends above it.
+  // Dark settle veil: completes the login transition. Fades out over the
+  // freshly mounted chat while the disclaimer descends above it - no flash.
   const [enterFlash, setEnterFlash] = useState<boolean>(() => entryStart === 'chat' ? false : autoEnter);
   useEffect(() => {
     if (!enterFlash) return;
@@ -1474,13 +1474,14 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         </div>
       </motion.div>
 
-      {/* Golden reveal flash after login transition */}
+      {/* Dark settle veil after the login transition: the chat materializes
+          out of the same deep navy the login dissolved into - no flash. */}
       {enterFlash && (
         <motion.div
-          initial={{ opacity: 0.45 }}
+          initial={{ opacity: 0.55 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-none fixed inset-0 z-[9000] bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.8)_0%,rgba(250,204,21,0.4)_50%,rgba(250,204,21,0.1)_78%,transparent_100%)]"
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none fixed inset-0 z-[9000] bg-[#020408]"
           aria-hidden
         />
       )}
