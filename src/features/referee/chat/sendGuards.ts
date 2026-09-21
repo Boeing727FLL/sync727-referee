@@ -17,7 +17,7 @@ export interface GuardInput {
   /** Number of active rulebook sources loaded for this request. */
   rulebookCount: number;
   /** Fast browser anti-spam check result. */
-  clientLimit: { allowed: boolean; message?: string };
+  clientLimit: { allowed: boolean; reason?: 'cooldown' | 'hourly' };
   /** Server daily-quota outcome (null = consumed or user has no uid). */
   quotaError: { exhausted: boolean; resetAtMs?: number | null } | null;
 }
@@ -25,6 +25,8 @@ export interface GuardInput {
 export interface GuardCopy {
   rulebookLoadFailed: string;
   noRulebook: string;
+  cooldown: string;
+  hourlyLimit: string;
   genericRateLimited: string;
   quotaExhausted: string;
   quotaUnavailable: string;
@@ -33,7 +35,14 @@ export interface GuardCopy {
 export function decideSendPreflight(input: GuardInput, copy: GuardCopy): GuardDecision {
   if (input.rulebookCount === 0) return { kind: 'reject', notice: copy.noRulebook };
   if (!input.clientLimit.allowed) {
-    return { kind: 'reject', notice: input.clientLimit.message || copy.genericRateLimited };
+    return {
+      kind: 'reject',
+      notice: input.clientLimit.reason === 'cooldown'
+        ? copy.cooldown
+        : input.clientLimit.reason === 'hourly'
+          ? copy.hourlyLimit
+          : copy.genericRateLimited,
+    };
   }
   if (input.quotaError) {
     return {

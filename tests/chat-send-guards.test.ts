@@ -5,6 +5,8 @@ import { decideSendPreflight, type GuardCopy } from '../src/features/referee/cha
 const copy: GuardCopy = {
   rulebookLoadFailed: 'LOAD_FAILED',
   noRulebook: 'NO_RULEBOOK',
+  cooldown: 'COOLDOWN',
+  hourlyLimit: 'HOURLY',
   genericRateLimited: 'RATE_LIMITED',
   quotaExhausted: 'QUOTA_EXHAUSTED',
   quotaUnavailable: 'QUOTA_UNAVAILABLE',
@@ -21,10 +23,13 @@ test('no rulebook rejects before any rate check (never answer blind)', () => {
   assert.deepEqual(d, { kind: 'reject', notice: 'NO_RULEBOOK' });
 });
 
-test('client rate limit rejects with its own message, or the generic one', () => {
+test('client rate limit rejects with the reason-matched notice, or the generic one', () => {
   assert.deepEqual(
-    decideSendPreflight({ ...ok, clientLimit: { allowed: false, message: 'WAIT' } }, copy),
-    { kind: 'reject', notice: 'WAIT' });
+    decideSendPreflight({ ...ok, clientLimit: { allowed: false, reason: 'cooldown' } }, copy),
+    { kind: 'reject', notice: 'COOLDOWN' });
+  assert.deepEqual(
+    decideSendPreflight({ ...ok, clientLimit: { allowed: false, reason: 'hourly' } }, copy),
+    { kind: 'reject', notice: 'HOURLY' });
   assert.deepEqual(
     decideSendPreflight({ ...ok, clientLimit: { allowed: false } }, copy),
     { kind: 'reject', notice: 'RATE_LIMITED' });

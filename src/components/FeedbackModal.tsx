@@ -22,45 +22,6 @@ import { useLanguage } from '../hooks/useLanguage';
 /** How long the thank-you state shows before the modal hands back control. */
 const THANKS_DELAY_MS = 1500;
 
-type FeedbackLabels = {
-  title: string;
-  subtitle: string;
-  hint: string;
-  improvementsTitle: string;
-  improvementsHint: string;
-  improvementsPlaceholder: string;
-  submit: string;
-  later: string;
-  thanks: string;
-  error: string;
-};
-
-const LABELS: Record<string, FeedbackLabels> = {
-  he: {
-    title: 'מה דעתך על השופט הווירטואלי?',
-    subtitle: 'הדירוג שלך עוזר לנו לשפר את השופט',
-    hint: 'תן ציון',
-    improvementsTitle: 'שיפורים שהייתם רוצים לראות?',
-    improvementsHint: 'לא כל שיפור ייכנס - ההחלטה על שיפורים היא על שיקול דעת הקבוצה',
-    improvementsPlaceholder: 'למשל: תשובות מהירות יותר, הסבר מפורט יותר...',
-    submit: 'שליחה',
-    later: 'בפעם אחרת',
-    thanks: 'תודה על הפידבק!',
-    error: 'שליחת הפידבק נכשלה. בדוק חיבור ונסה שוב.',
-  },
-  en: {
-    title: 'How was the Virtual Referee?',
-    subtitle: 'Your rating helps us improve the referee',
-    hint: 'Rate your experience',
-    improvementsTitle: 'Improvements you would like to see?',
-    improvementsHint: 'Not every improvement will be added - decisions are at the team\'s discretion',
-    improvementsPlaceholder: 'e.g. faster answers, more detailed explanations...',
-    submit: 'Send',
-    later: 'Not now',
-    thanks: 'Thanks for your feedback!',
-    error: 'Sending the feedback failed. Check your connection and try again.',
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,8 +75,19 @@ function StarsInput({ rating, hovered, onRate, onHover }: {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }: FeedbackModalProps) {
-  const { language, isRTL } = useLanguage();
-  const labels = LABELS[language] || LABELS.he;
+  const { t, language, isRTL } = useLanguage();
+  const labels = {
+    title: t('feedback.title'),
+    subtitle: t('feedback.subtitle'),
+    hint: t('feedback.ratingHint'),
+    improvementsTitle: t('feedback.improvementsTitle'),
+    improvementsHint: t('feedback.improvementsHint'),
+    improvementsPlaceholder: t('feedback.improvementsPlaceholder'),
+    submit: t('feedback.submit'),
+    later: t('feedback.later'),
+    thanks: t('feedback.thanks'),
+    error: t('feedback.error'),
+  };
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [improvements, setImprovements] = useState('');
@@ -215,7 +187,7 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
                     </div>
                     <button
                       onClick={handleClose}
-                      aria-label="סגור"
+                      aria-label={t('common.close')}
                       className="p-2 rounded-full bg-white/[0.05] text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer"
                     >
                       <X className="w-4 h-4" />

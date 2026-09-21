@@ -1,3 +1,5 @@
+import { translateFor } from '../../../locales/index.ts';
+
 export type RulebookSource = { name: string; url: string };
 
 export type CompletenessDeps = {
@@ -23,7 +25,12 @@ export class RulebookIncompleteError extends Error {
   }
 }
 
-export const RULEBOOK_INCOMPLETE_MESSAGE = 'חוברת החוקים הפעילה אינה שלמה כרגע, ולכן אני לא עונה כדי לא להסתמך על חוקים חלקיים. מנהל המערכת צריך לבדוק את קובצי החוברת והעמודים המעובדים.';
+/** User-facing incomplete-rulebook notice, in the asking language. */
+export const rulebookIncompleteMessage = (language: string): string =>
+  translateFor(language, 'chat.rulebookIncomplete');
+
+/** Hebrew original, kept for call sites that predate localization. */
+export const RULEBOOK_INCOMPLETE_MESSAGE = rulebookIncompleteMessage('he');
 
 export function expectedPageNumbers(total: number): number[] {
   return Array.from({ length: total }, (_, index) => index + 1);

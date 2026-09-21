@@ -28,7 +28,7 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
       <div className="relative mb-5">
         <div className="absolute inset-0 -m-2 rounded-full bg-[#FFC400]/[0.07] blur-xl" aria-hidden />
         <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[24px] bg-white ring-1 ring-white/30 overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
-          <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
+          <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
         </div>
       </div>
       <p className="text-[10px] md:text-[11px] font-black tracking-[0.45em] text-[#7FB8EC]" dir="ltr">

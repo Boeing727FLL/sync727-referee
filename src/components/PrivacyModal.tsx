@@ -12,6 +12,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, X, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 // ---------------------------------------------------------------------------
 // Shared policy copy (single source for the modal AND the /privacy route)
@@ -56,6 +57,7 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function PrivacyModal({ isOpen, onClose }: Props) {
+  const { t } = useLanguage();
   // No early return here on purpose: AnimatePresence needs the tree mounted
   // to play the 2s divine exit animation. Returning null would kill it instantly.
   return (
@@ -91,7 +93,7 @@ export default function PrivacyModal({ isOpen, onClose }: Props) {
             <div className="p-6 md:p-7 relative">
               <button
                 onClick={onClose}
-                aria-label="סגור"
+                aria-label={t('common.close')}
                 className="absolute top-4 left-4 p-2 rounded-full bg-white/[0.06] text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -103,9 +105,9 @@ export default function PrivacyModal({ isOpen, onClose }: Props) {
                     <ShieldCheck className="w-5 h-5 text-blue-300" />
                   </div>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">מדיניות פרטיות</h3>
+                <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">{t('privacy.title')}</h3>
               </div>
-              <div className="text-slate-200 text-right">
+              <div className="text-slate-200 text-start">
                 <PrivacyContent />
               </div>
               <button
@@ -113,11 +115,11 @@ export default function PrivacyModal({ isOpen, onClose }: Props) {
                 className="mt-6 w-full flex items-center justify-center gap-2 bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-slate-950 font-black py-3.5 md:py-4 px-6 rounded-2xl transition-all shadow-[0_8px_20px_rgba(250,204,21,0.25)] hover:shadow-[0_12px_28px_rgba(250,204,21,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer text-base"
               >
                 <ArrowRight className="w-4 h-4" />
-                חזרה לצ׳אט
+                {t('privacy.backToChat')}
               </button>
               <div className="mt-3 flex items-center justify-center gap-1.5">
                 <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain opacity-70" />
-                <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+                <span className="text-[10px] font-bold text-slate-500">{t('common.creditBuiltBy')}</span>
               </div>
             </div>
           </motion.div>

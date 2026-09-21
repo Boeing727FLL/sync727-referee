@@ -69,11 +69,11 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               <h3 className="text-xl md:text-2xl font-black text-white mb-3 leading-tight tracking-tight">
                 {t('disclaimerPopup.title')}
               </h3>
-              <div className="text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap text-right bg-slate-950/40 rounded-2xl p-4 border border-white/10">
+              <div className="text-sm md:text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap text-start bg-slate-950/40 rounded-2xl p-4 border border-white/10">
                 {t('disclaimerPopup.body')}
               </div>
               <p className="text-[11px] text-slate-400 mt-3 font-medium">
-                יש לאשר כדי להמשיך
+                {t('disclaimerPopup.hint')}
               </p>
               <button
                 onClick={onConfirm}
@@ -83,7 +83,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t }: Props
               </button>
               <div className="mt-3 flex items-center justify-center gap-1.5">
                 <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain opacity-70" />
-                <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+                <span className="text-[10px] font-bold text-slate-500">{t('common.creditBuiltBy')}</span>
               </div>
             </div>
           </motion.div>

@@ -150,6 +150,7 @@ function BrandBar() {
 
 /** The referee emblem in a quiet gold frame: one gentle fade-in. */
 function HeroLogo() {
+  const { t } = useLanguage();
   return (
     <div
       style={enterStyle('logo', 0.55)}
@@ -163,7 +164,7 @@ function HeroLogo() {
           <img
             src="/referee-logo.webp"
             width="256" height="256"
-            alt="שופט וירטואלי"
+            alt={t('app.title')}
             className="w-[84%] h-[84%] object-contain select-none relative z-10"
             draggable={false}
           />
@@ -300,7 +301,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: Intro
               {t('intro.notOfficial')}
               {' · '}
               <a href="/privacy" className="underline hover:text-white/70 transition-colors">
-                פרטיות
+                {t('common.privacy')}
               </a>
             </p>
           </div>

@@ -8,6 +8,7 @@
  */
 
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { translateFor } from '../locales/index.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,15 +43,21 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      // The boundary wraps the language provider, so context is unavailable
+      // here; read the persisted choice straight from storage.
+      let lang = 'he';
+      try { lang = localStorage.getItem('app_language') || 'he'; } catch {}
+      const tt = (key: string) => translateFor(lang, key);
+      const rtl = lang === 'he' || lang === 'ar';
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-4" dir="rtl">
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-4" dir={rtl ? 'rtl' : 'ltr'}>
           <div className="max-w-md w-full bg-slate-900/90 backdrop-blur-2xl p-6 md:p-8 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-red-500/20 text-center">
             <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/12 border border-red-500/25 flex items-center justify-center text-2xl font-black text-red-400" aria-hidden>
               !
             </div>
-            <h2 className="text-xl font-black tracking-tight">משהו השתבש</h2>
+            <h2 className="text-xl font-black tracking-tight">{tt('errorBoundary.title')}</h2>
             <p className="text-slate-400 text-sm leading-relaxed mt-2 mb-4">
-              אירעה שגיאה בטעינת האפליקציה. אנא נסה לרענן את העמוד.
+              {tt('errorBoundary.body')}
             </p>
             <div className="bg-slate-950/70 border border-white/[0.07] p-4 rounded-2xl overflow-auto max-h-40 mb-5 text-xs font-mono text-red-300/80 text-left" dir="ltr">
               {this.state.error?.message}
@@ -59,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={() => window.location.reload()}
               className="w-full bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white font-black py-3.5 px-6 rounded-2xl transition-all active:scale-[0.98] cursor-pointer shadow-[0_8px_24px_rgba(239,68,68,0.3)]"
             >
-              רענן עמוד
+              {tt('errorBoundary.reload')}
             </button>
           </div>
         </div>

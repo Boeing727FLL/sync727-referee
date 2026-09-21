@@ -1,20 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { TranslationMap } from '../locales/types';
-import he from '../locales/he';
-import en from '../locales/en';
-import ar from '../locales/ar';
-import es from '../locales/es';
-import fr from '../locales/fr';
-import de from '../locales/de';
-import ru from '../locales/ru';
-import pt from '../locales/pt';
-import it from '../locales/it';
-import zh from '../locales/zh';
-import ja from '../locales/ja';
-import ko from '../locales/ko';
+import { translations, type LanguageCode } from '../locales/index.ts';
 
-
-export type LanguageCode = 'he' | 'en' | 'ar' | 'es' | 'fr' | 'de' | 'ru' | 'pt' | 'it' | 'zh' | 'ja' | 'ko';
+export type { LanguageCode };
 
 interface Language {
   code: LanguageCode;
@@ -36,11 +23,6 @@ const languages: Language[] = [
   { code: 'ja', native: '日本語', english: 'Japanese' },
   { code: 'ko', native: '한국어', english: 'Korean' },
 ];
-
-type TranslationsDict = Record<LanguageCode, TranslationMap>;
-
-
-const translations: TranslationsDict = { he, en, ar, es, fr, de, ru, pt, it, zh, ja, ko };
 
 const rtlLanguages: LanguageCode[] = ['he', 'ar'];
 

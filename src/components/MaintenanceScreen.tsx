@@ -15,6 +15,7 @@
  */
 
 import { motion } from 'framer-motion';
+import { useLanguage } from '../hooks/useLanguage';
 import { Wrench, Clock, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -24,26 +25,14 @@ import type { LucideIcon } from 'lucide-react';
 
 type InfoCardData = {
   icon: LucideIcon;
-  title: string;
-  text: string;
+  titleKey: string;
+  textKey: string;
 };
 
 const CARDS: InfoCardData[] = [
-  {
-    icon: Wrench,
-    title: 'מה קורה',
-    text: 'קבוצת Boeing 727 משפרת את השופט ממש עכשיו, לכן האפליקציה סגורה זמנית.',
-  },
-  {
-    icon: Clock,
-    title: 'מה עושים',
-    text: 'שום דבר. ברגע שהעבודות מסתיימות המסך הזה נעלם לבד והאפליקציה נפתחת.',
-  },
-  {
-    icon: Sparkles,
-    title: 'מה מחכה',
-    text: 'גרסה טובה ומדויקת יותר ברגע שהעבודות מסתיימות.',
-  },
+  { icon: Wrench, titleKey: 'maintenance.title', textKey: 'maintenance.body' },
+  { icon: Clock, titleKey: 'maintenance.whatToDo', textKey: 'maintenance.whatToDoBody' },
+  { icon: Sparkles, titleKey: 'maintenance.whatWaits', textKey: 'maintenance.whatWaitsBody' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -82,6 +71,7 @@ function Backdrop() {
 
 /** Glowing referee medallion with orbiting ring + wrench badge. */
 function LogoMark({ onLogoTap }: { onLogoTap?: () => void }) {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ scale: 0.85, opacity: 0, y: 12 }}
@@ -98,7 +88,7 @@ function LogoMark({ onLogoTap }: { onLogoTap?: () => void }) {
       />
       <div className="absolute -inset-1.5 rounded-full border border-yellow-400/25 pointer-events-none" aria-hidden />
       <div className="relative w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_44px_rgba(250,204,21,0.4)] overflow-hidden flex items-center justify-center">
-        <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain" />
+        <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain" />
       </div>
       <div className="absolute -bottom-1 -left-1 w-10 h-10 rounded-full bg-gradient-to-b from-yellow-300 to-yellow-500 flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.5)] border-2 border-slate-950">
         <Wrench className="w-4 h-4 text-slate-950" />
@@ -108,7 +98,7 @@ function LogoMark({ onLogoTap }: { onLogoTap?: () => void }) {
 }
 
 /** One glass explainer card (what / what-to-do / what's next). */
-function InfoCard({ card, index }: { card: InfoCardData; index: number }) {
+function InfoCard({ card, index }: { card: { icon: LucideIcon; title: string; text: string }; index: number }) {
   const Icon = card.icon;
   return (
     <motion.div
@@ -150,13 +140,14 @@ function TypingDots() {
 // ---------------------------------------------------------------------------
 
 export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => void }) {
+  const { t, isRTL } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
       className="fixed inset-0 z-[11000] bg-slate-950 flex flex-col overflow-y-auto"
-      dir="rtl"
+      dir={isRTL ? 'rtl' : 'ltr'}
       role="status"
     >
       {/* Referee ribbon */}
@@ -175,10 +166,10 @@ export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => voi
           >
             <span className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-4 py-1.5 text-[11px] md:text-xs font-bold text-yellow-300">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden />
-              עבודות תחזוקה
+              {t('maintenance.badge')}
             </span>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-4 text-white">
-              אנחנו בעבודות
+              {t('maintenance.heading')}
             </h1>
             <div className="flex items-center justify-center gap-3 mt-4" aria-hidden>
               <div className="h-[1px] w-10 bg-gradient-to-r from-transparent to-white/20" />
@@ -186,7 +177,7 @@ export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => voi
               <div className="h-[1px] w-10 bg-gradient-to-l from-transparent to-white/20" />
             </div>
             <p className="text-sm md:text-base text-slate-400 font-medium mt-4 leading-relaxed">
-              השופט הווירטואלי עובר שדרוג כרגע. סליחה על ההפרעה, חוזרים ממש בקרוב.
+              {t('maintenance.subtitle')}
             </p>
           </motion.div>
 
@@ -194,10 +185,10 @@ export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => voi
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 md:gap-3 mt-6 md:mt-8 w-full text-right"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 md:gap-3 mt-6 md:mt-8 w-full text-start"
           >
             {CARDS.map((c, i) => (
-              <InfoCard key={c.title} card={c} index={i} />
+              <InfoCard key={c.titleKey} card={{ icon: c.icon, title: t(c.titleKey), text: t(c.textKey) }} index={i} />
             ))}
           </motion.div>
 
@@ -205,7 +196,7 @@ export default function MaintenanceScreen({ onLogoTap }: { onLogoTap?: () => voi
 
           <div className="mt-6 flex items-center justify-center gap-2">
             <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain opacity-70" />
-            <span className="text-[11px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+            <span className="text-[11px] font-bold text-slate-500">{t('common.creditBuiltBy')}</span>
           </div>
         </div>
       </div>

@@ -7,7 +7,8 @@ import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMe
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
-import { RulebookIncompleteError, RULEBOOK_INCOMPLETE_MESSAGE } from '../features/referee/rulebook/completeness';
+import { RulebookIncompleteError } from '../features/referee/rulebook/completeness';
+import { translateFor } from '../locales/index.ts';
 import { ASK_ABORTED } from '../features/referee/ai/askContract';
 
 // --- Configuration ---
@@ -380,7 +381,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       const hasUserFiles = Boolean(userFiles?.length);
       const expectedRulebook = (rulebookFiles || []).length;
       if (expectedRulebook > 0 && attachedRulebookImages === 0 && !hasUserFiles) {
-        return 'שגיאה בטעינת חוברת החוקים. לא הצלחתי לטעון אף עמוד, ולכן אני לא עונה כדי לא להמציא. נסו שוב, ואם זה חוזר, העלו מחדש את קובץ החוקים דרך מסך ההעלאה.';
+        return translateFor(language, 'chat.rulebookPagesFailed');
       }
       const modifiedQuestion = buildQuestionText(question, hasUserFiles, COGNITIVE_PROMPT);
 
@@ -466,16 +467,16 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       if (signal?.aborted) return ASK_ABORTED;
       if (error instanceof RulebookIncompleteError) {
         console.error('Active rulebook completeness check failed:', error.diagnostic);
-        return RULEBOOK_INCOMPLETE_MESSAGE;
+        return translateFor(language, 'chat.rulebookIncomplete');
       }
       const errMsg = errorText(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
         console.warn("Quota exceeded, returning friendly message");
-        return 'מערכת השופט הווירטואלי עמוסה כרגע. אנא המתן כדקה ונסה שוב.';
+        return translateFor(language, 'chat.serviceBusy');
       }
       console.warn("Gemini error:", errMsg.substring(0, 200));
-      return 'השופט הווירטואלי נתקל בתקלה זמנית. אנא נסה שוב.';
+      return translateFor(language, 'chat.serviceTemporaryFailure');
     }
   }
 };

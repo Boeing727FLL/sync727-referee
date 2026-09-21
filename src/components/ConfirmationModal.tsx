@@ -74,11 +74,13 @@ export default function ConfirmationModal({
   onConfirm,
   title,
   message,
-  confirmText = 'אישור',
-  cancelText = 'ביטול',
+  confirmText,
+  cancelText,
   variant = 'danger'
 }: ConfirmationModalProps) {
-  const { isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
+  const confirmLabel = confirmText ?? t('common.confirm');
+  const cancelLabel = cancelText ?? t('common.cancel');
   const color = VARIANTS[variant];
 
   // No early return on purpose: AnimatePresence needs the tree mounted
@@ -115,7 +117,7 @@ export default function ConfirmationModal({
                   onClick={onClose}
                   className="flex-1 px-4 py-3.5 rounded-2xl bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-bold text-sm transition-all active:scale-[0.98] cursor-pointer"
                 >
-                  {cancelText}
+                  {cancelLabel}
                 </button>
                 <button
                   onClick={() => {
@@ -124,7 +126,7 @@ export default function ConfirmationModal({
                   }}
                   className={`flex-1 px-4 py-3.5 rounded-2xl ${color.button} font-black text-sm transition-all active:scale-[0.98] cursor-pointer`}
                 >
-                  {confirmText}
+                  {confirmLabel}
                 </button>
               </div>
             </div>

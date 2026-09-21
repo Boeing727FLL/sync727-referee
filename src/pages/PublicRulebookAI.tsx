@@ -461,11 +461,11 @@ export default function PublicRulebookAI() {
     setDeletion(clearDeletionError);
     const current = auth.currentUser;
     if (!current || !current.email) {
-      setDeletion(s => rejectDeletion(s, 'אין משתמש מחובר. התחברו ונסו שוב.'));
+      setDeletion(s => rejectDeletion(s, t('account.errNoUser')));
       return;
     }
     if (!deletion.password) {
-      setDeletion(s => rejectDeletion(s, 'יש להזין סיסמה כדי לאשר מחיקה.'));
+      setDeletion(s => rejectDeletion(s, t('account.errNeedPassword')));
       return;
     }
     setDeletion(beginReauth);
@@ -473,7 +473,7 @@ export default function PublicRulebookAI() {
       const cred = EmailAuthProvider.credential(current.email, deletion.password);
       await reauthenticateWithCredential(current, cred);
     } catch {
-      setDeletion(s => failDeletion(s, 'סיסמה שגויה. המחיקה לא בוצעה.'));
+      setDeletion(s => failDeletion(s, t('account.errWrongPassword')));
       return;
     }
     const uid = current.uid;
@@ -481,7 +481,7 @@ export default function PublicRulebookAI() {
     try {
       await deleteDoc(doc(db, 'users', uid));
     } catch (e) {
-      setDeletion(s => failDeletion(s, 'מחיקת מסמך המשתמש נכשלה. נסו שוב.'));
+      setDeletion(s => failDeletion(s, t('account.errDeleteDocFailed')));
       return;
     }
     // RTDB cleanup must happen BEFORE deleteUser signs us out: afterwards
@@ -495,7 +495,7 @@ export default function PublicRulebookAI() {
     try {
       await deleteUser(current);
     } catch {
-      setDeletion(s => failDeletion(s, 'מחיקת החשבון נכשלה. התחברו מחדש ונסו שוב.'));
+      setDeletion(s => failDeletion(s, t('account.errDeleteFailed')));
       return;
     }
     try { await logout(); } catch { /* ignore */ }
@@ -591,7 +591,7 @@ export default function PublicRulebookAI() {
       faviconElement.href = "/favicon-192.png?v=3";
     }
     
-    document.title = 'שופט וירטואלי | Boeing727';
+    document.title = `${t('app.title')} | Boeing727`;
 
     return () => {
       document.title = originalTitle;
@@ -1100,7 +1100,7 @@ export default function PublicRulebookAI() {
         if (rulebookMutationRef.current) await rulebookMutationRef.current;
         requestRulebookFiles = await rulebookLoadBarrierRef.current.ready();
       } catch {
-        rejectWithNotice('טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.');
+        rejectWithNotice(t('chat.guardRulebookLoadFailed'));
         return;
       }
 
@@ -1126,9 +1126,11 @@ export default function PublicRulebookAI() {
       const guard = decideSendPreflight(
         { rulebookCount: requestRulebookFiles.length, clientLimit, quotaError },
         {
-          rulebookLoadFailed: 'טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.',
-          noRulebook: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.',
-          genericRateLimited: 'נסו שוב מאוחר יותר.',
+          rulebookLoadFailed: t('chat.guardRulebookLoadFailed'),
+          noRulebook: t('chat.guardNoRulebook'),
+        cooldown: t('chat.guardCooldown'),
+        hourlyLimit: t('chat.guardHourlyLimit'),
+          genericRateLimited: t('chat.guardRateLimited'),
           quotaExhausted: quotaMessage('chat.quotaExhausted', quotaError?.resetAtMs),
           quotaUnavailable: quotaMessage('chat.quotaUnavailable'),
         });
@@ -1255,7 +1257,7 @@ export default function PublicRulebookAI() {
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shrink-0 ring-1 ring-white/25 overflow-hidden">
-              <img src="/logoref.png" alt="שופט וירטואלי" className="w-full h-full object-contain select-none" />
+              <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
             </div>
             <div className="min-w-0">
                 <h1 className="text-sm md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
@@ -1316,7 +1318,7 @@ export default function PublicRulebookAI() {
                             <span className="text-sm font-black text-slate-950">{(displayUser.name || 'U').trim().charAt(0)}</span>
                           </div>
                         )}
-                        <div className="flex-1 min-w-0 text-right">
+                        <div className="flex-1 min-w-0 text-start">
                           <p className="text-sm font-black text-slate-900 truncate">{displayUser.name}</p>
                           <p className="text-xs text-slate-500 truncate" dir="ltr">
                             {displayUser.email}
@@ -1332,17 +1334,17 @@ export default function PublicRulebookAI() {
                           className={MENU_ROW_CLASS}
                         >
                           <LogOut className="w-4 h-4 text-slate-500" />
-                          התנתק
+                          {t('auth.logout')}
                         </button>
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
                             setDeletion(openDeletionConfirm());
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-right cursor-pointer"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-700 hover:text-red-600 font-bold text-sm transition-colors text-start cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
-                          מחיקת חשבון
+                          {t('common.deleteAccount')}
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
@@ -1353,7 +1355,7 @@ export default function PublicRulebookAI() {
                           className={MENU_ROW_CLASS}
                         >
                           <Shield className="w-4 h-4 text-slate-500" />
-                          פרטיות
+                          {t('common.privacy')}
                         </button>
                         {isCurrentUserOwner() && (
                           <button
@@ -1361,7 +1363,7 @@ export default function PublicRulebookAI() {
                             className={MENU_ROW_CLASS}
                           >
                             <Settings className="w-4 h-4 text-slate-500" />
-                            הגדרות
+                            {t('common.settings')}
                           </button>
                         )}
                         {auth.currentUser && !auth.currentUser.emailVerified && isCurrentUserOwner() && (
@@ -1373,16 +1375,16 @@ export default function PublicRulebookAI() {
                                 const fbUser = auth.currentUser;
                                 if (fbUser) {
                                   await sendEmailVerification(fbUser);
-                                  showToast('קישור אימות נשלח לאימייל הבעלים. לחצו עליו לפני פריסת החוקים.');
+                                  showToast(t('common.ownerVerificationSent'));
                                 }
                               } catch {
-                                showToast('לא הצלחתי לשלוח. נסו שוב מאוחר יותר.');
+                                showToast(t('common.ownerVerificationFailed'));
                               }
                             }}
                             className={MENU_ROW_CLASS}
                           >
                             <MailCheck className="w-4 h-4 text-amber-500" />
-                            <span className="flex-1">שלח קישור אימות לבעלים</span>
+                            <span className="flex-1">{t('common.sendOwnerVerification')}</span>
                           </button>
                         )}
                         <div className="h-px bg-white/60 my-1" />
@@ -1391,7 +1393,7 @@ export default function PublicRulebookAI() {
                           className={MENU_ROW_CLASS}
                         >
                           <ScrollText className="w-4 h-4 text-slate-500" />
-                          יומן שופטים
+                          {t('common.refereeLogs')}
                         </button>
                         <div className="h-px bg-white/60 my-1" />
                         <button
@@ -1400,13 +1402,13 @@ export default function PublicRulebookAI() {
                           className={MENU_ROW_CLASS}
                         >
                           <Globe className="w-4 h-4 text-slate-500" />
-                          <span className="flex-1">שפה</span>
+                          <span className="flex-1">{t('common.language')}</span>
                           <span className="text-[11px] text-slate-500 font-bold">{languages.find(l => l.code === language)?.native}</span>
                           <ChevronLeft className="w-4 h-4 text-slate-400" />
                         </button>
                       </div>
                       <div className="px-3 py-2 bg-white/40 border-t border-white/50 text-center">
-                        <span className="text-[10px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727 · גרסה {
+                        <span className="text-[10px] font-bold text-slate-500">{t('common.creditBuiltBy')} · {t('common.version')} {
                           // @ts-ignore build-time define, may be absent in some environments
                           typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '?'
                         }</span>
@@ -1677,9 +1679,9 @@ export default function PublicRulebookAI() {
               transition={MOTION.overlay}
               style={{ top: langPos.top, right: langPos.right }}
               className="fixed z-[70] w-52 max-w-[70vw] bg-white/70 backdrop-blur-2xl border border-white/60 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] overflow-hidden"
-              dir="rtl"
+              dir={isRTL ? 'rtl' : 'ltr'}
               role="dialog"
-              aria-label="שפה"
+              aria-label={t('common.language')}
             >
               <div className="py-1 divide-y divide-slate-900/10 max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(15,23,42,0.25)_transparent]">
                 {languages.map((lang) => {

@@ -68,7 +68,7 @@ export default function ChatComposer(props: Props) {
         </div>
       </div>
       {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-slate-400" aria-live="polite">{quotaText}</div>}
-      <div className="flex items-center justify-center gap-1.5 mt-2"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" /><p className="text-[11px] text-slate-500 font-medium">נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}</p></div>
+      <div className="flex items-center justify-center gap-1.5 mt-2"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" /><p className="text-[11px] text-slate-500 font-medium">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
     </div>
   );
 }

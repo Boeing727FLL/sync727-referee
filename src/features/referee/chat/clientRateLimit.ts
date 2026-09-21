@@ -7,13 +7,15 @@ const RATE_HOURLY_MAX = 120;
 const LAST_SEND_KEY = 'referee_last_send';
 const HOUR_BUCKET_KEY = 'referee_hour_bucket';
 
-export type RateLimitResult = { allowed: boolean; message?: string };
+export type RateLimitReason = 'cooldown' | 'hourly';
+
+export type RateLimitResult = { allowed: boolean; reason?: RateLimitReason };
 
 export function consumeClientRateLimit(now = Date.now()): RateLimitResult {
   try {
     const lastSend = Number(localStorage.getItem(LAST_SEND_KEY) || 0);
     if (now - lastSend < RATE_GAP_MS) {
-      return { allowed: false, message: 'חכו כמה שניות בין שאלה לשאלה.' };
+      return { allowed: false, reason: 'cooldown' };
     }
     const hour = new Date(now).toISOString().slice(0, 13);
     const raw = localStorage.getItem(HOUR_BUCKET_KEY);
@@ -25,7 +27,7 @@ export function consumeClientRateLimit(now = Date.now()): RateLimitResult {
       } catch { count = 0; }
     }
     if (count >= RATE_HOURLY_MAX) {
-      return { allowed: false, message: 'הגעתם למכסת השאלות לשעה הקרובה. נסו שוב מאוחר יותר.' };
+      return { allowed: false, reason: 'hourly' };
     }
     localStorage.setItem(LAST_SEND_KEY, String(now));
     localStorage.setItem(HOUR_BUCKET_KEY, JSON.stringify({ hour, count: count + 1 }));
