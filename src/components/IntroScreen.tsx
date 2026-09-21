@@ -78,7 +78,7 @@ function haloOf(w: number, h: number, logoPx: number): Halo {
     cy: h * LOGO_CY,
     rx: Math.min(w * 0.385, 230),
     ry: Math.min(h * 0.335, 165),
-    r0: (logoPx / 2) * 1.42,
+    r0: (logoPx / 2) * 1.2,
   };
 }
 
@@ -90,8 +90,10 @@ function polar(h: Halo, deg: number, onHalo: boolean): [number, number] {
   return [h.cx + h.r0 * Math.cos(rad(deg)), h.cy + h.r0 * Math.sin(rad(deg))];
 }
 
-/** A short path that leaves the logo silhouette and bows outward to its
- *  node on the halo — an embrace, not a spoke. */
+/** A short path that leaves the logo silhouette radially toward its node
+ *  and bows slightly outward — an embrace, not a spoke. The start angle
+ *  matches the node angle so the arc never droops across the card on
+ *  short-wide stages. */
 function pathTo(h: Halo, startDeg: number, nodeDeg: number, isRTL: boolean): string {
   const s = isRTL ? mirror(startDeg) : startDeg;
   const n = isRTL ? mirror(nodeDeg) : nodeDeg;
@@ -260,7 +262,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
                 key={a.key}
                 ref={el => { lineRefs.current[i] = el; }}
                 className="assoc-line"
-                d={pathTo(halo, a.start, a.node, isRTL)}
+                d={pathTo(halo, a.node, a.node, isRTL)}
               />
             ))}
           </svg>
