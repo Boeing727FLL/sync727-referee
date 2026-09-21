@@ -63,7 +63,7 @@ export default function ThinkIndicator() {
             exit={{ opacity: 0, scale: 1.07 }}
             transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.8 }}
           >
-            <ThinkingOrb state={current.orb} size={64} theme="dark" />
+            <ThinkingOrb state={current.orb} size={64} theme="light" />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -72,7 +72,7 @@ export default function ThinkIndicator() {
           {isConnecting ? (
             <motion.span
               key="label-connecting"
-              className="col-start-1 row-start-1 text-xs font-bold text-slate-300 text-center"
+              className="col-start-1 row-start-1 text-xs font-bold text-[#1b2434]/70 text-center"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}

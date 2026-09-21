@@ -1259,7 +1259,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop /></motion.div>
 
       {/* Header - dark glass, premium AI console */}
-      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#05080f]/65 backdrop-blur-xl z-30 shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#0a0e19] z-30 shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -1456,8 +1456,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       )}
 
       {/* Chat Area - premium AI console, full screen */}
-      <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
-        <div className="w-full max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
+      <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10 px-2.5 md:px-6 flex flex-col" ref={scrollRef}>
+        <div className="relative w-full max-w-3xl mx-auto my-3 md:my-6 grow px-5 md:px-9 py-6 md:py-8 space-y-4 md:space-y-6 bg-[#f6f2e8] rounded-[20px] shadow-[0_24px_70px_rgba(0,0,0,0.5)] ring-1 ring-[#1b2434]/10">
+        <div aria-hidden className="absolute inset-y-4 start-3 md:start-5 w-px bg-[#c2372f]/25" />
         <AnimatePresence>{heroActive && <ChatHero
           greeting={heroGreeting}
           questions={quickQuestions}

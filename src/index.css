@@ -140,8 +140,7 @@
   display: inline-block;
   animation: blink-cursor 0.85s step-end infinite;
   font-weight: 900;
-  color: #FFC400;
-  text-shadow: 0 0 10px rgba(250, 204, 21, 0.9), 0 0 3px rgba(250, 204, 21, 0.9);
+  color: #c2372f;
   margin: 0;
   padding: 0;
   transform: translateY(1px);
