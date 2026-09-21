@@ -309,17 +309,25 @@
   from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
   to   { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
-@keyframes login-line-draw { to { stroke-dashoffset: 0; } }
 .login-stage { animation: login-stage-in 0.7s both cubic-bezier(0.22, 1, 0.36, 1); }
-.login-line {
-  fill: none;
-  stroke: rgba(159, 216, 198, 0.55);
-  stroke-width: 1.1;
-  stroke-linecap: round;
-  animation: login-line-draw 0.7s both cubic-bezier(0.4, 0, 0.2, 1);
+/* The map's line-draw, applied functionally: each login field is a hairline
+   underline row. The rule draws in from center with the row's own entrance
+   delay (inherited from the inline animation-delay) and lights mint on
+   focus. No box, no card. */
+.login-field { position: relative; }
+.login-field::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.16);
+  transform: scaleX(0);
+  transform-origin: center;
+  animation: login-rule-draw 0.6s both cubic-bezier(0.22, 1, 0.36, 1);
+  animation-delay: inherit;
+  transition: background-color 0.25s ease;
 }
-@keyframes login-node-pop {
-  from { opacity: 0; transform: scale(0); }
-  to   { opacity: 1; transform: scale(1); }
-}
-.login-node { animation: login-node-pop 0.4s both cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: center; transform-box: fill-box; }
+@keyframes login-rule-draw { to { transform: scaleX(1); } }
+.login-field:focus-within::after { background: rgba(159, 216, 198, 0.6); }
