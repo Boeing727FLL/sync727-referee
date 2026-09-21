@@ -38,6 +38,7 @@ import { stripThinkBlocks } from '../features/referee/chat/text';
 import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
 import { safeUserFacingError } from '../features/referee/chat/userFacingError';
+import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from '../features/referee/chat/requestMachine';
 import { clearAllChatStates, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
@@ -539,9 +540,9 @@ export default function PublicRulebookAI() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const sendingRef = useRef(false);
-  const requestFinishedRef = useRef(false);
-  const stopHandledRef = useRef(false);
+  // One request lifecycle state machine replaces the old sending /
+  // requestFinished / stopHandled boolean trio (see requestMachine.ts).
+  const requestRef = useRef<RequestMachine>(initialRequestMachine);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   // Grow the composer with its content (up to 5 lines), shrink back on send.
   const autoresizeComposer = () => {
@@ -612,7 +613,7 @@ export default function PublicRulebookAI() {
   }, []);
 
   const finishRenderedResponse = React.useCallback(() => {
-    requestFinishedRef.current = false;
+    requestRef.current = finishRender(requestRef.current);
     abortControllerRef.current = null;
   }, []);
   useEffect(() => {
@@ -982,9 +983,9 @@ export default function PublicRulebookAI() {
    * the late resolution of the aborted request.
    */
   const handleStop = () => {
-    if (stopHandledRef.current) return;
-    stopHandledRef.current = true;
-    requestFinishedRef.current = false;
+    const stop = applyStop(requestRef.current);
+    if (!stop.tookEffect) return;
+    requestRef.current = stop.next;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     typewriter.finish();
@@ -1036,10 +1037,12 @@ export default function PublicRulebookAI() {
     const textToSend = textOverride || input;
 
     if ((!textToSend.trim() && !attachedImages.length) || isAiBusy) return;
-    // Synchronous single-flight: state updates lag a render, so rapid
-    // double taps could otherwise pass the isAiBusy check twice.
-    if (sendingRef.current) return;
-    sendingRef.current = true;
+    // State-machine single-flight: only an idle lifecycle accepts a send,
+    // so rapid double taps can never slip through a stale render closure.
+    const begin = beginSend(requestRef.current);
+    if (!begin.started) return;
+    requestRef.current = begin.next;
+    const sendRequestId = begin.next.requestId;
 
     const userMessage = textToSend.trim();
     // Snapshot everything the optimistic echo consumes, so a rejected
@@ -1126,12 +1129,11 @@ export default function PublicRulebookAI() {
         }
       }
 
+      requestRef.current = beginStream(requestRef.current);
       setLoading(true);
       resetThinkCycle();
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      requestFinishedRef.current = false;
-      stopHandledRef.current = false;
       setRenderingResponse(false);
       try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
 
@@ -1147,6 +1149,7 @@ export default function PublicRulebookAI() {
           photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
           (chunkText) => {
             if (controller.signal.aborted) return;
+            if (requestRef.current.requestId !== sendRequestId) return;
             setMessages(prev => {
               const newMessages = [...prev];
               const lastMsg = newMessages[newMessages.length - 1];
@@ -1185,7 +1188,7 @@ export default function PublicRulebookAI() {
             model: 'gemini-3.6-flash',
             ok: outcome.answered,
           });
-          requestFinishedRef.current = true;
+          requestRef.current = completeStream(requestRef.current);
           setRenderingResponse(true);
           setMessages(prev => finalizeModelResponse(prev, response, t('chat.commError')));
           if (outcome.answered) maybePromptFeedback();
@@ -1207,12 +1210,13 @@ export default function PublicRulebookAI() {
           setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
         }
       } finally {
-        if (!requestFinishedRef.current) abortControllerRef.current = null;
+        if (requestRef.current.phase !== 'rendering') abortControllerRef.current = null;
+        requestRef.current = settle(requestRef.current);
         setLoading(false);
         if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
       }
     } finally {
-      sendingRef.current = false;
+      requestRef.current = settle(requestRef.current);
     }
   };
 
@@ -1524,7 +1528,7 @@ export default function PublicRulebookAI() {
             typewriterCount,
             typewriterTarget: typewriterTargetRef.current,
             chatStarted,
-            stopped: stopHandledRef.current,
+            stopped: requestRef.current.stopHandled,
           });
           if (index === messages.length - 1 && message.role === 'model' && preview.fullText && typewriterReady) {
             typewriterTargetRef.current = typewriterLength(preview.fullText);
@@ -1538,7 +1542,7 @@ export default function PublicRulebookAI() {
               typewriterCount,
               typewriterTarget: typewriterTargetRef.current,
               chatStarted,
-              stopped: stopHandledRef.current,
+              stopped: requestRef.current.stopHandled,
             })}
             userPicture={user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture') || ''}
             userName={displayUser?.name || 'U'}
