@@ -7,7 +7,7 @@ import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMe
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
-import { RulebookIncompleteError } from '../features/referee/rulebook/completeness';
+import { assertListedPagesComplete, RulebookIncompleteError } from '../features/referee/rulebook/completeness';
 import { translateFor } from '../locales/index.ts';
 import { ASK_ABORTED } from '../features/referee/ai/askContract';
 
@@ -281,10 +281,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               const imageSet = await fetchR2ImageSet(fileName, signal);
               const uploadedImages = imageSet.pages;
               if (signal?.aborted) return ASK_ABORTED;
-              const expectedInventory = Array.from({ length: expectedPages }, (_, index) => index + 1);
-              if (imageSet.listedPages.length && (imageSet.listedPages.length !== expectedPages || imageSet.listedPages.some((page, index) => page !== expectedInventory[index]))) {
-                throw new RulebookIncompleteError({ file: fileName, code: 'missing-page', detail: `Expected pages 1-${expectedPages}; listed [${imageSet.listedPages.join(', ')}].` });
-              }
+              assertListedPagesComplete(fileName, expectedPages, imageSet.listedPages);
 
               console.log(`Loaded ${uploadedImages.length} of ${expectedPages} pages for ${fileName}`);
               if (uploadedImages.length === 0) {
