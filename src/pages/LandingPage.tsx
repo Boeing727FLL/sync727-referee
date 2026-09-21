@@ -1,16 +1,21 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import IntroScreen from '../components/IntroScreen';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 import { LanguageProvider } from '../hooks/useLanguage';
 
 /**
- * The login stage (and with it Firebase auth) stays out of the landing's
- * first paint: it is lazy-loaded on the first intent and revealed in-page,
- * so the intro -> login transition is a fold, not a route change.
+ * One continuous surface: intro -> (login) -> disclaimer -> entrance ->
+ * chat. Login, the disclaimer and the referee app itself are lazy stages
+ * revealed in-page, so every handoff is a fold/reveal, never a route
+ * change. The landing's first paint carries none of them.
  */
 const loginStageImport = () => import('../features/landing/LoginStage');
 const LoginStage = lazy(loginStageImport);
+const disclaimerStageImport = () => import('../features/landing/DisclaimerStage');
+const DisclaimerStage = lazy(disclaimerStageImport);
+const refereeImport = () => import('../features/landing/EmbeddedReferee');
+const EmbeddedReferee = lazy(refereeImport);
 
 export function hasSavedSession() {
   try {
@@ -25,53 +30,83 @@ export function hasSavedSession() {
   }
 }
 
-interface LandingPageProps {
-  onNavigate?: (to: string) => void;
-  onWarmRoute?: (to: string) => void;
-}
+type Stage = 'intro' | 'login' | 'disclaimer' | 'entering' | 'chat';
 
-function LandingContent({ onNavigate, onWarmRoute }: LandingPageProps) {
+/** How long the entrance choreography runs before the chat is fully live. */
+const ENTERING_MS = 1900;
+
+function LandingContent() {
   const { t } = useLandingLanguage();
   const signedIn = hasSavedSession();
-  const [stage, setStage] = useState<'intro' | 'login'>(
+  const [stage, setStage] = useState<Stage>(
     () => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login') ? 'login' : 'intro'),
   );
 
-  const navigate = (to: string) => (onNavigate ?? window.location.assign.bind(window.location))(to);
-  const enterChat = () => navigate('/app?enter=chat');
+  useEffect(() => {
+    if (stage !== 'entering') return;
+    const id = setTimeout(() => setStage('chat'), ENTERING_MS);
+    return () => clearTimeout(id);
+  }, [stage]);
+
+  // Both entry paths converge here: a fresh login (LoginStage onSuccess)
+  // and a signed-in CTA press. The disclaimer always comes before the chat
+  // entrance, and the app chunk starts downloading immediately.
+  const beginEntry = () => {
+    void refereeImport();
+    // Deep-link param consumed: a reload from here on lands on the intro.
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login')) {
+      window.history.replaceState({}, '', '/');
+    }
+    setStage('disclaimer');
+  };
+
+  const chatLive = stage === 'entering' || stage === 'chat';
 
   return (
-    <>
-      <IntroScreen
-        isLoggedIn={signedIn}
-        mode={stage}
-        onContinue={() => (signedIn ? enterChat() : setStage('login'))}
-        onWarm={() => {
-          if (signedIn) {
-            onWarmRoute?.('/app?enter=chat');
-          } else {
-            void loginStageImport();
-          }
-        }}
-        t={t}
-      />
-      {stage === 'login' && !signedIn && (
-        <Suspense fallback={null}>
-          <LoginStage onBack={() => setStage('intro')} onSuccess={enterChat} />
-        </Suspense>
+    <div data-stage={stage}>
+      {(stage === 'intro' || stage === 'login' || stage === 'disclaimer') && (
+        <IntroScreen
+          isLoggedIn={signedIn}
+          mode={stage === 'intro' ? 'intro' : 'login'}
+          onContinue={() => (signedIn ? beginEntry() : setStage('login'))}
+          onWarm={() => void (signedIn ? refereeImport() : loginStageImport())}
+          t={t}
+        />
       )}
-    </>
+      {!signedIn && (stage === 'login' || stage === 'disclaimer') && (
+        <div className={stage === 'login' ? undefined : 'login-stage-out'}>
+          <Suspense fallback={null}>
+            <LoginStage onBack={() => setStage('intro')} onSuccess={beginEntry} />
+          </Suspense>
+        </div>
+      )}
+      {(stage === 'disclaimer' || chatLive) && (
+        <>
+          {/* The app mounts hidden behind the disclaimer so it is live and
+              settled before the entrance reveals it. */}
+          <div className={chatLive ? 'chat-stage chat-stage-live' : 'chat-stage'} aria-hidden={!chatLive}>
+            <Suspense fallback={null}>
+              <EmbeddedReferee onNavigateOut={(to) => setStage(to === '/login' ? 'login' : 'intro')} />
+            </Suspense>
+          </div>
+          <Suspense fallback={null}>
+            <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={() => setStage('entering')} />
+          </Suspense>
+          {stage === 'entering' && <div className="enter-bloom" aria-hidden />}
+        </>
+      )}
+    </div>
   );
 }
 
-export default function LandingPage(props: LandingPageProps) {
+export default function LandingPage() {
   // IntroScreen reads direction from the app-wide language context, so the
   // landing route must provide it too (it normally lives only inside
   // RefereeApp). The locales are already in this chunk via IntroScreen's
   // own useLanguage import, so this adds no bundle weight.
   return (
     <LanguageProvider>
-      <LandingLanguageProvider><LandingContent {...props} /></LandingLanguageProvider>
+      <LandingLanguageProvider><LandingContent /></LandingLanguageProvider>
     </LanguageProvider>
   );
 }

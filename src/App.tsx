@@ -1,7 +1,7 @@
 /** Route shell. The public landing page starts without router, Firebase, or app code. */
-import {lazy, startTransition, Suspense, useCallback, useEffect, useState} from 'react';
+import {lazy, startTransition, Suspense, useEffect, useState} from 'react';
 import LandingPage, {hasSavedSession} from './pages/LandingPage';
-import {warmIdleRoutes, warmRoute} from './routeWarmup';
+import {warmIdleRoutes} from './routeWarmup';
 
 const RouterApp = lazy(() => import('./RouterApp'));
 
@@ -26,21 +26,11 @@ export default function App() {
     warmIdleRoutes(likelyPath);
   }, [isLandingRoute, likelyPath]);
 
-  const openRoute = useCallback((to: string) => {
-    const url = new URL(to, window.location.href);
-    // Keep the complete landing screen visible while router and destination
-    // download together. Once both are ready, the transition is immediate.
-    void warmRoute(url.pathname).then(() => {
-      window.history.pushState(null, '', `${url.pathname}${url.search}${url.hash}`);
-      startTransition(() => setPathname(url.pathname));
-    });
-  }, []);
-
   return (
     <div className="h-screen h-[100dvh] w-full">
       <Suspense fallback={<RouteFrame />}>
         {isLandingRoute
-          ? <LandingPage onNavigate={openRoute} onWarmRoute={(to) => void warmRoute(new URL(to, window.location.href).pathname)} />
+          ? <LandingPage />
           : <RouterApp />}
       </Suspense>
     </div>

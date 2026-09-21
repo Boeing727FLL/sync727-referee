@@ -60,6 +60,7 @@ import {
   disclaimerConfirm,
   enterFromUrl,
   exitToIntro,
+  enteredChatState,
   initialEntryState,
   introContinue,
   showDisclaimer as entryShowDisclaimer,
@@ -93,8 +94,11 @@ import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthentic
 import { auth } from '../lib/firebase/auth';
 
 
-export default function PublicRulebookAI() {
-  const navigate = useNavigate();
+export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryStart?: 'chat'; onNavigateOut?: (to: string) => void } = {}) {
+  const routerNavigate = useNavigate();
+  // Embedded in the landing flow: navigations escape to the landing's
+  // stage machine (logout -> intro, kicked -> login), never to a route.
+  const navigate = onNavigateOut ?? routerNavigate;
   const location = useLocation();
   const { user, logout } = useAuth();
   const { t, language, isRTL, setLanguage, languages } = useLanguage();
@@ -239,13 +243,15 @@ export default function PublicRulebookAI() {
   });
   // Entry flow (intro -> disclaimer -> chat) as one state machine; the
   // render tree reads derived booleans (see entryFlow.ts).
-  const [entry, setEntry] = useState<EntryState>(() => initialEntryState(autoEnter));
+  // Embedded same-page flow: the landing already walked intro -> login ->
+  // disclaimer, so the chat mounts live with no intro takeover and no gate.
+  const [entry, setEntry] = useState<EntryState>(() => (entryStart === 'chat' ? enteredChatState() : initialEntryState(autoEnter)));
   const showIntro = entryShowIntro(entry);
   const chatStarted = entryChatStarted(entry);
   const showDisclaimer = entryShowDisclaimer(entry);
   // Golden reveal flash: completes the divine login transition. Fades out
   // over the freshly mounted chat while the disclaimer descends above it.
-  const [enterFlash, setEnterFlash] = useState<boolean>(() => autoEnter);
+  const [enterFlash, setEnterFlash] = useState<boolean>(() => entryStart === 'chat' ? false : autoEnter);
   useEffect(() => {
     if (!enterFlash) return;
     const t = setTimeout(() => setEnterFlash(false), ENTER_FLASH_MS);

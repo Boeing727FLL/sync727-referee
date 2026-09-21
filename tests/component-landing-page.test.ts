@@ -20,22 +20,24 @@ test('hasSavedSession detects a persisted firebase auth user key', () => {
   localStorage.clear();
 });
 
-test('LandingPage opens the login stage in-page for signed-out visitors and sends returning users straight to chat', () => {
-  const seen: string[] = [];
+test('LandingPage opens the login stage in-page for signed-out visitors and sends returning users to the disclaimer stage', () => {
   localStorage.clear();
-  const first = render(React.createElement(LandingPage, { onNavigate: (to: string) => seen.push(to) }));
+  const first = render(React.createElement(LandingPage));
   fireEvent.click(first.getByRole('button'));
   // No route change: the intro flips to its login stage on the same page.
   // (The stage itself mounts Firebase — covered by browser harness, not node.)
-  assert.deepEqual(seen, []);
   assert.ok(first.container.querySelector('[data-mode="login"]'), 'intro should flip to login mode');
+  assert.equal(first.container.querySelector('[data-stage]')?.getAttribute('data-stage'), 'login');
   first.unmount();
   cleanup();
 
+  // Signed-in continue: the disclaimer stage opens on the same page, before
+  // any chat entrance — never a navigation. (DisclaimerStage/RefereeApp are
+  // lazy; the stage marker flips synchronously on the click.)
   localStorage.setItem('auth_user', '{"uid":"u1"}');
-  const second = render(React.createElement(LandingPage, { onNavigate: (to: string) => seen.push(to) }));
+  const second = render(React.createElement(LandingPage));
   fireEvent.click(second.getByRole('button'));
-  assert.deepEqual(seen, ['/app?enter=chat']);
+  assert.equal(second.container.querySelector('[data-stage]')?.getAttribute('data-stage'), 'disclaimer');
   second.unmount();
   cleanup();
   localStorage.clear();

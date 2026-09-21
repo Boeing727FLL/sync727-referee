@@ -46,6 +46,13 @@ export function disclaimerConfirm(state: EntryState): EntryState {
   return { stage: 'chat', pendingEnterChat: false, typewriterReady: true };
 }
 
+/** The landing walked intro -> login -> disclaimer itself and mounts the
+ *  chat directly live (embedded same-page flow): no intro, no gate,
+ *  typewriter allowed from the first frame. */
+export function enteredChatState(): EntryState {
+  return { stage: 'chat', pendingEnterChat: false, typewriterReady: true };
+}
+
 /** Sign-out / kick / account deletion: everything back to a fresh intro. */
 export function exitToIntro(): EntryState {
   return { stage: 'intro', pendingEnterChat: false, typewriterReady: false };

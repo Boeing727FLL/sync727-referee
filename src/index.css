@@ -331,3 +331,44 @@
 }
 @keyframes login-rule-draw { to { transform: scaleX(1); } }
 .login-field:focus-within::after { background: rgba(159, 216, 198, 0.6); }
+
+/* Login stage folding away behind the arriving disclaimer. */
+.login-stage-out { opacity: 0; transition: opacity 0.35s ease; }
+
+/* Chat stage: the referee app mounts hidden behind the disclaimer and is
+   revealed by the entrance choreography — an iOS-style de-blur and settle
+   onto the same surface, no flash, no cut. */
+.chat-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.035);
+  filter: blur(14px);
+}
+.chat-stage-live {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+  filter: blur(0);
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s,
+    transform 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.3s,
+    filter 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.3s;
+}
+
+/* A whisper of the intro's light accompanying the entrance, then gone. */
+.enter-bloom {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, rgba(159, 216, 198, 0.16) 0%, rgba(255, 122, 102, 0.06) 45%, transparent 75%);
+  animation: enter-bloom 1.7s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes enter-bloom {
+  0%   { opacity: 0; transform: scale(0.92); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.06); }
+}
