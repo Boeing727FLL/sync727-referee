@@ -1,4 +1,5 @@
 import { textStep, toInteractionParts, type InteractionStep, type LegacyPart } from './conversation';
+import { stripThinkBlocks } from '../chat/text.ts';
 
 const CLEAN_IMAGE_ANALYSIS_PREFIX = `⚠️⚠️⚠️ [הנחיית שיפוט קריטית - ניתוח עצמאי נקי ללא הטיה] ⚠️⚠️⚠️
 עליך לנתח את התמונה/קבצים שהועלו כעת במנותק ובנפרד לחלוטין מכל משימה, חוק או תמונה קודמת שדוברה בצ'אט (כמו משימה 5 או כל נושא קודם). אל תניח בשום אופן שהתמונה הזו קשורה אליהם!
@@ -40,7 +41,7 @@ export function critiquePlan(options: {
 }
 
 export function visibleCritique(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '').trim();
+  return stripThinkBlocks(text);
 }
 
 export function finalPlan(critiqueInput: InteractionStep[], critiqueText: string, finalPrompt: string): InteractionStep[] {

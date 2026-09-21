@@ -1211,7 +1211,14 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             });
           },
           language,
-          controller.signal
+          controller.signal,
+          () => {
+            // A retried attempt restarts the streamed answer: drop the
+            // partial bubble the failed attempt left behind.
+            if (controller.signal.aborted) return;
+            if (requestRef.current.requestId !== sendRequestId) return;
+            setMessages(prev => (prev[prev.length - 1]?.role === 'model' ? prev.slice(0, -1) : prev));
+          }
         );
 
         if (controller.signal.aborted) {
@@ -1253,7 +1260,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             model: 'gemini-3.6-flash',
             ok: false,
           });
-          setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
+          // A partial bubble that never reached a visible answer (still
+          // inside private thinking) is dropped, never shown as raw markup.
+          setMessages(prev => [...applyStopToMessages(prev), { role: 'model', text: errMsg }]);
         }
       } finally {
         if (requestRef.current.phase !== 'rendering') abortControllerRef.current = null;

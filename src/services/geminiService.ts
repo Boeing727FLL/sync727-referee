@@ -204,7 +204,8 @@ export const GeminiService = {
     userFiles?: UserFile[],
     onChunk?: (text: string) => void,
     language: string = 'he',
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onStreamReset?: () => void
   ) {
     try {
       console.log("Processing FLL Query directly on the client-side...");
@@ -407,6 +408,8 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       let responseText = '';
       let lastFailureKind: ReturnType<typeof classifyFailure>['kind'] | null = null;
       const allKeys = await getAllApiKeys();
+      // True once any attempt has streamed final-answer chunks into the UI.
+      let streamedBubbleLive = false;
 
       modelLoop: for (let modelIndex = 0; modelIndex < effectiveChain.length; modelIndex++) {
         const modelEntry = effectiveChain[modelIndex];
@@ -438,7 +441,19 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
             if (visibleCritique(critiqueText)) {
               const finalInput = finalPlan(critiqueInput, critiqueText, FINAL_PROMPT);
-              const streamedText = await callModel(client, modelEntry, finalInput, true, onChunk);
+              // A retried attempt restarts the answer from zero: the caller
+              // drops the partial bubble the failed attempt streamed, so a
+              // stale half-finished think block is never concatenated into
+              // the fresh answer.
+              let attemptStreamed = false;
+              const streamedText = await callModel(client, modelEntry, finalInput, true, (chunk: string) => {
+                if (!attemptStreamed) {
+                  attemptStreamed = true;
+                  if (streamedBubbleLive) onStreamReset?.();
+                }
+                streamedBubbleLive = true;
+                onChunk?.(chunk);
+              });
               finalAnswer = streamedText || draftText;
             }
 

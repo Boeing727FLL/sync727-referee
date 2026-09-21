@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../types';
+import { stripThinkBlocks, THINK_CLOSE_RE, THINK_OPEN_RE } from './text.ts';
 
 export type MessageView = {
   message: ChatMessage;
@@ -27,14 +28,15 @@ export function buildMessageView(message: ChatMessage, index: number, options: {
   stopped: boolean;
 }): MessageView {
   const isModel = message.role === 'model';
-  const hasThink = message.text.includes('<think>');
-  const thinkContent = hasThink ? message.text.split('<think>')[1]?.split('</think>')[0]?.trim() || '' : '';
-  const thinking = isModel && hasThink && !message.text.includes('</think>') && options.loading && index === options.lastIndex;
-  const thinkBlock = new RegExp('<think>[\\s\\S]*</think>', 'g');
-  let fullText = isModel ? normalizeArrows(message.text.replace(thinkBlock, '')).trim() : normalizeArrows(message.text);
-  if (!fullText && isModel) {
-    fullText = thinkContent ? normalizeArrows(thinkContent).trim() : hasThink ? normalizeArrows(message.text.replace('<think>', '')).trim() : '';
-  }
+  // Reasoning markup is stripped with the same tolerant rules everywhere
+  // (text.ts): variant tags, unclosed blocks and truncated fragments from a
+  // live stream must never reach the visible answer.
+  const hasThink = THINK_OPEN_RE.test(message.text);
+  const thinkContent = hasThink ? message.text.split(/<\s*think\s*>/i)[1]?.split(/<\s*\/\s*think\s*>/i)[0]?.trim() || '' : '';
+  const thinking = isModel && hasThink && !THINK_CLOSE_RE.test(message.text) && options.loading && index === options.lastIndex;
+  // No think-content fallback: a message whose visible text strips to empty
+  // is private reasoning, never an answer to show.
+  const fullText = isModel ? normalizeArrows(stripThinkBlocks(message.text)) : normalizeArrows(message.text);
   const isLastModel = index === options.lastIndex && isModel;
   const typewriting = isLastModel && !options.stopped && options.typewriterReady && options.typewriterCount < options.typewriterTarget;
   let text = typewriting ? fullText.split(/(\s+)/).slice(0, options.typewriterCount).join('') : fullText;
