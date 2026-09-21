@@ -27,7 +27,7 @@ export default function ChatComposer(props: Props) {
   const { replyTo, clearReply, attachments, removeAttachment, attachInputRef, onAttach,
     composerRef, input, setInput, resize, busy, learning, onSend, onStop, t, quotaText } = props;
   return (
-    <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
+    <div className="px-3 md:px-10 pt-1 lg:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-2 shrink-0 relative z-10">
       <AnimatePresence>
         {replyTo && (
           <motion.div
@@ -37,7 +37,7 @@ export default function ChatComposer(props: Props) {
             exit={{ opacity: 0, y: 8, scaleY: 0.9, clipPath: 'inset(100% 0 0 0 round 16px)' }}
             transition={MOTION.morph}
             style={{ transformOrigin: 'bottom center' }}
-            className="w-full max-w-3xl mx-auto mb-2 flex items-center gap-2.5 rounded-xl border-r-2 border-[rgba(159,216,198,0.5)] bg-white/[0.03] px-3 py-2"
+            className="w-full max-w-3xl lg:max-w-5xl mx-auto mb-2 flex items-center gap-2.5 rounded-xl border-r-2 border-[rgba(159,216,198,0.5)] bg-white/[0.03] px-3 py-2"
           >
             <Reply className="shrink-0 w-4 h-4 text-[#9fd8c6]/80" />
             <div className="flex-1 min-w-0 text-right"><div className="text-[10px] font-black text-[#9fd8c6]/80">{t('chat.replyTo')}</div><div className="truncate text-xs text-slate-200">{replyTo.text}</div></div>
@@ -45,7 +45,7 @@ export default function ChatComposer(props: Props) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 rounded-[26px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_14px_40px_rgba(0,0,0,0.4)] px-2 pt-1.5 md:pt-2 focus-within:border-white/[0.3] transition-colors">
+      <div className="w-full max-w-3xl lg:max-w-5xl mx-auto flex flex-col gap-1 rounded-[26px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_14px_40px_rgba(0,0,0,0.4)] px-2 pt-1.5 md:pt-2 focus-within:border-white/[0.3] transition-colors">
         <AnimatePresence>
           {attachments.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} animate={{ opacity: 1, height: 'auto', clipPath: 'inset(0% 0 0 0 round 12px)' }} exit={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} transition={MOTION.morph} className="overflow-hidden">
@@ -68,7 +68,7 @@ export default function ChatComposer(props: Props) {
         </div>
       </div>
       {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-white/55 [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]" aria-live="polite">{quotaText}</div>}
-      <div className="flex items-center justify-center gap-1.5 mt-2"><span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span><p className="text-[11px] text-white/65 font-medium [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
+      <div className="flex items-center justify-center gap-1.5 mt-2 lg:mt-1"><span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span><p className="text-[11px] text-white/65 font-medium [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
     </div>
   );
 }
