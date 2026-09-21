@@ -10,6 +10,7 @@ const ja: TranslationMap = {
     'chat.quotaRemaining': '24時間あたり残り{remaining}/{limit}問',
     'chat.quotaExhausted': '24時間あたり{limit}問の上限に達しました。{time}以降にもう一度お試しください。',
     'chat.quotaUnavailable': '現在、質問上限を確認できません。しばらくしてからもう一度お試しください。',
+        'chat.heroDesc': "ルールやミッション、判定について尋ねると、数秒で明確な裁定が返ってきます。",
     'chat.suggestion1': 'ミッションは順番通りにやらなければいけませんか？',
     'chat.suggestion2': 'ベースの外でロボットに触れるとどうなりますか？',
     'chat.suggestion3': 'ロボットに使えるモーターは何個までですか？',

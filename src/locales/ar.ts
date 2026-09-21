@@ -10,6 +10,7 @@ const ar: TranslationMap = {
     'chat.quotaRemaining': 'متبقي {remaining} من أصل {limit} سؤالًا خلال 24 ساعة',
     'chat.quotaExhausted': 'لقد وصلت إلى حد {limit} سؤالًا خلال 24 ساعة. حاول مجددًا بعد {time}.',
     'chat.quotaUnavailable': 'تعذر التحقق من حد الأسئلة الآن. حاول مجددًا بعد قليل.',
+        'chat.heroDesc': "اسأل عن أي قاعدة أو مهمة أو قرار في الساحة واحصل على حكم واضح في ثوانٍ.",
     'chat.suggestion1': 'هل يجب تنفيذ المهام بالترتيب؟',
     'chat.suggestion2': 'ماذا يحدث عند لمس الروبوت خارج القاعدة؟',
     'chat.suggestion3': 'كم عدد المحركات المسموح بها على الروبوت؟',

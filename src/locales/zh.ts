@@ -10,6 +10,7 @@ const zh: TranslationMap = {
     'chat.quotaRemaining': '24 小时内还可提问 {remaining}/{limit} 次',
     'chat.quotaExhausted': '您已达到 24 小时内 {limit} 次提问的上限。请在 {time} 后重试。',
     'chat.quotaUnavailable': '目前无法验证提问限额，请稍后重试。',
+        'chat.heroDesc': "询问任何规则、任务或判罚，几秒内获得明确裁定。",
     'chat.suggestion1': '任务必须按顺序完成吗？',
     'chat.suggestion2': '在基地外触碰机器人会怎样？',
     'chat.suggestion3': '机器人上允许使用几个电机？',

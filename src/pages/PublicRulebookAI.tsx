@@ -1258,26 +1258,26 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
       <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop /></motion.div>
 
-      {/* Header - dark glass, premium AI console */}
-      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#0a0e19]/55 backdrop-blur-xl backdrop-saturate-150 z-30 shrink-0 relative">
+      {/* Header - Liquid Glass bar */}
+      <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="mx-2.5 mt-2.5 md:mx-4 md:mt-3.5 rounded-[22px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_16px_44px_rgba(0,0,0,0.45)] z-30 shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
-        <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
+        <div className="px-3 py-2 md:px-4 md:py-2.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center shrink-0 ring-1 ring-white/15 overflow-hidden">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden ring-1 ring-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_14px_rgba(0,0,0,0.35)]">
               <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
             </div>
-            <div className="min-w-0">
-                <h1 className="text-sm md:text-xl font-black text-white tracking-tight cursor-default select-none leading-tight">
-                  {t('app.title')}
-                </h1>
-              <div className="flex md:hidden items-center gap-1.5 mt-1">
-                <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact />
-              </div>
+            <h1 className="min-w-0 truncate text-base md:text-xl font-bold text-white/95 tracking-tight cursor-default select-none leading-tight">
+              {t('app.title')}
+            </h1>
+            <div className="flex md:hidden items-center shrink-0 rounded-full border border-white/[0.14] bg-white/[0.08] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact />
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
+            <div className="rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
+            </div>
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
@@ -1285,28 +1285,25 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 md:gap-2.5 p-1 md:p-1.5 rounded-full hover:bg-white/[0.05] transition-colors cursor-pointer"
+                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 rounded-full border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
                 >
-                  <div className="hidden sm:flex flex-col items-end text-right">
-                    <span className="text-xs font-black text-white max-w-[120px] truncate leading-none">{displayUser.name}</span>
-                    <span className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]" dir="ltr">
-                      {displayUser.email}
-                    </span>
+                  <div className="hidden sm:flex items-center ps-1.5">
+                    <span className="text-xs font-bold text-white/85 max-w-[120px] truncate leading-none">{displayUser.name}</span>
                   </div>
                   {displayUser.picture || gravatarPic ? (
                     <img
                       src={displayUser.picture || gravatarPic}
                       alt=""
-                      className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-950 shadow-[1px_1px_0px_rgba(0,0,0,1)] object-cover"
+                      className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-white/25 object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-white/15 bg-white/10 flex items-center justify-center">
-                      <span className="text-xs md:text-sm font-black text-white/80">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-white/20 bg-white/10 flex items-center justify-center">
+                      <span className="text-xs md:text-sm font-bold text-white/85">
                         {(displayUser.name || 'U').trim().charAt(0)}
                       </span>
                     </div>
                   )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-white/45 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {showUserMenu && (
@@ -1315,7 +1312,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={MOTION.overlay}
-                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0a121e]/95 backdrop-blur-xl rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden z-50"
+                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0c1322]/80 backdrop-blur-2xl backdrop-saturate-150 rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_50px_rgba(0,0,0,0.55)] border border-white/[0.12] overflow-hidden z-50"
                     >
                       <div className="p-3 bg-white/[0.03] border-b border-white/[0.08] flex items-center gap-3">
                         {displayUser.picture || gravatarPic ? (
@@ -1427,17 +1424,14 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             ) : (
               <button
                 onClick={sessionAlive ? () => setShowLogoutConfirm(true) : () => navigate('/login')}
-                className="text-sm font-black text-white tracking-tight border-b border-yellow-400/60 pb-0.5 hover:border-yellow-300 transition-colors cursor-pointer whitespace-nowrap"
+                className="text-sm font-bold text-white/90 tracking-tight rounded-full border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl px-4 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-white/[0.11] transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>{sessionAlive ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div className="inline-flex items-center gap-2 whitespace-nowrap shrink-0 select-none opacity-50 hover:opacity-90 transition-opacity">
-              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 md:h-5 w-auto object-contain" />
-              <div className="hidden sm:flex flex-col leading-tight">
-                <span className="text-[8px] md:text-[9px] font-bold text-white/40 uppercase tracking-[0.18em] select-none">Developed By</span>
-                <span className="text-[10px] md:text-xs font-black text-white/70 italic leading-tight">Boeing <span className="text-red-500/90">727</span><span className="text-white/30 font-bold text-[8px] md:text-[10px] mx-px">&</span><span className="text-white/50 font-bold not-italic text-[8px] md:text-[10px]">Yuval Margalit</span></span>
-              </div>
+            <div className="hidden md:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 select-none opacity-45 hover:opacity-80 transition-opacity">
+              <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3.5 w-auto object-contain" />
+              <span className="text-[10px] font-semibold text-white/40 tracking-wide">Boeing <span className="text-red-500/80">727</span> <span className="text-white/25">&</span> Yuval Margalit</span>
             </div>
 
           </div>

@@ -54,9 +54,9 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING, delay: 0.3 }}
-        className="mt-3 text-sm md:text-[15px] text-white/45 font-medium leading-relaxed max-w-md"
+        className="mt-3 md:mt-4 text-sm md:text-base text-white/50 font-medium leading-relaxed max-w-md"
       >
-        {t('intro.descFull')}
+        {t('chat.heroDesc')}
       </motion.p>
       <div className="mt-8 md:mt-10 grid grid-cols-2 gap-2.5 md:gap-3 w-full max-w-xl md:max-w-2xl">
         {questions.map((question, index) => {

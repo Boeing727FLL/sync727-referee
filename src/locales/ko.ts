@@ -10,6 +10,7 @@ const ko: TranslationMap = {
     'chat.quotaRemaining': '24시간 동안 질문 {limit}개 중 {remaining}개 남음',
     'chat.quotaExhausted': '24시간 동안 질문 {limit}개 한도에 도달했습니다. {time} 이후 다시 시도해 주세요.',
     'chat.quotaUnavailable': '현재 질문 한도를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        'chat.heroDesc': "규칙, 미션, 판정에 대해 물어보면 몇 초 안에 명확한 답을 받을 수 있습니다.",
     'chat.suggestion1': '미션을 순서대로 해야 하나요?',
     'chat.suggestion2': '베이스 밖에서 로봇을 만지면 어떻게 되나요?',
     'chat.suggestion3': '로봇에 모터를 몇 개까지 사용할 수 있나요?',

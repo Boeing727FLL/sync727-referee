@@ -10,6 +10,7 @@ const he: TranslationMap = {
     'chat.quotaRemaining': 'נותרו {remaining} מתוך {limit} שאלות ב-24 שעות',
     'chat.quotaExhausted': 'הגעתם למכסה של {limit} שאלות ב-24 שעות. אפשר לנסות שוב אחרי {time}.',
     'chat.quotaUnavailable': 'אי אפשר לאמת כרגע את מכסת השאלות. נסו שוב בעוד רגע.',
+        'chat.heroDesc': 'שאלו על כל חוק, משימה או החלטה בזירה וקבלו פסיקה ברורה תוך שניות.',
     'chat.suggestion1': 'חייבים לעשות את המשימות לפי הסדר?',
     'chat.suggestion2': 'מה קורה אם נוגעים ברובוט מחוץ לבית?',
     'chat.suggestion3': 'כמה מנועים מותר לשים על הרובוט?',
