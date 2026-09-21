@@ -434,18 +434,6 @@
   .login-scroll { max-height: calc(100vh - 28px); }
 }
 
-/* Successful inline handoff: the form's rows gather upward into the space
-   (fast, staggered) while the action row becomes the welcome beat. The gate
-   then builds itself out of the flying logo - one continuous organism, no
-   intermediate screen. */
-@keyframes login-gather-out {
-  to { opacity: 0; transform: translateY(-64px) scale(0.85); filter: blur(8px); }
-}
-.login-gather .login-row {
-  animation: login-gather-out 0.38s both cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-
 /* ===== Gate handoff: camera drift, staged-content gating, the bloom ====== */
 /* Cinematic push: the shared backdrop eases from a slight zoom into rest
    while the logo flies in - pure background parallax, no layout impact. */

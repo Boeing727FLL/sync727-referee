@@ -22,9 +22,10 @@ const VERIFY_DELAY_MS = 650;
 const SUCCESS_HOLD_MS = 1050;
 const NAVIGATE_AFTER_LEAVE_MS = 520;
 /** Inline handoff (landing page): a short beat to read the button state,
- *  a shorter welcome hold, then the gate builds itself out of the logo. */
+ *  then the gate opens and the cut begins from the stable, unmoved logo.
+ *  No gather/morph between the form and the animation. */
 const INLINE_VERIFY_DELAY_MS = 250;
-const INLINE_SUCCESS_HOLD_MS = 520;
+const INLINE_SUCCESS_HOLD_MS = 150;
 
 /** Firebase Auth error code -> Hebrew message (single source of truth). */
 const FIREBASE_AUTH_MESSAGES: Record<string, string> = {
@@ -73,9 +74,6 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
   // -- post-login overlay state (verifying -> success -> golden exit) --------
   const [authOverlay, setAuthOverlay] = useState<null | 'verifying' | 'success'>(null);
   const [authLeaving, setAuthLeaving] = useState(false);
-  // Inline handoff: no overlay screen. 'gather' = the form's rows fold up
-  // into the space while the action row shows the welcome beat.
-  const [inlinePhase, setInlinePhase] = useState<null | 'gather'>(null);
   const [welcomeName, setWelcomeName] = useState('');
   const pendingAuthRef = useRef<PendingAuth | null>(null);
   const authTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -204,8 +202,8 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
     setError(null);
     pendingAuthRef.current = { email, password, isSignUp, name };
     if (handoff === 'inline') {
-      // No intermediate screen: the button shows progress inline, the rows
-      // gather into the space on success, then the gate grows out of the logo.
+      // No intermediate screen and no morph: the button shows progress
+      // inline, then the gate opens directly and the stable logo is cut.
       setLoading(true);
       later(async () => {
         const pending = pendingAuthRef.current;
@@ -215,12 +213,8 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
           const fbUid = auth.currentUser?.uid || 'anon';
           const { trackRefereeUser } = await import('../../lib/analytics');
           trackRefereeUser(fbUid);
-          setWelcomeName(pending.name || pending.email.split('@')[0]);
           setLoading(false);
-          setInlinePhase('gather');
           later(() => onSuccess(), INLINE_SUCCESS_HOLD_MS);
-        } else {
-          setInlinePhase(null);
         }
       }, INLINE_VERIFY_DELAY_MS);
       return;
@@ -315,7 +309,7 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
     email, setEmail, password, setPassword, name, setName,
     resetEmail, setResetEmail, showPassword, setShowPassword,
     loading, error, setError, resetSent, setResetSent,
-    authOverlay, authLeaving, welcomeName, inlinePhase,
+    authOverlay, authLeaving, welcomeName,
     gated, handleSecretTap,
     handleSubmit, handleResetPassword,
   };
