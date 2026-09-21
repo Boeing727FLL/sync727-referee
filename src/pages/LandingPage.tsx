@@ -1,6 +1,7 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
 import IntroScreen from '../components/IntroScreen';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
+import { LanguageProvider } from '../hooks/useLanguage';
 
 export function hasSavedSession() {
   try {
@@ -35,5 +36,13 @@ function LandingContent({ onNavigate, onWarmRoute }: LandingPageProps) {
 }
 
 export default function LandingPage(props: LandingPageProps) {
-  return <LandingLanguageProvider><LandingContent {...props} /></LandingLanguageProvider>;
+  // IntroScreen reads direction from the app-wide language context, so the
+  // landing route must provide it too (it normally lives only inside
+  // RefereeApp). The locales are already in this chunk via IntroScreen's
+  // own useLanguage import, so this adds no bundle weight.
+  return (
+    <LanguageProvider>
+      <LandingLanguageProvider><LandingContent {...props} /></LandingLanguageProvider>
+    </LanguageProvider>
+  );
 }

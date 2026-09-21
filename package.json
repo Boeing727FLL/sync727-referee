@@ -14,7 +14,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "start": "vite preview",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --import ./tests/helpers/register-hooks.mjs --test tests/*.test.ts"
   },
   "overrides": {
     "esbuild": "^0.28.2"
@@ -39,7 +39,9 @@
     "thinking-orbs": "^0.3.1"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.14.0",
+    "jsdom": "^30.1.0",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
