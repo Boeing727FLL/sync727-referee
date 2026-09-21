@@ -1,172 +1,31 @@
+import {translations} from '../../locales/index.ts';
 import type {LandingTranslations} from './language';
 
-export const landingTranslations: LandingTranslations = {
-  "he": {
-    "intro.subtitle": "שופט זירה וירטואלי",
-    "intro.descFull": "שופט הזירה הווירטואלי הוא צ'אט AI שנועד לעזור בהבנת חוקי המשחק.",
-    "intro.feature1Title": "שואלים במילים שלכם",
-    "intro.feature1Desc": "כל דבר שקשור למשחק הרובוט שואלים איך שרוצים ומקבלים תשובה ברורה.",
-    "intro.feature2Title": "זמין מכל מקום",
-    "intro.feature2Desc": "עובד מהטלפון, מהמחשב ומהזירה, תמיד זמין כשצריכים.",
-    "intro.continue": "המשך לשופט",
-    "intro.continueLogin": "המשך לכניסה",
-    "intro.badge": "כלי קהילתי מבית Boeing 727",
-    "intro.feature3Title": "מבוסס על המסמכים הרשמיים",
-    "intro.feature3Desc": "התשובות נשענות על החוקים והעדכונים הרשמיים של פירסט.",
-    "intro.notOfficial": "כלי קהילתי — אינו מוצר רשמי של FIRST"
-  },
-  "en": {
-    "intro.subtitle": "Virtual Field Referee",
-    "intro.descFull": "Ask any question about the game rules. Get an instant answer with the exact rulebook section and a reference to official updates. A community tool built voluntarily by team Boeing 727.",
-    "intro.feature1Title": "Game Rules Inquiry",
-    "intro.feature1Desc": "Instant answer with the exact rulebook section — no guessing.",
-    "intro.feature2Title": "Scoring Explained",
-    "intro.feature2Desc": "How many points each mission is worth and the exact completion conditions.",
-    "intro.continue": "Continue to App",
-    "intro.continueLogin": "Continue to Login",
-    "intro.badge": "Community tool by Boeing 727",
-    "intro.feature3Title": "Referee Updates",
-    "intro.feature3Desc": "Clarifications, rulings and changes published throughout the season — in one place.",
-    "intro.notOfficial": "Community tool — not an official FIRST product"
-  },
-  "ar": {
-    "intro.subtitle": "حكم ملعب افتراضي",
-    "intro.descFull": "اطرح أي سؤال عن قوانين اللعبة — واحصل على إجابة فورية مع الفقرة الدقيقة من كتاب القوانين وإحالة إلى التحديثات الرسمية. أداة مجتمعية بناها فريق Boeing 727 تطوعاً.",
-    "intro.feature1Title": "استفسار قواعد اللعبة",
-    "intro.feature1Desc": "إجابة فورية مع الفقرة الدقيقة من كتاب القوانين — دون تخمين.",
-    "intro.feature2Title": "شرح النقاط",
-    "intro.feature2Desc": "كم نقطة تستحق كل مهمة وما شروط إكمالها الدقيقة.",
-    "intro.continue": "المتابعة إلى التطبيق",
-    "intro.continueLogin": "المتابعة إلى تسجيل الدخول",
-    "intro.badge": "أداة مجتمعية من Boeing 727",
-    "intro.feature3Title": "تحديثات التحكيم",
-    "intro.feature3Desc": "التوضيحات والقرارات والتغييرات المنشورة طوال الموسم — في مكان واحد.",
-    "intro.notOfficial": "أداة مجتمعية — ليست منتجاً رسمياً من FIRST"
-  },
-  "es": {
-    "intro.subtitle": "Árbitro de Campo Virtual",
-    "intro.descFull": "Haz cualquier pregunta sobre las reglas — obtén al instante la sección exacta del libro de reglas y la referencia a las actualizaciones oficiales. Herramienta comunitaria creada voluntariamente por el equipo Boeing 727.",
-    "intro.feature1Title": "Consulta de Reglas del Juego",
-    "intro.feature1Desc": "Respuesta instantánea con la sección exacta del libro de reglas — sin conjeturas.",
-    "intro.feature2Title": "Puntuación explicada",
-    "intro.feature2Desc": "Cuántos puntos vale cada misión y las condiciones exactas para completarla.",
-    "intro.continue": "Continuar a la App",
-    "intro.continueLogin": "Continuar al Login",
-    "intro.badge": "Herramienta comunitaria de Boeing 727",
-    "intro.feature3Title": "Actualizaciones del árbitro",
-    "intro.feature3Desc": "Aclaraciones, fallos y cambios publicados durante la temporada — en un solo lugar.",
-    "intro.notOfficial": "Herramienta comunitaria — no es un producto oficial de FIRST"
-  },
-  "fr": {
-    "intro.subtitle": "Arbitre de Terrain Virtuel",
-    "intro.descFull": "Posez toute question sur les règles — obtenez instantanément la section exacte du livre des règles et la référence aux mises à jour officielles. Outil communautaire créé bénévolement par l'équipe Boeing 727.",
-    "intro.feature1Title": "Enquête sur les Règles du Jeu",
-    "intro.feature1Desc": "Réponse instantanée avec la section exacte du livre des règles — sans supposition.",
-    "intro.feature2Title": "Score expliqué",
-    "intro.feature2Desc": "Combien de points vaut chaque mission et les conditions exactes de réussite.",
-    "intro.continue": "Continuer vers l'App",
-    "intro.continueLogin": "Continuer vers la Connexion",
-    "intro.badge": "Outil communautaire par Boeing 727",
-    "intro.feature3Title": "Mises à jour de l'arbitre",
-    "intro.feature3Desc": "Clarifications, décisions et changements publiés pendant la saison — en un seul endroit.",
-    "intro.notOfficial": "Outil communautaire — pas un produit officiel FIRST"
-  },
-  "de": {
-    "intro.subtitle": "Virtueller Spielfeld-Schiedsrichter",
-    "intro.descFull": "Stelle jede Frage zu den Spielregeln — erhalte sofort den exakten Abschnitt aus dem Regelbuch und den Verweis auf offizielle Updates. Ein Community-Tool, ehrenamtlich vom Team Boeing 727 gebaut.",
-    "intro.feature1Title": "Spielregeln-Anfrage",
-    "intro.feature1Desc": "Sofortige Antwort mit dem exakten Abschnitt aus dem Regelbuch — ohne Raten.",
-    "intro.feature2Title": "Punkte erklärt",
-    "intro.feature2Desc": "Wie viele Punkte jede Mission wert ist und die genauen Abschlussbedingungen.",
-    "intro.continue": "Zur App fortfahren",
-    "intro.continueLogin": "Zur Anmeldung fortfahren",
-    "intro.badge": "Community-Tool von Boeing 727",
-    "intro.feature3Title": "Schiedsrichter-Updates",
-    "intro.feature3Desc": "Klarstellungen, Entscheidungen und Änderungen der Saison — an einem Ort.",
-    "intro.notOfficial": "Community-Tool — kein offizielles FIRST-Produkt"
-  },
-  "ru": {
-    "intro.subtitle": "Виртуальный судья поля",
-    "intro.descFull": "Задайте любой вопрос о правилах — получите мгновенный ответ с точным разделом из книги правил и ссылкой на официальные обновления. Общественный инструмент, созданный волонтёрами команды Boeing 727.",
-    "intro.feature1Title": "Запрос правил игры",
-    "intro.feature1Desc": "Мгновенный ответ с точным разделом из книги правил — без догадок.",
-    "intro.feature2Title": "Подсчёт очков",
-    "intro.feature2Desc": "Сколько очков стоит каждая миссия и точные условия выполнения.",
-    "intro.continue": "Перейти к приложению",
-    "intro.continueLogin": "Перейти к входу",
-    "intro.badge": "Инструмент сообщества от Boeing 727",
-    "intro.feature3Title": "Обновления судьи",
-    "intro.feature3Desc": "Разъяснения, решения и изменения сезона — в одном месте.",
-    "intro.notOfficial": "Инструмент сообщества — не официальный продукт FIRST"
-  },
-  "pt": {
-    "intro.subtitle": "Juiz de Campo Virtual",
-    "intro.descFull": "Faça qualquer pergunta sobre as regras — receba instantaneamente a seção exata do livro de regras e a referência às atualizações oficiais. Ferramenta comunitária criada voluntariamente pela equipe Boeing 727.",
-    "intro.feature1Title": "Consulta de Regras do Jogo",
-    "intro.feature1Desc": "Resposta instantânea com a seção exata do livro de regras — sem achismos.",
-    "intro.feature2Title": "Pontuação explicada",
-    "intro.feature2Desc": "Quantos pontos vale cada missão e as condições exatas de conclusão.",
-    "intro.continue": "Continuar para o App",
-    "intro.continueLogin": "Continuar para o Login",
-    "intro.badge": "Ferramenta comunitária da Boeing 727",
-    "intro.feature3Title": "Atualizações do árbitro",
-    "intro.feature3Desc": "Esclarecimentos, decisões e alterações da temporada — em um só lugar.",
-    "intro.notOfficial": "Ferramenta comunitária — não é um produto oficial da FIRST"
-  },
-  "it": {
-    "intro.subtitle": "Arbitro di Campo Virtuale",
-    "intro.descFull": "Fai qualsiasi domanda sulle regole — ottieni subito la sezione esatta del regolamento e il riferimento agli aggiornamenti ufficiali. Strumento comunitario creato volontariamente dal team Boeing 727.",
-    "intro.feature1Title": "Richiesta Regole del Gioco",
-    "intro.feature1Desc": "Risposta immediata con la sezione esatta del regolamento — senza supposizioni.",
-    "intro.feature2Title": "Punteggio spiegato",
-    "intro.feature2Desc": "Quanti punti vale ogni missione e le condizioni esatte di completamento.",
-    "intro.continue": "Continua all'App",
-    "intro.continueLogin": "Continua al Login",
-    "intro.badge": "Strumento comunitario di Boeing 727",
-    "intro.feature3Title": "Aggiornamenti arbitro",
-    "intro.feature3Desc": "Chiarimenti, decisioni e modifiche della stagione — in un unico posto.",
-    "intro.notOfficial": "Strumento comunitario — non è un prodotto ufficiale FIRST"
-  },
-  "zh": {
-    "intro.subtitle": "虚拟场地裁判",
-    "intro.descFull": "询问任何关于比赛规则的问题 — 立即获得规则手册中的准确章节和官方更新的引用。这是由Boeing 727团队志愿构建的社区工具。",
-    "intro.feature1Title": "游戏规则查询",
-    "intro.feature1Desc": "即时回答并引用规则手册中的准确章节 — 无需猜测。",
-    "intro.feature2Title": "得分详解",
-    "intro.feature2Desc": "每个任务值多少分以及完成的确切条件。",
-    "intro.continue": "继续进入应用",
-    "intro.continueLogin": "继续登录",
-    "intro.badge": "Boeing 727 社区工具",
-    "intro.feature3Title": "裁判更新",
-    "intro.feature3Desc": "赛季中发布的澄清、裁决和变更 — 尽在一处。",
-    "intro.notOfficial": "社区工具 — 非FIRST官方产品"
-  },
-  "ja": {
-    "intro.subtitle": "バーチャルフィールド審判",
-    "intro.descFull": "ルールについて何でも質問 — ルールブックの正確な条項と公式アップデートへの参照を即座に取得。Boeing 727チームがボランティアで構築したコミュニティツール。",
-    "intro.feature1Title": "ゲームルールの照会",
-    "intro.feature1Desc": "ルールブックの正確な条項付きで即答 — 推測なし。",
-    "intro.feature2Title": "得点解説",
-    "intro.feature2Desc": "各ミッションの配点と達成の正確な条件。",
-    "intro.continue": "アプリに進む",
-    "intro.continueLogin": "ログインに進む",
-    "intro.badge": "Boeing 727 コミュニティツール",
-    "intro.feature3Title": "審判アップデート",
-    "intro.feature3Desc": "シーズン中に公開された澄清、裁定、変更 — 一箇所に。",
-    "intro.notOfficial": "コミュニティツール — FIRST公式製品ではありません"
-  },
-  "ko": {
-    "intro.subtitle": "가상 필드 심판",
-    "intro.descFull": "경기 규칙에 대해 무엇이든 질문하세요 — 규칙집의 정확한 조항과 공식 업데이트 참조를 즉시 받아보세요. Boeing 727 팀이 자발적으로 구축한 커뮤니티 도구.",
-    "intro.feature1Title": "게임 규칙 문의",
-    "intro.feature1Desc": "규칙집의 정확한 조항과 함께 즉시 답변 — 추측 없음.",
-    "intro.feature2Title": "점수 설명",
-    "intro.feature2Desc": "각 미션의 배점과 완료를 위한 정확한 조건.",
-    "intro.continue": "앱으로 계속",
-    "intro.continueLogin": "로그인으로 계속",
-    "intro.badge": "Boeing 727 커뮤니티 도구",
-    "intro.feature3Title": "심판 업데이트",
-    "intro.feature3Desc": "시즌 동안 게시된 설명, 판정 및 변경 사항 — 한 곳에서.",
-    "intro.notOfficial": "커뮤니티 도구 — 공식 FIRST 제품이 아닙니다"
-  }
-};
+/**
+ * Landing copy is a projection of the canonical locale registry, never a
+ * second dictionary: the intro must say exactly the same thing on the
+ * public landing route and inside the app, in every shipped language.
+ * Add a key here when IntroScreen starts using it.
+ */
+const LANDING_KEYS = [
+  'intro.subtitle',
+  'intro.descFull',
+  'intro.feature1Title',
+  'intro.feature1Desc',
+  'intro.feature2Title',
+  'intro.feature2Desc',
+  'intro.feature3Title',
+  'intro.feature3Desc',
+  'intro.continue',
+  'intro.continueLogin',
+  'intro.badge',
+  'intro.notOfficial',
+  'common.privacy',
+] as const;
+
+export const landingTranslations: LandingTranslations = Object.fromEntries(
+  Object.entries(translations).map(([code, dict]) => [
+    code,
+    Object.fromEntries(LANDING_KEYS.map(key => [key, dict[key]])),
+  ]),
+);
