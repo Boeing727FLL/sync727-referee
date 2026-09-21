@@ -5,7 +5,6 @@ import { Copy, FileText, Reply } from 'lucide-react';
 import ThinkIndicator from '../../../components/ThinkIndicator';
 import { MarkdownMessage } from '../ui/lazyComponents';
 import type { MessageView } from './messageView';
-import { STOPPED_TEXT } from '../config';
 import { MOTION } from '../ui/motion';
 
 type Props = {
@@ -45,7 +44,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
               : <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-p:my-2 prose-p:text-slate-100 prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#7FB8EC] prose-strong:text-[#FFC400] prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-slate-200 rtl:text-right"><Suspense fallback={<span>{text}</span>}><MarkdownMessage components={{ em: ({ children, ...props }) => { const value = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null; return value === '▍' ? <span className="typewriter-cursor" aria-hidden>▍</span> : <em {...props}>{children}</em>; } }}>{typewriting ? text + '\u200B*\u258D*' : text}</MarkdownMessage></Suspense></div>}
           </div>
         </div>
-        {!isUser && index > 0 && message.text !== STOPPED_TEXT && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...MOTION.filmReveal, delay: liveAnswer ? 0 : 0.12 }} className="flex items-center gap-1.5 px-0.5">
+        {!isUser && index > 0 && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...MOTION.filmReveal, delay: liveAnswer ? 0 : 0.12 }} className="flex items-center gap-1.5 px-0.5">
           <button onClick={() => onCopy(text)} className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#E1251B]/50 hover:bg-[#E1251B]/10 hover:shadow-[0_0_12px_rgba(225,37,27,0.25)] cursor-pointer flex items-center gap-1.5"><Copy className="w-3.5 h-3.5" />{t('chat.copy')}</button>
           {!liveAnswer && <button onClick={() => onReply(text)} className="text-[11px] md:text-xs font-bold text-slate-400 hover:text-white transition-all px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/10 hover:border-[#0B6BCB]/60 hover:bg-[#0B6BCB]/15 hover:shadow-[0_0_12px_rgba(11,107,203,0.3)] cursor-pointer flex items-center gap-1.5"><Reply className="w-3.5 h-3.5" />{t('chat.reply')}</button>}
         </motion.div>}

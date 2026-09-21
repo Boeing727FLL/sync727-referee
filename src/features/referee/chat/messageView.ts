@@ -24,6 +24,7 @@ export function buildMessageView(message: ChatMessage, index: number, options: {
   typewriterCount: number;
   typewriterTarget: number;
   chatStarted: boolean;
+  stopped: boolean;
 }): MessageView {
   const isModel = message.role === 'model';
   const hasThink = message.text.includes('<think>');
@@ -35,7 +36,7 @@ export function buildMessageView(message: ChatMessage, index: number, options: {
     fullText = thinkContent ? normalizeArrows(thinkContent).trim() : hasThink ? normalizeArrows(message.text.replace('<think>', '')).trim() : '';
   }
   const isLastModel = index === options.lastIndex && isModel;
-  const typewriting = isLastModel && options.typewriterReady && options.typewriterCount < options.typewriterTarget;
+  const typewriting = isLastModel && !options.stopped && options.typewriterReady && options.typewriterCount < options.typewriterTarget;
   let text = typewriting ? fullText.split(/(\s+)/).slice(0, options.typewriterCount).join('') : fullText;
   if (isLastModel && !options.typewriterReady && options.chatStarted) text = '';
   return { message, index, thinking, thinkContent, text, fullText, typewriting, liveAnswer: typewriting };

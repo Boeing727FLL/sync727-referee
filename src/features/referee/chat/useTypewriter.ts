@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TYPEWRITER_TICK_MS } from '../config';
 
 /** Owns only the visible-response clock; request streaming stays in the coordinator. */
@@ -47,9 +47,10 @@ export function useTypewriter(options: {
     rendering,
     setRendering,
     targetRef,
-    reset() {
-      setCount(0);
-      targetRef.current = 0;
-    },
+    // Stop: reveal everything already received at once and end the animation.
+    finish: useCallback(() => {
+      setCount(targetRef.current);
+      setRendering(false);
+    }, []),
   };
 }

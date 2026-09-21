@@ -1,5 +1,4 @@
 /** Product timing and UI constants. Keeping these together makes tuning auditable. */
-export const STOPPED_TEXT = 'הפעולה הופסקה על ידי המשתמש.';
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const FEEDBACK_REPROMPT_DAYS = 14;
 export const FEEDBACK_QUIET_AFTER_SUBMIT_DAYS = 45;

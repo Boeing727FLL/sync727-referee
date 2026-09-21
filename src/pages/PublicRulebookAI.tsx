@@ -33,8 +33,9 @@ import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceServ
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
-import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, TYPEWRITER_TICK_MS } from '../features/referee/config';
 import { stripThinkBlocks } from '../features/referee/chat/text';
+import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
@@ -622,6 +623,10 @@ export default function PublicRulebookAI() {
     });
   }, [messages, loading]);
 
+  useEffect(() => () => {
+    abortControllerRef.current?.abort();
+  }, []);
+
   const finishRenderedResponse = React.useCallback(() => {
     requestFinishedRef.current = false;
     abortControllerRef.current = null;
@@ -971,19 +976,22 @@ export default function PublicRulebookAI() {
   };
 
 
+  /**
+   * Gemini-style Stop: abort the provider stream immediately, freeze the
+   * typewriter on everything already received, and keep the partial answer
+   * as the final message — copyable, replyable and history-safe. An answer
+   * that never started leaves no bubble. Idempotent across rapid clicks and
+   * the late resolution of the aborted request.
+   */
   const handleStop = () => {
     if (stopHandledRef.current) return;
     stopHandledRef.current = true;
     requestFinishedRef.current = false;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-    typewriter.reset();
-    setRenderingResponse(false);
+    typewriter.finish();
     refundClientRateLimit();
-    setMessages(prev => {
-      const trimmed = prev[prev.length - 1]?.role === 'model' ? prev.slice(0, -1) : prev;
-      return [...trimmed, { role: 'model', text: STOPPED_TEXT }];
-    });
+    setMessages(applyStopToMessages);
   };
 
   /**
@@ -1014,7 +1022,7 @@ export default function PublicRulebookAI() {
    * Send the input (or a tapped suggestion) to the referee: input guards,
    * anti-spam rate limits, then a streamed answer appended chunk by chunk.
    * On success the question is counted, logged, and may trigger the feedback
-   * popup. Abort via handleStop: partial text is dropped and the quota refunded.
+   * popup. Stop via handleStop: the partial answer stays and the client rate-limit slot is refunded.
    */
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
@@ -1501,6 +1509,7 @@ export default function PublicRulebookAI() {
             typewriterCount,
             typewriterTarget: typewriterTargetRef.current,
             chatStarted,
+            stopped: stopHandledRef.current,
           });
           if (index === messages.length - 1 && message.role === 'model' && preview.fullText && typewriterReady) {
             typewriterTargetRef.current = typewriterLength(preview.fullText);
@@ -1514,6 +1523,7 @@ export default function PublicRulebookAI() {
               typewriterCount,
               typewriterTarget: typewriterTargetRef.current,
               chatStarted,
+              stopped: stopHandledRef.current,
             })}
             userPicture={user?.picture || displayUser?.picture || gravatarPic || localStorage.getItem('user_picture') || ''}
             userName={displayUser?.name || 'U'}
