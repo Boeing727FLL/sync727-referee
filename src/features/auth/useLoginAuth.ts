@@ -24,7 +24,7 @@ const NAVIGATE_AFTER_LEAVE_MS = 520;
 /** Inline handoff (landing page): a short beat to read the button state,
  *  a shorter welcome hold, then the gate builds itself out of the logo. */
 const INLINE_VERIFY_DELAY_MS = 250;
-const INLINE_SUCCESS_HOLD_MS = 620;
+const INLINE_SUCCESS_HOLD_MS = 520;
 
 /** Firebase Auth error code -> Hebrew message (single source of truth). */
 const FIREBASE_AUTH_MESSAGES: Record<string, string> = {

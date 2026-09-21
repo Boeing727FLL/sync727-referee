@@ -439,8 +439,115 @@
    then builds itself out of the flying logo - one continuous organism, no
    intermediate screen. */
 @keyframes login-gather-out {
-  to { opacity: 0; transform: translateY(-18px) scale(0.98); filter: blur(6px); }
+  to { opacity: 0; transform: translateY(-64px) scale(0.85); filter: blur(8px); }
 }
 .login-gather .login-row {
   animation: login-gather-out 0.38s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* ===== Gate handoff: camera drift, staged-content gating, the bloom ====== */
+/* Cinematic push: the shared backdrop eases from a slight zoom into rest
+   while the logo flies in - pure background parallax, no layout impact. */
+.gate-camera { animation: gate-camera 1.7s both cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes gate-camera { from { transform: scale(1.06); } to { transform: scale(1); } }
+
+/* Until the flying logo lands, the gate's staged content waits invisibly;
+   when the wait lifts, every staged animation starts fresh from that beat. */
+.gate-wait .intro-rise,
+.gate-wait .assoc-node {
+  animation: none !important;
+  opacity: 0;
+}
+
+/* The bloom: the landed logo splits into shearing light slices while halo
+   rings bloom outward and forking branches grow in every direction, tipping
+   with coral buds - then the whole layer dissolves into the fold paths. */
+.bloom-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: bloom-layer-out 0.5s both ease;
+  animation-delay: 1.5s;
+}
+@keyframes bloom-layer-out { to { opacity: 0; } }
+
+.bloom-glow {
+  position: absolute;
+  left: 110px; top: 62px;
+  width: 300px; height: 300px;
+  transform: translate(-50%, -50%) scale(0.5);
+  border-radius: 9999px;
+  opacity: 0;
+  background: radial-gradient(closest-side, rgba(143,214,194,0.32) 0%, rgba(255,122,102,0.12) 50%, transparent 75%);
+  animation: bloom-glow 1s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes bloom-glow {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+}
+
+.bloom-ring {
+  position: absolute;
+  left: 110px; top: 62px;
+  width: 168px; height: 92px;
+  transform: translate(-50%, -50%) scale(0.4);
+  border-radius: 50%;
+  border: 1.5px dashed rgba(159, 216, 198, 0.62);
+  opacity: 0;
+  animation: bloom-ring 0.85s both cubic-bezier(0.22, 1, 0.36, 1);
+  animation-delay: var(--rd, 0s);
+}
+.bloom-ring-b { border-color: rgba(159, 216, 198, 0.45); }
+.bloom-ring-c { border-color: rgba(255, 122, 102, 0.5); }
+@keyframes bloom-ring {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  15%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+}
+
+.bloom-svg {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 420px; height: 260px;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.bloom-branch {
+  fill: none;
+  stroke: rgba(159, 216, 198, 0.85);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bloom-draw 0.65s both cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: var(--bd, 0.1s);
+  filter: drop-shadow(0 0 4px rgba(143, 214, 194, 0.35));
+}
+.bloom-fork { stroke: rgba(159, 216, 198, 0.55); stroke-width: 1.5; }
+@keyframes bloom-draw { to { stroke-dashoffset: 0; } }
+.bloom-bud {
+  fill: #ff7a66;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  filter: drop-shadow(0 0 5px rgba(255, 122, 102, 0.8));
+  animation: bloom-bud-pop 0.4s both cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-delay: var(--bd, 0.3s);
+}
+@keyframes bloom-bud-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.bloom-slice {
+  animation: bloom-slice-shear 0.75s both cubic-bezier(0.3, 0.7, 0.3, 1);
+  animation-delay: var(--sd, 0s);
+  filter: drop-shadow(0 0 7px rgba(143, 214, 194, 0.55));
+}
+@keyframes bloom-slice-shear {
+  0%   { transform: translateX(0); opacity: 0; }
+  8%   { opacity: 1; }
+  30%  { transform: translateX(var(--shear)); }
+  55%  { transform: translateX(var(--shear)); }
+  80%  { transform: translateX(calc(var(--shear) * -0.4)); }
+  100% { transform: translateX(0); opacity: 0; }
 }
