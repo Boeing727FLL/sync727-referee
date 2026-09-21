@@ -18,7 +18,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db, rtdb } from '../lib/firebase';
+import { db } from '../lib/firebase/firestore';
+import { rtdb } from '../lib/firebase/rtdb';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
 import { getPublicUrl } from '../lib/r2Config';
 import { resetThinkCycle } from '../lib/thinkCycle';
@@ -62,7 +63,7 @@ import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrection
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
 import { subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/refereeFlags';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth } from '../lib/firebase/auth';
 
 
 export default function PublicRulebookAI() {
@@ -769,7 +770,13 @@ export default function PublicRulebookAI() {
    * Upload a rulebook PDF to R2, render its pages to images for the judge,
    * clear replaced versions, detect a season change, and refresh the list.
    */
+  const uploadingRef = useRef(false);
+
   const performUpload = async (file: File) => {
+    // Synchronous single-flight: rapid double taps on the season-wipe
+    // confirm could otherwise start two uploads of the same file.
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
     setUploading(true);
     setUploadProgress(0);
     setIsLearning(true);
@@ -937,6 +944,7 @@ export default function PublicRulebookAI() {
       await refreshLatestRulebook();
       setIsLearning(false);
       setUploading(false);
+      uploadingRef.current = false;
       setUploadProgress(0);
       resolveMutation();
       if (rulebookMutationRef.current === mutation) rulebookMutationRef.current = null;
@@ -957,6 +965,7 @@ export default function PublicRulebookAI() {
       // alert, no raw technical message.
       setUploadError('העלאת הקובץ נכשלה. בדוק חיבור ונסו שוב.');
       setUploading(false);
+      uploadingRef.current = false;
       setUploadProgress(0);
       setIsLearning(false);
       rejectMutation(error);

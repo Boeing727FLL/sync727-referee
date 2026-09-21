@@ -16,9 +16,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
-import { trackRefereeUser } from '../lib/analytics';
+import { auth } from '../lib/firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
 import { subscribeMaintenanceGate } from '../lib/refereeFlags';
@@ -145,6 +143,8 @@ export default function LoginPage() {
         userEmail = result.user.email || emailVal;
         displayName = nameVal || emailVal.split('@')[0];
 
+        const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase/firestore');
         await setDoc(doc(db, 'users', uid), {
           email: userEmail,
           name: displayName,
@@ -153,7 +153,9 @@ export default function LoginPage() {
           uid,
         });
 
-        // Registered users = users who actually signed up
+        // Registered users = users who actually signed up (lazy: keeps
+        // RTDB+Firestore analytics off the login form's first paint).
+        const { trackRefereeUser } = await import('../lib/analytics');
         trackRefereeUser(uid);
 
         await result.user.reload();
@@ -164,6 +166,8 @@ export default function LoginPage() {
         try {
           // Fail-open: auth already succeeded — a Firestore denial here
           // (outage, App Check) must not masquerade as a login failure.
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('../lib/firebase/firestore');
           displayName = (await getDoc(doc(db, 'users', uid))).data()?.name || emailVal.split('@')[0];
         } catch {
           displayName = emailVal.split('@')[0];
@@ -222,6 +226,7 @@ export default function LoginPage() {
       const authOk = await doAuth(pending.email, pending.password, pending.isSignUp, pending.name);
       if (authOk) {
         const fbUid = auth.currentUser?.uid || 'anon';
+        const { trackRefereeUser } = await import('../lib/analytics');
         trackRefereeUser(fbUid);
         setWelcomeName(pending.name || pending.email.split('@')[0]);
         setAuthOverlay('success');

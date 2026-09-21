@@ -6,7 +6,7 @@
  * here are convenience only — the Firestore/RTDB rules enforce the same
  * email independently on the server.
  */
-import { auth } from './firebase';
+import { auth } from './firebase/auth';
 
 export const OWNER_EMAIL = 'boeing727.il@gmail.com';
 

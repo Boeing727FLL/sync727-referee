@@ -25,7 +25,7 @@ import {
   ListOrdered,
 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '../lib/firebase/firestore';
 import { invalidateCorrectionsCache } from '../services/geminiService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from '../features/referee/corrections/model';
@@ -217,6 +217,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
    * the next question already obeys the new text.
    */
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
     try {
       const now = Date.now();

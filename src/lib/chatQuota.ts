@@ -7,9 +7,9 @@
  * the request. Internal model/key retries remain part of one reservation.
  */
 import { doc, onSnapshot, runTransaction, serverTimestamp, type Timestamp } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from './firebase/firestore';
 import { CHAT_QUOTA_WINDOW_MS, DAILY_CHAT_LIMIT, decideChatQuota } from './chatQuotaCore';
-import { auth } from './firebase';
+import { auth } from './firebase/auth';
 import { OWNER_EMAIL } from './owner';
 
 export { DAILY_CHAT_LIMIT } from './chatQuotaCore';

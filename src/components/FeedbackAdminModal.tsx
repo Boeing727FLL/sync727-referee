@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquareHeart, RefreshCw, Trash2, Check } from 'lucide-react';
 import { onValue, get, remove, ref, update } from 'firebase/database';
-import { rtdb } from '../lib/firebase';
+import { rtdb } from '../lib/firebase/rtdb';
 import { feedbackQuery } from '../lib/analytics';
 import { resetFeedbackForAll } from '../lib/refereeFlags';
 import { isCurrentUserOwner } from '../lib/owner';

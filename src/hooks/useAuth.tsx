@@ -23,7 +23,7 @@ import {
   setPersistence,
   browserLocalPersistence,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth, googleProvider } from '../lib/firebase/auth';
 import { isOwnerEmail } from '../lib/owner';
 
 // ---------------------------------------------------------------------------

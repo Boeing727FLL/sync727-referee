@@ -1,6 +1,6 @@
 /** Global feedback-reset and maintenance flags for the referee app. */
 import { onValue, ref, serverTimestamp, set, type DataSnapshot } from 'firebase/database';
-import { rtdb } from './firebase';
+import { rtdb } from './firebase/rtdb';
 
 const META_PATH = 'referee/meta';
 

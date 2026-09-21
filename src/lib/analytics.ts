@@ -32,7 +32,8 @@ import {
   onDisconnect,
   type DataSnapshot,
 } from 'firebase/database';
-import { rtdb, db } from './firebase';
+import { rtdb } from './firebase/rtdb';
+import { db } from './firebase/firestore';
 import {
   collection,
   getDocs as fsGetDocs,

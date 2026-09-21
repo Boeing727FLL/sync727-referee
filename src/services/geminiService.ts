@@ -1,4 +1,4 @@
-import { db } from '../lib/firebase';
+import { db } from '../lib/firebase/firestore';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';

@@ -70,7 +70,7 @@ function concatBytes(...parts: Uint8Array[]): Uint8Array {
 // that already ship in the bundle means there is no secret-looking string to
 // grep for — the "secret" is the combination + the KDF work factor.
 async function baseMaterial(): Promise<Uint8Array> {
-  const { app } = await import('./firebase');
+  const { app } = await import('./firebase/app');
   const enc = new TextEncoder();
   const options = app.options || {};
   return concatBytes(

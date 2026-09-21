@@ -1,14 +1,10 @@
 /**
- * firebase.ts — one initialized Firebase app shared by the whole codebase.
+ * firebase/app.ts — the one initialized Firebase app + App Check.
  *
- * SERVICES: Auth (email/password + Google), Firestore (users, rulebooks,
- * corrections, key pool — offline-persistent) and Realtime Database (all
- * analytics/presence/flags). App Check (reCAPTCHA Enterprise) attests web clients.
+ * Services are split per module (auth / firestore / rtdb) so a route pays
+ * only for the SDK it actually uses. Never re-initialize anywhere else.
  */
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
-import { getDatabase } from "firebase/database";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig = {
@@ -39,18 +35,3 @@ if (typeof window !== 'undefined') {
     console.warn('App Check init failed:', e);
   }
 }
-
-// --- Service singletons (import these, never re-initialize) ---
-export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
-});
-export const rtdb = getDatabase(app);
-export const googleProvider = new GoogleAuthProvider();
-
-// No Drive scopes: the app only needs the basic Google profile (name, email,
-// picture), which Firebase Auth already provides. Requesting Drive access
-// would hand every XSS or token leak full Drive power for zero benefit.
-googleProvider.setCustomParameters({
-  prompt: 'consent'
-});
