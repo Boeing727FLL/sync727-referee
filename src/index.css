@@ -455,22 +455,21 @@
 /* Until the flying logo lands, the gate's staged content waits invisibly;
    when the wait lifts, every staged animation starts fresh from that beat. */
 .gate-wait .intro-rise,
-.gate-wait .assoc-node {
+.gate-wait .assoc-node,
+.gate-wait .gate-halo {
   animation: none !important;
   opacity: 0;
 }
 
-/* The bloom: the landed logo splits into shearing light slices while halo
-   rings bloom outward and forking branches grow in every direction, tipping
-   with coral buds - then the whole layer dissolves into the fold paths. */
+/* The landing: the logo shears into light slices (it re-forms - same logo),
+   a pure light flash pulses, and the geometry that grows out of it IS the
+   final header structure - halo, fold paths, crown twigs, coral node. Nothing
+   appears twice and nothing disappears; each element only changes intensity. */
 .bloom-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  animation: bloom-layer-out 0.5s both ease;
-  animation-delay: 1.5s;
 }
-@keyframes bloom-layer-out { to { opacity: 0; } }
 
 .bloom-glow {
   position: absolute;
@@ -488,55 +487,50 @@
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
 }
 
-.bloom-ring {
-  position: absolute;
-  left: 110px; top: 62px;
-  width: 168px; height: 92px;
-  transform: translate(-50%, -50%) scale(0.4);
-  border-radius: 50%;
-  border: 1.5px dashed rgba(159, 216, 198, 0.62);
-  opacity: 0;
-  animation: bloom-ring 0.85s both cubic-bezier(0.22, 1, 0.36, 1);
-  animation-delay: var(--rd, 0s);
+/* The halo blooms out of the logo and settles as the gate's dashed halo. */
+.gate-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gate-halo-in 0.85s both cubic-bezier(0.22, 1, 0.36, 1);
+  animation-delay: 0.1s;
 }
-.bloom-ring-b { border-color: rgba(159, 216, 198, 0.45); }
-.bloom-ring-c { border-color: rgba(255, 122, 102, 0.5); }
-@keyframes bloom-ring {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-  15%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+@keyframes gate-halo-in {
+  0%   { transform: scale(0.25); opacity: 0; stroke: rgba(159, 216, 198, 0.65); filter: drop-shadow(0 0 6px rgba(143, 214, 194, 0.4)); }
+  35%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; stroke: rgba(159, 216, 198, 0.10); filter: none; }
 }
 
-.bloom-svg {
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 420px; height: 260px;
-  transform: translate(-50%, -50%);
-  overflow: visible;
+/* Growing branches are bright and lit; when their draw finishes the SAME
+   path settles into its final quiet styling (class removed onfinish). */
+.assoc-line, .assoc-twig {
+  transition: stroke 0.55s ease, stroke-width 0.55s ease, filter 0.55s ease;
 }
-.bloom-branch {
-  fill: none;
-  stroke: rgba(159, 216, 198, 0.85);
+.fold-grow {
+  stroke: rgba(159, 216, 198, 0.9);
   stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(143, 214, 194, 0.45));
+}
+.assoc-twig {
+  fill: none;
+  stroke: rgba(159, 216, 198, 0.22);
+  stroke-width: 1;
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: bloom-draw 0.65s both cubic-bezier(0.4, 0, 0.2, 1);
-  animation-delay: var(--bd, 0.1s);
-  filter: drop-shadow(0 0 4px rgba(143, 214, 194, 0.35));
+  animation: assoc-draw 1s both cubic-bezier(0.4, 0, 0.2, 1);
 }
-.bloom-fork { stroke: rgba(159, 216, 198, 0.55); stroke-width: 1.5; }
-@keyframes bloom-draw { to { stroke-dashoffset: 0; } }
-.bloom-bud {
-  fill: #ff7a66;
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(0);
-  filter: drop-shadow(0 0 5px rgba(255, 122, 102, 0.8));
-  animation: bloom-bud-pop 0.4s both cubic-bezier(0.34, 1.56, 0.64, 1);
-  animation-delay: var(--bd, 0.3s);
+
+/* The coral bud rides the tip of the growing center line and settles as the
+   gate node - the same dot from logo to node, no pop-in. */
+.gate-bud {
+  animation: bud-travel 0.48s both cubic-bezier(0.4, 0, 0.2, 1);
 }
-@keyframes bloom-bud-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bud-travel {
+  0%   { opacity: 0; transform: translate(-50%, -50%) translateY(-32px) scale(0.5); }
+  15%  { opacity: 1; }
+  85%  { transform: translate(-50%, -50%) translateY(-2px) scale(1.1); }
+  100% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+}
 
 .bloom-slice {
   animation: bloom-slice-shear 0.75s both cubic-bezier(0.3, 0.7, 0.3, 1);
@@ -548,6 +542,7 @@
   8%   { opacity: 1; }
   30%  { transform: translateX(var(--shear)); }
   55%  { transform: translateX(var(--shear)); }
-  80%  { transform: translateX(calc(var(--shear) * -0.4)); }
-  100% { transform: translateX(0); opacity: 0; }
+  80%  { transform: translateX(calc(var(--shear) * -0.4)); opacity: 1; }
+  92%  { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(0); opacity: 1; }
 }

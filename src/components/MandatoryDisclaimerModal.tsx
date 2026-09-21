@@ -67,35 +67,18 @@ const FOLD_PATHS = [
   'M 182.7 85 Q 157 127 110 140',
 ];
 
-const FOLD_AT = [0.15, 0.28, 0.41]; // seconds, staggered
-/** Handoff timing: the fold begins as the bloom dissolves (post-landing). */
-const FOLD_AT_HANDOFF = [1.15, 1.27, 1.39];
+/** Two crown twigs: the branching crown the logo grows on landing. They are
+ *  part of the final header geometry - they settle dimmed, never removed. */
+const TWIG_PATHS = [
+  'M 50 30 Q 40 20 34 12',
+  'M 170 30 Q 180 20 186 12',
+];
 
-/**
- * The bloom: forking branches that grow out of the landed logo's halo.
- * Coordinates live in a 420x260 overlay centered on the 220x170 cluster
- * (cluster offset = 100,45): logo center (210,107), halo rx 84 ry 46,
- * gate node (210,185). Mains + forks + buds at the tips.
- */
-const BLOOM_BRANCHES: { d: string; fork?: boolean; at: number }[] = [
-  { d: 'M 128.8 118.9 C 100 150, 84 176, 74 206', at: 0.10 },                    // left main
-  { d: 'M 100.6 158.3 C 96 180, 106 202, 118 222', fork: true, at: 0.38 },       // left fork
-  { d: 'M 88 188 C 80 200, 70 208, 58 216', fork: true, at: 0.50 },              // left sub-fork
-  { d: 'M 291.2 118.9 C 320 150, 336 176, 346 206', at: 0.16 },                  // right main
-  { d: 'M 319.4 158.3 C 324 180, 314 202, 302 222', fork: true, at: 0.44 },      // right fork
-  { d: 'M 332 188 C 340 200, 350 208, 362 216', fork: true, at: 0.56 },          // right sub-fork
-  { d: 'M 165.4 74.7 C 152 58, 140 46, 128 32', at: 0.24 },                      // top-left leaf
-  { d: 'M 148 56 C 138 46, 128 40, 116 36', fork: true, at: 0.52 },              // top-left sub-leaf
-  { d: 'M 254.6 74.7 C 268 58, 280 46, 292 32', at: 0.30 },                      // top-right leaf
-  { d: 'M 272 56 C 282 46, 292 40, 304 36', fork: true, at: 0.58 },              // top-right sub-leaf
-  { d: 'M 210 153 C 198 166, 222 176, 210 185', fork: true, at: 0.52 },          // trunk into the gate node
-];
-const BLOOM_BUDS: { x: number; y: number; at: number }[] = [
-  { x: 74, y: 206, at: 0.72 }, { x: 118, y: 222, at: 0.88 }, { x: 58, y: 216, at: 1.02 },
-  { x: 346, y: 206, at: 0.78 }, { x: 302, y: 222, at: 0.94 }, { x: 362, y: 216, at: 1.08 },
-  { x: 128, y: 32, at: 0.76 }, { x: 116, y: 36, at: 1.00 },
-  { x: 292, y: 32, at: 0.82 }, { x: 304, y: 36, at: 1.06 },
-];
+/** Draw order: 3 fold mains, then the 2 crown twigs (seconds, staggered). */
+const FOLD_AT = [0.15, 0.28, 0.41, 0.30, 0.38];
+/** Handoff timing: the branches grow out of the landed logo, overlapping the
+ *  tail of the slice shear, and settle into the final header structure. */
+const FOLD_AT_HANDOFF = [0.35, 0.47, 0.59, 0.52, 0.62];
 
 const SLICE_COUNT = 6;
 
@@ -103,7 +86,7 @@ const SLICE_COUNT = 6;
 // Presentational pieces
 // ---------------------------------------------------------------------------
 
-function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, clusterRef }: {
+function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, budTravel, clusterRef }: {
   t: (key: string) => string;
   foldAt: readonly number[];
   nodeDelay: string;
@@ -113,6 +96,8 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, clust
   slicing: boolean;
   /** Gate the WAAPI draws on the flight landing (handoff); immediate otherwise. */
   drawNow: boolean;
+  /** Handoff: the coral bud rides the growing center line down into the node. */
+  budTravel: boolean;
   clusterRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const lineRefs = useRef<(SVGPathElement | null)[]>([]);
@@ -131,13 +116,17 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, clust
       el.style.strokeDasharray = `${len}`;
       if (reduce) {
         el.style.strokeDashoffset = '0';
+        el.classList.remove('fold-grow');
         return;
       }
       el.style.strokeDashoffset = `${len}`;
-      anims.push(el.animate(
+      const anim = el.animate(
         [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
         { duration: 480, delay: foldAt[i] * 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'both' },
-      ));
+      );
+      // The SAME path element settles into its final quiet styling - no swap.
+      anim.onfinish = () => el.classList.remove('fold-grow');
+      anims.push(anim);
     });
     return () => anims.forEach(a => a.cancel());
   }, [foldAt, drawNow]);
@@ -145,33 +134,20 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, clust
   return (
     <div ref={clusterRef} className="intro-rise relative w-[220px] h-[170px] mx-auto" style={{ animationDelay: '0.05s' }}>
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 170" aria-hidden>
-        <ellipse cx="110" cy="62" rx="84" ry="46" fill="none" stroke="rgba(159,216,198,0.10)" strokeWidth="1" strokeDasharray="2 7" />
+        <ellipse className="gate-halo" cx="110" cy="62" rx="84" ry="46" fill="none" stroke="rgba(159,216,198,0.10)" strokeWidth="1" strokeDasharray="2 7" />
         {FOLD_PATHS.map((d, i) => (
-          <path key={i} ref={el => { lineRefs.current[i] = el; }} className="assoc-line" d={d} />
+          <path key={i} ref={el => { lineRefs.current[i] = el; }} className="assoc-line fold-grow" d={d} />
+        ))}
+        {TWIG_PATHS.map((d, i) => (
+          <path key={`t${i}`} ref={el => { lineRefs.current[FOLD_PATHS.length + i] = el; }} className="assoc-twig fold-grow" d={d} />
         ))}
       </svg>
 
-      {/* the bloom: rings, forking branches and buds growing out of the halo */}
+      {/* the landing flash: pure light, no geometry - the geometry that grows
+          out of the logo IS the final header (halo, fold paths, twigs, bud) */}
       {slicing && (
         <div className="bloom-layer" aria-hidden>
           <div className="bloom-glow" />
-          <div className="bloom-ring" style={{ ['--rd' as string]: '0.04s' }} />
-          <div className="bloom-ring bloom-ring-b" style={{ ['--rd' as string]: '0.16s' }} />
-          <div className="bloom-ring bloom-ring-c" style={{ ['--rd' as string]: '0.28s' }} />
-          <svg className="bloom-svg" viewBox="0 0 420 260">
-            {BLOOM_BRANCHES.map((b, i) => (
-              <path
-                key={i}
-                className={`bloom-branch${b.fork ? ' bloom-fork' : ''}`}
-                d={b.d}
-                pathLength={1}
-                style={{ ['--bd' as string]: `${b.at}s` }}
-              />
-            ))}
-            {BLOOM_BUDS.map((b, i) => (
-              <circle key={i} className="bloom-bud" cx={b.x} cy={b.y} r="3.4" style={{ ['--bd' as string]: `${b.at}s` }} />
-            ))}
-          </svg>
         </div>
       )}
 
@@ -219,7 +195,7 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, clust
       {/* the point the associations gather into */}
       <span
         aria-hidden
-        className="assoc-node absolute w-[6px] h-[6px] rounded-full"
+        className={`assoc-node absolute w-[6px] h-[6px] rounded-full${budTravel ? ' gate-bud' : ''}`}
         style={{ left: 110, top: 140, background: '#ff7a66', boxShadow: '0 0 10px rgba(255,122,102,0.7)', animationDelay: nodeDelay }}
       />
     </div>
@@ -244,11 +220,12 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
   const [flightTo, setFlightTo] = useState<{ x: number; y: number; scale: number } | null>(null);
   const [flightDone, setFlightDone] = useState(false);
   const [sliceDone, setSliceDone] = useState(false);
+  const [logoBack, setLogoBack] = useState(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   useEffect(() => {
-    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setSliceDone(false); return; }
+    if (!isOpen || !handoff || reduce) { setFlightFrom(null); setFlightTo(null); setFlightDone(false); setSliceDone(false); setLogoBack(false); return; }
     const el = document.querySelector('.assoc-logo-wrap');
     const r = el?.getBoundingClientRect();
     if (r && r.width > 0) {
@@ -256,10 +233,12 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
       setFlightTo(null);
       setFlightDone(false);
       setSliceDone(false);
+      setLogoBack(false);
     } else {
       setFlightFrom(null);
       setFlightDone(true);
       setSliceDone(true);
+      setLogoBack(true);
     }
   }, [isOpen, handoff, reduce]);
 
@@ -267,7 +246,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
     if (!flightFrom || flightTo) return;
     const id = requestAnimationFrame(() => {
       const box = clusterRef.current?.getBoundingClientRect();
-      if (!box || box.width === 0) { setFlightDone(true); setSliceDone(true); return; }
+      if (!box || box.width === 0) { setFlightDone(true); setSliceDone(true); setLogoBack(true); return; }
       const tx = box.left + (110 / 220) * box.width;
       const ty = box.top + (62 / 170) * box.height;
       const size = 64;
@@ -283,9 +262,9 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
   const landed = !handoff || !flightFrom || flightDone;
 
   const foldAt = handoff ? FOLD_AT_HANDOFF : FOLD_AT;
-  const nodeDelay = handoff ? '1.45s' : '0.62s';
+  const nodeDelay = handoff ? '0.47s' : '0.62s';
   const copyDelay = handoff
-    ? { title: '1.55s', body: '1.67s', hint: '1.77s', confirm: '1.87s', credit: '1.97s' }
+    ? { title: '1.15s', body: '1.27s', hint: '1.37s', confirm: '1.47s', credit: '1.57s' }
     : { title: '0.5s', body: '0.62s', hint: '0.72s', confirm: '0.82s', credit: '0.94s' };
 
   // No early return here on purpose: AnimatePresence needs the tree mounted
@@ -322,9 +301,10 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
                   t={t}
                   foldAt={foldAt}
                   nodeDelay={nodeDelay}
-                  logoHidden={flying || slicing}
+                  logoHidden={flying || (slicing && !logoBack)}
                   slicing={slicing}
                   drawNow={landed}
+                  budTravel={handoff}
                   clusterRef={clusterRef}
                 />
               </div>
@@ -387,7 +367,10 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
               transition={{ type: 'spring', stiffness: 105, damping: 16, mass: 0.9 }}
               onAnimationComplete={() => {
                 setFlightDone(true);
-                timersRef.current.push(setTimeout(() => setSliceDone(true), 820));
+                // the slices re-form into the whole logo by ~700ms; fade the
+                // base logo in underneath, then unmount the identical stack.
+                timersRef.current.push(setTimeout(() => setLogoBack(true), 700));
+                timersRef.current.push(setTimeout(() => setSliceDone(true), 900));
               }}
             >
               <motion.img
