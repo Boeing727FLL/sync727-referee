@@ -149,7 +149,7 @@ async function ensureKeysLoaded(): Promise<void> {
   }
 }
 
-async function getAllApiKeys(): Promise<string[]> {
+export async function getAllApiKeys(): Promise<string[]> {
   await ensureKeysLoaded();
   const envKey = getEnvKey();
   const list = [...GEMINI_KEYS];

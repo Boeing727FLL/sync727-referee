@@ -25,6 +25,7 @@ import { getPublicUrl } from '../lib/r2Config';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
 import ThinkIndicator from '../components/ThinkIndicator';
+import { ensureSeasonIdentity, useSeasonIdentity } from '../features/referee/season/identity';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -532,6 +533,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   };
   // ===== 5. Chat state: messages, input, rulebook files, request flags.
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
+  const seasonIdentity = useSeasonIdentity(seasonName);
   // Restore this device's local-only chat (bounded, text-only) across a
   // refresh. Never synced anywhere; wiped on sign-out/kick/delete/reset.
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadChatState(resolveRefereeUid() || 'anon')?.messages ?? []);
@@ -714,6 +716,26 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                 last_updated: Date.now()
               });
             } catch (e) {}
+            // One-time identity generation for seasons that predate the
+            // upload-time hook; no-op when the identity already exists.
+            void (async () => {
+              try {
+                const [{ listRulebookImagePages }, { fileToBase64 }] = await Promise.all([
+                  import('../lib/r2'),
+                  import('../features/referee/rulebook/pdfRendering'),
+                ]);
+                let evidence;
+                const cover = loadedFiles[0];
+                if (cover) {
+                  const pages = await listRulebookImagePages(cover.name);
+                  if (pages.length) {
+                    const blob = await fetch(getPublicUrl(`fll-rules-images/${cover.name}/page_${pages[0]}.jpg`)).then(r => r.ok ? r.blob() : Promise.reject(new Error(String(r.status))));
+                    evidence = { imageBase64: await fileToBase64(blob), mimeType: 'image/jpeg' };
+                  }
+                }
+                await ensureSeasonIdentity(detectedSeason, evidence);
+              } catch { /* identity is best-effort */ }
+            })();
           }
         } else if (seasonNameRef.current !== 'UNKNOWN') {
           seasonNameRef.current = 'UNKNOWN';
@@ -806,7 +828,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     rulebookMutationRef.current = mutation;
     void mutation.catch(() => {});
     try {
-      const [{ Upload }, { s3Client, R2_BUCKET_NAME, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand }, { convertPdfToImages }] = await Promise.all([
+      const [{ Upload }, { s3Client, R2_BUCKET_NAME, ListObjectsV2Command, DeleteObjectsCommand, PutObjectCommand }, { convertPdfToImages, fileToBase64 }] = await Promise.all([
         import('@aws-sdk/lib-storage'),
         import('../lib/r2'),
         import('../features/referee/rulebook/pdfRendering'),
@@ -911,7 +933,12 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         try {
-          const images = await convertPdfToImages(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
+          const images = await convertPdfToImages
+          if (isNewSeason && images.length > 0) {
+            // The season's cover is the strongest branding evidence: generate
+            // and persist its badge identity once, right after upload.
+            void ensureSeasonIdentity(extractedSeason, { imageBase64: await fileToBase64(images[0].data), mimeType: 'image/jpeg' }).catch(() => {});
+          }(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
           let okCount = 0;
           for (let i = 0; i < images.length; i++) {
             const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
@@ -1259,7 +1286,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop /></motion.div>
 
       {/* Header - Liquid Glass bar */}
-      <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="mx-2.5 mt-2.5 md:mx-4 md:mt-3.5 rounded-[22px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_16px_44px_rgba(0,0,0,0.45)] z-30 shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="mx-2.5 mt-2.5 md:mx-4 md:mt-3.5 rounded-[16px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_16px_44px_rgba(0,0,0,0.45)] z-30 shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-3 py-2 md:px-4 md:py-2.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -1270,12 +1297,12 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               {t('app.title')}
             </h1>
             <div className="flex md:hidden items-center shrink-0">
-              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact />
+              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact identity={seasonIdentity} />
             </div>
           </div>
 
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} />
+            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} identity={seasonIdentity} />
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
@@ -1283,7 +1310,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 rounded-full border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
+                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 rounded-[12px] border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
                 >
                   <div className="hidden sm:flex items-center ps-1.5">
                     <span className="text-xs font-bold text-white/85 max-w-[120px] truncate leading-none">{displayUser.name}</span>
