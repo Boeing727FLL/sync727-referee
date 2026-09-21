@@ -45,7 +45,7 @@ export default function ChatComposer(props: Props) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 border-t border-white/[0.12] px-1 pt-2 md:pt-2.5 focus-within:border-[rgba(159,216,198,0.55)] transition-colors">
+      <div className="w-full max-w-3xl mx-auto flex flex-col gap-1 rounded-[22px] border border-white/[0.10] bg-white/[0.045] backdrop-blur-md shadow-[0_10px_36px_rgba(0,0,0,0.35)] px-2 pt-1.5 md:pt-2 focus-within:border-[rgba(159,216,198,0.45)] focus-within:bg-white/[0.06] focus-within:shadow-[0_0_0_4px_rgba(159,216,198,0.08),0_18px_50px_rgba(0,0,0,0.45)] transition-all">
         <AnimatePresence>
           {attachments.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} animate={{ opacity: 1, height: 'auto', clipPath: 'inset(0% 0 0 0 round 12px)' }} exit={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} transition={MOTION.morph} className="overflow-hidden">
@@ -64,7 +64,7 @@ export default function ChatComposer(props: Props) {
           <motion.button whileTap={{ scale: 0.9 }} transition={MOTION.tap} onClick={() => attachInputRef.current?.click()} disabled={busy || learning} aria-label={t('chat.attachImage')} title={t('chat.attachImage')} className="ms-auto shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white/35 hover:text-white hover:bg-white/[0.06] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><ImagePlus className="w-5 h-5" /></motion.button>
           <input ref={attachInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onAttach} />
           {busy ? <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onStop} aria-label="עצור" title="עצור" className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] text-[#ff7a66] active:scale-90 transition-all cursor-pointer"><Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" /></motion.button>
-            : <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onSend} disabled={busy || learning || (!input.trim() && !attachments.length)} aria-label={t('chat.send')} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-yellow-400 hover:bg-yellow-300 text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" /></motion.button>}
+            : <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onSend} disabled={busy || learning || (!input.trim() && !attachments.length)} aria-label={t('chat.send')} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-slate-950 shadow-[0_6px_18px_rgba(251,191,36,0.35)] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" /></motion.button>}
         </div>
       </div>
       {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-slate-400" aria-live="polite">{quotaText}</div>}

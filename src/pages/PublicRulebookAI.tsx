@@ -80,7 +80,7 @@ import { buildMessageView, typewriterLength } from '../features/referee/chat/mes
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
 import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
 import { SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
-import SpatialBackdrop from '../components/SpatialBackdrop';
+import ChatBackdrop from '../components/ChatBackdrop';
 import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
@@ -1256,10 +1256,10 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><SpatialBackdrop /></motion.div>
+      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop /></motion.div>
 
       {/* Header - dark glass, premium AI console */}
-      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#04070d]/55 backdrop-blur-xl z-30 shrink-0 relative">
+      <motion.div initial={{ opacity: 0, y: -14, scale: 0.995 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.08 }} className="border-b border-white/[0.07] bg-[#05080f]/65 backdrop-blur-xl z-30 shrink-0 relative">
         {/* Row 1: Logo + Title + User */}
         <div className="px-2 py-1.5 md:px-4 md:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
