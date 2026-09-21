@@ -61,7 +61,9 @@ interface Spark {
 
 const smooth = (k: number) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
 
-export default function ParticleBurst({ onDone }: { onDone?: () => void }) {
+interface BurstSeed { left: number; top: number; width: number; height: number }
+
+export default function ParticleBurst({ onDone, seeds }: { onDone?: () => void; seeds?: BurstSeed[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
@@ -72,7 +74,7 @@ export default function ParticleBurst({ onDone }: { onDone?: () => void }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = window.innerWidth, h = window.innerHeight;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
@@ -82,9 +84,11 @@ export default function ParticleBurst({ onDone }: { onDone?: () => void }) {
     const R = Math.min(w, h) * 0.30;
     const persp = R * 3.2;
 
-    // Spawn geometry from the disclaimer's own elements.
-    const rects = Array.from(document.querySelectorAll<HTMLElement>('[data-burst]'))
-      .map((el) => el.getBoundingClientRect())
+    // Spawn geometry from the disclaimer's own elements. A caller that
+    // delays the burst (to keep the chat's mount off the animation's first
+    // frames) snapshots these rects at confirm time and passes them in.
+    const rects = (seeds && seeds.length ? seeds : Array.from(document.querySelectorAll<HTMLElement>('[data-burst]'))
+      .map((el) => el.getBoundingClientRect()))
       .filter((r) => r.width > 0 && r.height > 0);
     const spawn = (): { x: number; y: number } => {
       if (!rects.length) return { x: cx + (Math.random() - 0.5) * w * 0.4, y: cy + (Math.random() - 0.5) * h * 0.4 };

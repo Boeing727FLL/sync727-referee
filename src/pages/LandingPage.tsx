@@ -54,6 +54,12 @@ function LandingContent() {
   // entrance, and the app chunk starts downloading immediately.
   const beginEntry = () => {
     void refereeImport();
+    // Decode the chat backdrop's glow fields now, during the gate, instead
+    // of on the main thread in the middle of the entrance animation.
+    if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
+      const imgA = new Image(); imgA.src = '/chat-glow.jpg';
+      const imgB = new Image(); imgB.src = '/chat-glow-tall.jpg';
+    }
     // Deep-link param consumed: a reload from here on lands on the intro.
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login')) {
       window.history.replaceState({}, '', '/');
@@ -68,12 +74,22 @@ function LandingContent() {
   // canvas ABOVE the exiting stage and the entering chat. Reduced motion
   // skips the burst and goes straight to the entrance.
   const [entryBurst, setEntryBurst] = useState(false);
+  const [burstSeeds, setBurstSeeds] = useState<{ left: number; top: number; width: number; height: number }[]>([]);
   const confirmDisclaimer = () => {
     const reduce = typeof window !== 'undefined'
       && typeof window.matchMedia === 'function'
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduce) setEntryBurst(true);
+    // Snapshot the disclaimer's element geometry NOW, before its exit
+    // animation moves anything - the burst's spawn points stay truthful
+    // even though the burst itself starts a beat later.
+    const seeds = Array.from(document.querySelectorAll<HTMLElement>('[data-burst]'))
+      .map((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; })
+      .filter((r) => r.width > 0 && r.height > 0);
+    setBurstSeeds(seeds);
     setStage('entering');
+    // Let the chat chunk mount behind the exiting gate first; the burst
+    // starts on a clean frame instead of competing with the mount long-task.
+    if (!reduce) window.setTimeout(() => setEntryBurst(true), 200);
   };
 
   return (
@@ -107,7 +123,7 @@ function LandingContent() {
             <DisclaimerStage isOpen={stage === 'disclaimer'} onConfirm={confirmDisclaimer} />
           </Suspense>
           {stage === 'entering' && <div className="enter-bloom" aria-hidden />}
-          {entryBurst && <ParticleBurst onDone={() => setEntryBurst(false)} />}
+          {entryBurst && <ParticleBurst seeds={burstSeeds} onDone={() => setEntryBurst(false)} />}
         </>
       )}
     </div>

@@ -276,7 +276,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
       </div>
 
       {/* copy: anchored low, quiet, generous air above */}
-      <main className="intro-copy relative z-10 px-5 md:px-10 pb-7 md:pb-10 w-full max-w-3xl mx-auto md:mx-0">
+      <main className="intro-copy relative z-10 px-5 md:px-10 pb-7 md:pb-10 w-full max-w-3xl mx-auto md:text-center">
         <span
           className="intro-rise block text-[10px] md:text-[11px] font-bold uppercase tracking-[0.34em] text-white/45 mb-3"
           style={{ animationDelay: '0.5s' }}
@@ -292,7 +292,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
         </h2>
 
         <p
-          className="intro-rise text-slate-400 text-[14px] md:text-[16px] font-medium leading-6 md:leading-7 mt-3 max-w-md"
+          className="intro-rise text-slate-400 text-[14px] md:text-[16px] font-medium leading-6 md:leading-7 mt-3 max-w-md md:mx-auto"
           style={{ animationDelay: '0.85s', textWrap: 'pretty' } as React.CSSProperties}
         >
           {t('intro.descFull')}
@@ -305,7 +305,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 
             onPointerEnter={onWarm}
             onFocus={onWarm}
             onTouchStart={onWarm}
-            className="group flex items-center gap-3 cursor-pointer py-2"
+            className="group flex items-center gap-3 cursor-pointer py-2 md:justify-center md:w-full"
           >
             <span className="text-[15px] md:text-base font-black text-white tracking-tight border-b border-yellow-400/60 pb-1 transition-colors group-hover:border-yellow-300">
               {isLoggedIn ? t('intro.continue') : t('intro.continueLogin')}
