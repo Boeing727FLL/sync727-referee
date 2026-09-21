@@ -1458,13 +1458,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       {/* Chat Area - premium AI console, full screen */}
       <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef}>
         <div className="w-full max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
-        {heroActive && <ChatHero
+        <AnimatePresence>{heroActive && <ChatHero
           greeting={heroGreeting}
           questions={quickQuestions}
           disabled={isAiBusy || rulebookLoading}
           onQuestion={question => handleSend(question)}
           t={t}
-        />}
+        />}</AnimatePresence>
         <AnimatePresence initial={false} mode="popLayout">
         {messages.map((message, index) => {
           const preview = buildMessageView(message, index, {
