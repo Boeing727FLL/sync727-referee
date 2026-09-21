@@ -6,8 +6,7 @@
  * confirm, revealing the live chat underneath. Timings are product
  * behavior — never "cleaned up".
  *
- * COPY: title/body/confirm arrive translated via t(); only the tiny Hebrew
- * helper line below is hardcoded.
+ * COPY: all copy arrives translated via t(); direction follows isRTL.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';

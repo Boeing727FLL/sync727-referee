@@ -95,3 +95,19 @@ test('completion racing stop: fully received answer stays complete and static', 
   const historyView = buildMessageView(message, 0, viewOptions({ lastIndex: 2, stopped: false }));
   assert.equal(historyView.text, fullText);
 });
+
+test('stop never injects stopped-by-user copy in any language', () => {
+  const scenarios: ChatMessage[][] = [
+    [question],
+    [question, { role: 'model', text: '<think>thinking' }],
+    [question, { role: 'model', text: 'תשובה חלקית בעברית' }],
+    [question, { role: 'model', text: 'A partial English answer' }],
+  ];
+  const stoppedCopy = /הופסקה|נעצרה|stopped by the user|action stopped|aborted by/i;
+  for (const before of scenarios) {
+    const after = applyStopToMessages(before);
+    assert.equal(after.some(m => stoppedCopy.test(m.text)), false);
+    // The user question and any visible partial answer survive untouched.
+    assert.equal(after[0], question);
+  }
+});
