@@ -268,3 +268,58 @@
 .intro-drift-a { animation: intro-drift-a-kf 38s ease-in-out infinite; }
 .intro-drift-b { animation: intro-drift-b-kf 46s ease-in-out infinite; }
 .intro-drift-c { animation: intro-drift-c-kf 52s ease-in-out infinite; }
+
+/* ===== Same-page intro -> login transition ============================== */
+/* CTA flips IntroScreen to data-mode="login": the halo and cards fold away,
+   the copy releases, and the logo travels up and shrinks to make room for
+   the inline login stage. Transitions only; the global reduced-motion rule
+   collapses them. */
+.intro-screen .assoc-halo-svg,
+.intro-screen .assoc-card,
+.intro-screen .intro-copy {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.intro-screen .assoc-logo-wrap {
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.intro-screen[data-mode="login"] .assoc-halo-svg {
+  opacity: 0;
+}
+/* animation: none first: the fill-mode entrance animations would otherwise
+   keep overriding opacity and pin the cards/nodes visible. */
+.intro-screen[data-mode="login"] .assoc-card,
+.intro-screen[data-mode="login"] .assoc-node {
+  animation: none;
+  opacity: 0;
+}
+.intro-screen[data-mode="login"] .intro-copy {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+.intro-screen[data-mode="login"] .assoc-logo-wrap {
+  transform: translate(-50%, -50%) translateY(-17vh) scale(0.58) !important;
+}
+
+/* ===== Inline login stage =============================================== */
+/* The login form arrives in the same fold language as the disclaimer: two
+   hairlines converge to a node above the card, then content stages in. */
+@keyframes login-stage-in {
+  from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes login-line-draw { to { stroke-dashoffset: 0; } }
+.login-stage { animation: login-stage-in 0.7s both cubic-bezier(0.22, 1, 0.36, 1); }
+.login-line {
+  fill: none;
+  stroke: rgba(159, 216, 198, 0.55);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  animation: login-line-draw 0.7s both cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes login-node-pop {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.login-node { animation: login-node-pop 0.4s both cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: center; transform-box: fill-box; }

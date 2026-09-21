@@ -1,7 +1,16 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
+import { Suspense, lazy, useState } from 'react';
 import IntroScreen from '../components/IntroScreen';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 import { LanguageProvider } from '../hooks/useLanguage';
+
+/**
+ * The login stage (and with it Firebase auth) stays out of the landing's
+ * first paint: it is lazy-loaded on the first intent and revealed in-page,
+ * so the intro -> login transition is a fold, not a route change.
+ */
+const loginStageImport = () => import('../features/landing/LoginStage');
+const LoginStage = lazy(loginStageImport);
 
 export function hasSavedSession() {
   try {
@@ -24,14 +33,34 @@ interface LandingPageProps {
 function LandingContent({ onNavigate, onWarmRoute }: LandingPageProps) {
   const { t } = useLandingLanguage();
   const signedIn = hasSavedSession();
+  const [stage, setStage] = useState<'intro' | 'login'>(
+    () => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login') ? 'login' : 'intro'),
+  );
+
+  const navigate = (to: string) => (onNavigate ?? window.location.assign.bind(window.location))(to);
+  const enterChat = () => navigate('/app?enter=chat');
 
   return (
-    <IntroScreen
-      isLoggedIn={signedIn}
-      onContinue={() => (onNavigate ?? window.location.assign.bind(window.location))(signedIn ? '/app?enter=chat' : '/login')}
-      onWarm={() => onWarmRoute?.(signedIn ? '/app?enter=chat' : '/login')}
-      t={t}
-    />
+    <>
+      <IntroScreen
+        isLoggedIn={signedIn}
+        mode={stage}
+        onContinue={() => (signedIn ? enterChat() : setStage('login'))}
+        onWarm={() => {
+          if (signedIn) {
+            onWarmRoute?.('/app?enter=chat');
+          } else {
+            void loginStageImport();
+          }
+        }}
+        t={t}
+      />
+      {stage === 'login' && !signedIn && (
+        <Suspense fallback={null}>
+          <LoginStage onBack={() => setStage('intro')} onSuccess={enterChat} />
+        </Suspense>
+      )}
+    </>
   );
 }
 

@@ -32,6 +32,8 @@ interface IntroScreenProps {
   isLoggedIn: boolean;
   onContinue: () => void;
   onWarm?: () => void;
+  /** 'login' folds the association system away so the inline login stage can take over the same page. */
+  mode?: 'intro' | 'login';
   t: (key: string) => string;
 }
 
@@ -129,7 +131,7 @@ function BrandMark() {
 /** The full team-built logo, intact, at the center of its halo. */
 function CenterLogo({ t, logoPx }: { t: (key: string) => string; logoPx: number }) {
   return (
-    <div className="absolute" style={{ left: '50%', top: `${LOGO_CY * 100}%`, transform: 'translate(-50%, -50%)' }}>
+    <div className="assoc-logo-wrap absolute" style={{ left: '50%', top: `${LOGO_CY * 100}%`, transform: 'translate(-50%, -50%)' }}>
       <div
         aria-hidden
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
@@ -181,7 +183,7 @@ function Association({ x, y, title, index }: { x: number; y: number; title: stri
 // The screen
 // ---------------------------------------------------------------------------
 
-export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: IntroScreenProps) {
+export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t, mode = 'intro' }: IntroScreenProps) {
   const { isRTL } = useLanguage();
   const lineRefs = useRef<(SVGPathElement | null)[]>([]);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -232,6 +234,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: Intro
     <div
       className="intro-screen fixed inset-0 z-[9999] flex flex-col overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
+      data-mode={mode}
     >
       <SpatialBackdrop />
       <BrandMark />
@@ -240,7 +243,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: Intro
       <div ref={stageRef} className="relative z-10 flex-1 min-h-0">
         {halo && (
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className="assoc-halo-svg absolute inset-0 w-full h-full pointer-events-none"
             viewBox={`0 0 ${halo.w} ${halo.h}`}
             aria-hidden
           >
@@ -273,7 +276,7 @@ export default function IntroScreen({ isLoggedIn, onContinue, onWarm, t }: Intro
       </div>
 
       {/* copy: anchored low, quiet, generous air above */}
-      <main className="relative z-10 px-5 md:px-10 pb-7 md:pb-10 w-full max-w-3xl mx-auto md:mx-0">
+      <main className="intro-copy relative z-10 px-5 md:px-10 pb-7 md:pb-10 w-full max-w-3xl mx-auto md:mx-0">
         <span
           className="intro-rise block text-[10px] md:text-[11px] font-bold uppercase tracking-[0.34em] text-white/45 mb-3"
           style={{ animationDelay: '0.5s' }}

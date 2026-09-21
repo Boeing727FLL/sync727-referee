@@ -20,19 +20,22 @@ test('hasSavedSession detects a persisted firebase auth user key', () => {
   localStorage.clear();
 });
 
-test('LandingPage sends signed-out visitors to /login and returning users straight to chat', () => {
+test('LandingPage opens the login stage in-page for signed-out visitors and sends returning users straight to chat', () => {
   const seen: string[] = [];
   localStorage.clear();
   const first = render(React.createElement(LandingPage, { onNavigate: (to: string) => seen.push(to) }));
   fireEvent.click(first.getByRole('button'));
-  assert.deepEqual(seen, ['/login']);
+  // No route change: the intro flips to its login stage on the same page.
+  // (The stage itself mounts Firebase — covered by browser harness, not node.)
+  assert.deepEqual(seen, []);
+  assert.ok(first.container.querySelector('[data-mode="login"]'), 'intro should flip to login mode');
   first.unmount();
   cleanup();
 
   localStorage.setItem('auth_user', '{"uid":"u1"}');
   const second = render(React.createElement(LandingPage, { onNavigate: (to: string) => seen.push(to) }));
   fireEvent.click(second.getByRole('button'));
-  assert.deepEqual(seen, ['/login', '/app?enter=chat']);
+  assert.deepEqual(seen, ['/app?enter=chat']);
   second.unmount();
   cleanup();
   localStorage.clear();
