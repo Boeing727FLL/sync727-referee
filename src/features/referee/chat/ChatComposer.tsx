@@ -20,11 +20,12 @@ type Props = {
   onSend: () => void;
   onStop: () => void;
   t: (key: string) => string;
+  quotaText?: string | null;
 };
 
 export default function ChatComposer(props: Props) {
   const { replyTo, clearReply, attachments, removeAttachment, attachInputRef, onAttach,
-    composerRef, input, setInput, resize, busy, learning, onSend, onStop, t } = props;
+    composerRef, input, setInput, resize, busy, learning, onSend, onStop, t, quotaText } = props;
   return (
     <div className="px-3 md:px-10 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 relative z-10">
       <AnimatePresence>
@@ -66,6 +67,7 @@ export default function ChatComposer(props: Props) {
             : <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onSend} disabled={busy || learning || (!input.trim() && !attachments.length)} aria-label={t('chat.send')} className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[#FFC400] hover:bg-[#E6B000] text-slate-950 active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_16px_rgba(250,204,21,0.35)] disabled:shadow-none"><Send className="w-4 h-4 md:w-5 md:h-5 -scale-x-100" /></motion.button>}
         </div>
       </div>
+      {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-slate-400" aria-live="polite">{quotaText}</div>}
       <div className="flex items-center justify-center gap-1.5 mt-2"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-80" /><p className="text-[11px] text-slate-500 font-medium">נבנה בהתנדבות על ידי קבוצת Boeing 727 · {t('intro.notOfficial')}</p></div>
     </div>
   );

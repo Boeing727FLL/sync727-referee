@@ -31,7 +31,7 @@ import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
 import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
-import { consumeChatQuota } from '../lib/chatQuota';
+import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
 import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, STOPPED_TEXT, TYPEWRITER_TICK_MS } from '../features/referee/config';
 import { stripThinkBlocks } from '../features/referee/chat/text';
@@ -70,6 +70,7 @@ export default function PublicRulebookAI() {
   // Login state comes only from Firebase Auth (user) or the saved auth_user.
   // URL bypass params were removed for security, everyone must log in.
   const [hasGoogleToken, setHasGoogleToken] = useState<boolean>(false);
+  const [chatQuota, setChatQuota] = useState<ChatQuotaStatus | null>(null);
   // Keep hasGoogleToken in sync with Firebase Auth so the
   // browserLocalPersistence session survives close/reopen the next day.
   // With no network Firebase reports no user because it cannot verify the
@@ -361,6 +362,20 @@ export default function PublicRulebookAI() {
       if (authUser?.uid) return authUser.uid;
     } catch (e) {}
     return null;
+  };
+
+  useEffect(() => {
+    const uid = resolveRefereeUid();
+    if (!uid) { setChatQuota(null); return; }
+    return subscribeChatQuota(uid, setChatQuota);
+    // auth UID and owner identity are the only subscription inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, hasGoogleToken]);
+
+  const quotaMessage = (key: 'chat.quotaExhausted' | 'chat.quotaUnavailable', resetAtMs?: number | null) => {
+    let message = t(key).replace('{limit}', '55');
+    if (resetAtMs) message = message.replace('{time}', new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(resetAtMs));
+    return message;
   };
 
   // Presence + single-session lock: mark this user as online and watch for
@@ -1055,7 +1070,10 @@ export default function PublicRulebookAI() {
       try {
         await consumeChatQuota(quotaUid);
       } catch (error) {
-        setMessages(prev => [...prev, { role: 'model', text: error instanceof Error ? error.message : 'הגעתם למכסת השאלות היומית. נסו שוב מחר.' }]);
+        const text = error instanceof ChatQuotaExhaustedError
+          ? quotaMessage('chat.quotaExhausted', error.resetAtMs)
+          : quotaMessage('chat.quotaUnavailable');
+        setMessages(prev => [...prev, { role: 'model', text }]);
         return;
       }
     }
@@ -1548,6 +1566,7 @@ export default function PublicRulebookAI() {
         onSend={() => handleSend()}
         onStop={handleStop}
         t={t}
+        quotaText={chatQuota ? t('chat.quotaRemaining').replace('{remaining}', String(chatQuota.remaining)).replace('{limit}', String(chatQuota.limit)) : null}
       />
 
       {/* ===== Floating layers: every modal/toast/drawer mounts here and

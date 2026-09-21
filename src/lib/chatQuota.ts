@@ -1,56 +1,71 @@
 /**
- * chatQuota.ts — server-enforced daily question budget (no backend needed).
+ * Firestore-backed referee request budget.
  *
- * WHAT: each answered question consumes one unit from `chat_quota/{uid}`
- * ({count, windowStart}). Firestore rules enforce strictly-+1 increments
- * inside a rolling 24h window with a hard cap, so deleting localStorage or
- * switching devices cannot dodge the budget. Analytics-style failures never
- * break the app, but a DENIED quota write must block the question.
+ * A unit is reserved atomically before any provider work begins. Reservations
+ * are deliberately not refunded on abort/provider failure: a client-controlled
+ * refund would let anyone bypass the cap by aborting after the provider accepted
+ * the request. Internal model/key retries remain part of one reservation.
  */
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { CHAT_QUOTA_WINDOW_MS, DAILY_CHAT_LIMIT, decideChatQuota } from './chatQuotaCore';
+import { auth } from './firebase';
+import { OWNER_EMAIL } from './owner';
 
-/** Max answered questions per user per rolling 24h window. */
-export const DAILY_CHAT_LIMIT = 80;
+export { DAILY_CHAT_LIMIT } from './chatQuotaCore';
 
-const DAY_MS = 24 * 3600 * 1000;
-
-/** Consume one unit. Throws a Hebrew message when the budget is exhausted. */
-export async function consumeChatQuota(uid: string): Promise<void> {
-  if (!uid) return;
-  const ref = doc(db, 'chat_quota', uid);
-  // Staged rollout: the quota collection only exists once the new security
-  // rules are deployed. Until then (or offline) reads fail — stay out of the
-  // way and let the question through, exactly like before the quota existed.
-  try {
-    await getDoc(ref);
-  } catch (error: any) {
-    console.warn('chatQuota unavailable (rules not deployed yet, or offline) — continuing without budget.');
-    return;
+export type ChatQuotaStatus = { remaining: number; limit: number; resetAtMs: number | null };
+export class ChatQuotaExhaustedError extends Error {
+  resetAtMs: number | null;
+  constructor(resetAtMs: number | null) {
+    super('DAILY_QUOTA_EXHAUSTED');
+    this.name = 'ChatQuotaExhaustedError';
+    this.resetAtMs = resetAtMs;
   }
-  try {
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists()) {
-        tx.set(ref, { count: 1, windowStart: serverTimestamp() });
-        return;
-      }
-      const data = snap.data() as { count?: unknown; windowStart?: { toMillis?: () => number } };
-      const startMs = typeof data?.windowStart?.toMillis === 'function' ? (data.windowStart.toMillis() as number) : 0;
-      if (Date.now() - startMs >= DAY_MS) {
-        tx.set(ref, { count: 1, windowStart: serverTimestamp() });
-        return;
-      }
-      const count = Number(data?.count) || 0;
-      if (count >= DAILY_CHAT_LIMIT) throw new Error('DAILY_QUOTA_EXHAUSTED');
-      tx.update(ref, { count: count + 1 });
+}
+
+function millis(value: unknown): number {
+  return value && typeof (value as Timestamp).toMillis === 'function' ? (value as Timestamp).toMillis() : 0;
+}
+
+/** Reserve one request. Firestore retries transaction conflicts atomically. */
+export async function consumeChatQuota(uid: string, nowMs = Date.now()): Promise<ChatQuotaStatus | null> {
+  const signedIn = auth.currentUser;
+  const verifiedOwner = signedIn?.uid === uid && signedIn.emailVerified && signedIn.email?.trim().toLowerCase() === OWNER_EMAIL;
+  if (!uid || verifiedOwner) return null;
+  const quotaRef = doc(db, 'chat_quota', uid);
+  return runTransaction(db, async tx => {
+    const snapshot = await tx.get(quotaRef);
+    const data = snapshot.exists() ? snapshot.data() : null;
+    const decision = decideChatQuota({
+      current: data ? { count: Number(data.count), windowStartMs: millis(data.windowStart) } : null,
+      nowMs,
+      owner: false,
     });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'DAILY_QUOTA_EXHAUSTED') {
-      throw new Error(`הגעתם למכסת השאלות היומית (${DAILY_CHAT_LIMIT}). נסו שוב מחר.`);
+    if (!decision.allowed || !decision.next) throw new ChatQuotaExhaustedError(decision.resetAtMs);
+    if (!snapshot.exists() || decision.next.windowStartMs === nowMs) {
+      tx.set(quotaRef, { count: decision.next.count, windowStart: serverTimestamp() });
+    } else {
+      tx.update(quotaRef, { count: decision.next.count });
     }
-    // Rules denial (e.g. tampered count) also lands here: block the question
-    // instead of letting quota writes fail open.
-    throw new Error(`הגעתם למכסת השאלות היומית (${DAILY_CHAT_LIMIT}). נסו שוב מחר.`);
-  }
+    return { remaining: decision.remaining!, limit: DAILY_CHAT_LIMIT, resetAtMs: decision.resetAtMs };
+  });
+}
+
+/** Live cross-device status for the composer. Owner has no quota indicator. */
+export function subscribeChatQuota(uid: string, onChange: (status: ChatQuotaStatus | null) => void): () => void {
+  const signedIn = auth.currentUser;
+  const verifiedOwner = signedIn?.uid === uid && signedIn.emailVerified && signedIn.email?.trim().toLowerCase() === OWNER_EMAIL;
+  if (!uid || verifiedOwner) { onChange(null); return () => {}; }
+  return onSnapshot(doc(db, 'chat_quota', uid), snapshot => {
+    if (!snapshot.exists()) { onChange({ remaining: DAILY_CHAT_LIMIT, limit: DAILY_CHAT_LIMIT, resetAtMs: null }); return; }
+    const data = snapshot.data();
+    const start = millis(data.windowStart);
+    const expired = !start || Date.now() - start >= CHAT_QUOTA_WINDOW_MS;
+    onChange({
+      remaining: expired ? DAILY_CHAT_LIMIT : Math.max(0, DAILY_CHAT_LIMIT - (Number(data.count) || 0)),
+      limit: DAILY_CHAT_LIMIT,
+      resetAtMs: expired ? null : start + CHAT_QUOTA_WINDOW_MS,
+    });
+  }, () => onChange(null));
 }
