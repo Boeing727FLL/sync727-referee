@@ -41,6 +41,7 @@ import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarr
 import { selectActiveRulebookSources } from '../features/referee/rulebook/activeFiles';
 import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
 import { useDeviceType } from '../features/referee/ui/useDeviceType';
+import { useVersionCheck } from '../features/referee/ui/useVersionCheck';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
@@ -635,6 +636,10 @@ export default function PublicRulebookAI() {
   const renderingResponse = typewriter.rendering;
   const setRenderingResponse = typewriter.setRendering;
   const isAiBusy = loading || renderingResponse;
+
+  // A new deployment reloads the page only when nothing is streaming,
+  // rendering, or typed - never mid-answer or mid-draft.
+  useVersionCheck({ busy: isAiBusy, composerEmpty: !input.trim() });
 
   useEffect(() => {
     // Rulebook metadata is not needed on the landing screen. Waiting until
