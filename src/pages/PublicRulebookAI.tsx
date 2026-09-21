@@ -97,6 +97,17 @@ import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthentic
 import { auth } from '../lib/firebase/auth';
 
 
+/** Build stamp display: epoch millis read as a short local date-time; anything else passes through. */
+function formatBuildVersion(raw: unknown): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1e12) return raw == null ? '?' : String(raw);
+  try {
+    return new Date(n).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return String(raw);
+  }
+}
+
 export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryStart?: 'chat'; onNavigateOut?: (to: string) => void } = {}) {
   const routerNavigate = useNavigate();
   // Embedded in the landing flow: navigations escape to the landing's
@@ -1348,7 +1359,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={MOTION.overlay}
-                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0c1322]/80 backdrop-blur-2xl backdrop-saturate-150 rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_50px_rgba(0,0,0,0.55)] border border-white/[0.12] overflow-hidden z-50"
+                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0c1322]/95 backdrop-blur-2xl backdrop-saturate-150 rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_50px_rgba(0,0,0,0.55)] border border-white/[0.12] overflow-hidden z-50"
                     >
                       <div className="p-3 bg-white/[0.03] border-b border-white/[0.08] flex items-center gap-3">
                         {displayUser.picture || gravatarPic ? (
@@ -1448,10 +1459,10 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                         </button>
                       </div>
                       <div className="px-3 py-2 bg-white/[0.03] border-t border-white/[0.08] text-center">
-                        <span className="text-[10px] font-bold text-white/35">{t('common.creditBuiltBy')} · {t('common.version')} {
+                        <span className="text-[10px] font-bold text-white/35">{t('common.creditBuiltBy')} · {t('common.version')} {formatBuildVersion(
                           // @ts-ignore build-time define, may be absent in some environments
-                          typeof __APP_VERSION__ !== 'undefined' ? String(__APP_VERSION__) : '?'
-                        }</span>
+                          typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null
+                        )}</span>
                       </div>
                     </motion.div>
                   )}
