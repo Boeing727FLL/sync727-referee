@@ -1504,7 +1504,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="bg-white/[0.02] border border-white/[0.07] px-4 py-3 rounded-2xl flex flex-col items-center gap-2">
+            <div className="bg-white/[0.05] px-4 py-3 rounded-full flex items-center">
               <ThinkIndicator />
             </div>
           </motion.div>
