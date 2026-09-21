@@ -538,3 +538,13 @@
      software rendering). */
   will-change: transform;
 }
+
+/* Notch / home-indicator clearance. The shell draws full-bleed (viewport-fit=cover)
+ * while flow content - header, composer, footer - stays inside the safe area.
+ * Zero on devices without insets, so desktop and older phones are unchanged. */
+.app-shell-safe {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
