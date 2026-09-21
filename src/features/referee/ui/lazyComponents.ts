@@ -9,5 +9,4 @@ export const PrivacyModal = lazy(() => import('../../../components/PrivacyModal'
 export const SettingsModal = lazy(() => import('../../../components/SettingsModal'));
 export const MaintenanceScreen = lazy(() => import('../../../components/MaintenanceScreen'));
 export const FeedbackAdminModal = lazy(() => import('../../../components/FeedbackAdminModal'));
-export const TeamWorkspaceModal = lazy(() => import('../../../components/TeamWorkspaceModal'));
 export const MarkdownMessage = lazy(() => import('../../../components/MarkdownMessage'));

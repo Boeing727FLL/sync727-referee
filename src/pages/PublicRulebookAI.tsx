@@ -16,7 +16,7 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Users, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
+import { Send, Bot, FileText, LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Globe, ScrollText, Wrench, Square, Check, Settings, MailCheck, X, ImagePlus } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, rtdb } from '../lib/firebase';
 import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
@@ -29,7 +29,6 @@ import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
-import { getActiveTeamId, saveTeamQuestion } from '../services/teamWorkspaceService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
@@ -54,7 +53,7 @@ import ChatComposer from '../features/referee/chat/ChatComposer';
 import ChatHero from '../features/referee/chat/ChatHero';
 import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
 
-import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, PrivacyModal, RefereeLogsModal, SettingsModal, TeamWorkspaceModal } from '../features/referee/ui/lazyComponents';
+import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, PrivacyModal, RefereeLogsModal, SettingsModal } from '../features/referee/ui/lazyComponents';
 
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
 import { subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/refereeFlags';
@@ -143,14 +142,6 @@ export default function PublicRulebookAI() {
       : h >= 17 && h < 23 ? 'chat.greet_evening' : 'chat.greet_night';
     return t(key).replace('{name}', first);
   }, [displayUser, t, language]);
-  const currentTeamMember = useMemo(() => {    const firebaseUser = auth.currentUser;
-    if (!user && !firebaseUser) return null;
-    return {
-      uid: user?.uid || firebaseUser?.uid || '',
-      name: user?.name || firebaseUser?.displayName || displayUser?.name || 'חבר קבוצה',
-      email: user?.email || firebaseUser?.email || displayUser?.email || '',
-    };
-  }, [user, displayUser]);
   // Force reload when a new version is deployed so cached outdated clients get App Check
   useEffect(() => {
     // @ts-ignore
@@ -186,8 +177,6 @@ export default function PublicRulebookAI() {
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
-  const [showTeamWorkspace, setShowTeamWorkspace] = useState(false);
-  const [teamWorkspaceId, setTeamWorkspaceId] = useState(() => getActiveTeamId());
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
   useEffect(() => {
     return subscribeMaintenanceGate(setMaintenanceState);
@@ -1158,16 +1147,6 @@ export default function PublicRulebookAI() {
             ok: true,
           });
         }
-        if (teamWorkspaceId && currentTeamMember) {
-          void saveTeamQuestion(teamWorkspaceId, {
-            question: userMessage,
-            answer: stripThinkBlocks(response) || response || t('chat.commError'),
-            season: seasonName,
-            language,
-            authorUid: currentTeamMember.uid,
-            authorName: currentTeamMember.name || currentTeamMember.email,
-          }).catch(error => console.warn('Team question save failed:', error));
-        }
         requestFinishedRef.current = true;
         setRenderingResponse(true);
         setMessages(prev => {
@@ -1400,13 +1379,6 @@ export default function PublicRulebookAI() {
                             הגדרות
                           </button>
                         )}
-                        <button
-                          onClick={() => { setShowUserMenu(false); setShowTeamWorkspace(true); }}
-                          className={MENU_ROW_CLASS}
-                        >
-                          <Users className="w-4 h-4 text-[#0B6BCB]" />
-                          מרחב הקבוצה
-                        </button>
                         {auth.currentUser && !auth.currentUser.emailVerified && isCurrentUserOwner() && (
                           <button
                             onClick={async () => {
@@ -1609,12 +1581,6 @@ export default function PublicRulebookAI() {
         onOpenPrivacy={() => setShowPrivacy(true)}
       />}
       {showSettingsFeedback && <FeedbackAdminModal isOpen onClose={() => setShowSettingsFeedback(false)} />}
-      {showTeamWorkspace && <TeamWorkspaceModal
-        isOpen
-        onClose={() => setShowTeamWorkspace(false)}
-        onTeamChange={team => setTeamWorkspaceId(team?.id || '')}
-        currentUser={currentTeamMember || { uid: '', name: 'חבר קבוצה', email: '' }}
-      />}
 
       {/* Owner banner while work mode is on */}
       {maintenance && isCurrentUserOwner() && (
