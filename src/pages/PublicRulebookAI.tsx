@@ -69,7 +69,7 @@ import {
   showIntro as entryShowIntro,
   type EntryState,
 } from '../features/referee/session/entryFlow';
-import { clearAllChatStates, clearChatState, isChatStateEmpty, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
+import { clearAllChatStates, clearChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
@@ -544,12 +544,14 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // ===== 5. Chat state: messages, input, rulebook files, request flags.
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
   const seasonIdentity = useSeasonIdentity(seasonName);
-  // Restore this device's local-only chat (bounded, text-only) across a
-  // refresh. Never synced anywhere; wiped on sign-out/kick/delete/reset.
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChatState(resolveRefereeUid() || 'anon')?.messages ?? []);
-  const [input, setInput] = useState(() => loadChatState(resolveRefereeUid() || 'anon')?.draft ?? '');
+  // Every page load starts a clean conversation: chat history is NOT
+  // restored after a refresh (owner decision). Anything persisted by older
+  // versions is wiped on mount below; sign-out/kick/delete still wipe via
+  // localHistory.ts.
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
   // WhatsApp-style reply: quoted answer context for a follow-up question.
-  const [replyTo, setReplyTo] = useState<{ text: string } | null>(() => loadChatState(resolveRefereeUid() || 'anon')?.replyTo ?? null);
+  const [replyTo, setReplyTo] = useState<{ text: string } | null>(null);
   // Attached user photos (max 3, images only, sent full-resolution).
   // Preview URLs stay alive for the session so sent bubbles keep showing them.
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
@@ -585,19 +587,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   };
   useEffect(() => { autoresizeComposer(); }, [input]);
 
-  // Persist the conversation + composer draft locally (device only) on
-  // every change, so a refresh restores them. See localHistory.ts for the
-  // privacy policy and bounds.
-  useEffect(() => {
-    // Sign-out/kick/delete clear the store and then reset state; persisting
-    // that empty reset would resurrect the just-cleared key, so an empty
-    // state REMOVES the record instead of writing it.
-    const uid = resolveRefereeUid() || 'anon';
-    const state = { messages, draft: input, replyTo };
-    if (isChatStateEmpty(state)) clearChatState(uid);
-    else saveChatState(uid, state);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, input, replyTo]);
+  // Wipe any chat history persisted by older versions on first mount, so a
+  // refresh can never resurrect a past conversation.
+  useEffect(() => { clearChatState(resolveRefereeUid() || 'anon'); }, []);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -1533,7 +1525,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
               <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
-            <div className="bg-white/[0.05] px-4 py-3 rounded-full flex items-center">
+            <div className="bg-[#04060c]/55 border border-white/[0.12] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3 rounded-full flex items-center">
               <ThinkIndicator />
             </div>
           </motion.div>

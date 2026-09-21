@@ -34,7 +34,7 @@ export function hasSavedSession() {
 type Stage = 'intro' | 'login' | 'disclaimer' | 'entering' | 'chat';
 
 /** How long the entrance choreography runs before the chat is fully live. */
-const ENTERING_MS = 1900;
+const ENTERING_MS = 2600;
 
 function LandingContent() {
   const { t } = useLandingLanguage();
