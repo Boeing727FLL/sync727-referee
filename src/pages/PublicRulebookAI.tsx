@@ -35,6 +35,8 @@ import type { ChatMessage, RulebookFile } from '../features/referee/types';
 import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS, TYPEWRITER_TICK_MS } from '../features/referee/config';
 import { stripThinkBlocks } from '../features/referee/chat/text';
 import { applyStopToMessages } from '../features/referee/chat/stopResponse';
+import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
+import { clearAllChatStates, loadChatState, saveChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
@@ -441,10 +443,13 @@ export default function PublicRulebookAI() {
     } catch (err) {}
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('auth_user');
+    clearAllChatStates();
     setHasGoogleToken(false);
     setShowLogoutConfirm(false);
     // Back to the main intro page with a fresh chat
     setMessages([]);
+    setInput('');
+    setReplyTo(null);
     setChatStarted(false);
     setTypewriterReady(false);
     navigate('/');
@@ -508,6 +513,7 @@ export default function PublicRulebookAI() {
     localStorage.removeItem('auth_user');
     localStorage.removeItem('user_picture');
     localStorage.removeItem('user_name');
+    clearAllChatStates();
     setHasGoogleToken(false);
     setShowDeleteConfirm(false);
     setDeletingAccount(false);
@@ -527,15 +533,18 @@ export default function PublicRulebookAI() {
     } catch (e) {}
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('auth_user');
+    clearAllChatStates();
     setHasGoogleToken(false);
     setSessionKicked(true);
   };
   // ===== 5. Chat state: messages, input, rulebook files, request flags.
   const [seasonName, setSeasonName] = useState<string>('UNKNOWN');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  // Restore this device's local-only chat (bounded, text-only) across a
+  // refresh. Never synced anywhere; wiped on sign-out/kick/delete/reset.
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChatState(resolveRefereeUid() || 'anon')?.messages ?? []);
+  const [input, setInput] = useState(() => loadChatState(resolveRefereeUid() || 'anon')?.draft ?? '');
   // WhatsApp-style reply: quoted answer context for a follow-up question.
-  const [replyTo, setReplyTo] = useState<{ text: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ text: string } | null>(() => loadChatState(resolveRefereeUid() || 'anon')?.replyTo ?? null);
   // Attached user photos (max 3, images only, sent full-resolution).
   // Preview URLs stay alive for the session so sent bubbles keep showing them.
   const [attachedImages, setAttachedImages] = useState<{ file: File; url: string }[]>([]);
@@ -555,6 +564,7 @@ export default function PublicRulebookAI() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sendingRef = useRef(false);
   const requestFinishedRef = useRef(false);
   const stopHandledRef = useRef(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -566,6 +576,14 @@ export default function PublicRulebookAI() {
     el.style.height = Math.min(el.scrollHeight, 132) + 'px';
   };
   useEffect(() => { autoresizeComposer(); }, [input]);
+
+  // Persist the conversation + composer draft locally (device only) on
+  // every change, so a refresh restores them. See localHistory.ts for the
+  // privacy policy and bounds.
+  useEffect(() => {
+    saveChatState(resolveRefereeUid() || 'anon', { messages, draft: input, replyTo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, input, replyTo]);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -1018,72 +1036,42 @@ export default function PublicRulebookAI() {
    * On success the question is counted, logged, and may trigger the feedback
    * popup. Stop via handleStop: the partial answer stays and the client rate-limit slot is refunded.
    */
+  /**
+   * Hybrid optimistic send: the user's bubble echoes instantly, then the
+   * preflight guards (rulebook barrier, blind-answer guard, client rate
+   * limit, server daily quota) run. If a guard rejects, the optimistic
+   * bubble is removed and the exact draft, reply context and attachments
+   * are restored without loss or flicker; the guard's notice appears as a
+   * model bubble. A synchronous single-flight ref blocks double submits
+   * through stale closures. On success the request streams as before;
+   * Stop keeps the partial answer and refunds the client rate-limit slot.
+   */
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || input;
 
     if ((!textToSend.trim() && !attachedImages.length) || isAiBusy) return;
-
-    let requestRulebookFiles: RulebookFile[];
-    try {
-      if (rulebookMutationRef.current) await rulebookMutationRef.current;
-      requestRulebookFiles = await rulebookLoadBarrierRef.current.ready();
-    } catch {
-      setMessages(prev => [...prev, { role: 'model', text: 'טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.' }]);
-      return;
-    }
-
-    // Never answer blind: with no rulebook files loaded at all, the model
-    // would fabricate. Tell the user instead of guessing.
-    if (requestRulebookFiles.length === 0) {
-      setInput('');
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', text: textToSend.trim() },
-        { role: 'model', text: 'אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.' },
-      ]);
-      return;
-    }
-
-    // Fast browser guard first; Firestore's daily quota remains authoritative.
-    const clientLimit = consumeClientRateLimit();
-    if (!clientLimit.allowed) {
-      setMessages(prev => [...prev, { role: 'model', text: clientLimit.message || 'נסו שוב מאוחר יותר.' }]);
-      return;
-    }
-
-    // Server-enforced daily budget: consumes one unit from chat_quota/{uid}.
-    // Rules enforce strictly-+1 inside a rolling 24h window with a hard cap,
-    // so clearing localStorage or switching devices cannot dodge it.
-    const quotaUid = resolveRefereeUid();
-    if (quotaUid) {
-      try {
-        await consumeChatQuota(quotaUid);
-      } catch (error) {
-        const text = error instanceof ChatQuotaExhaustedError
-          ? quotaMessage('chat.quotaExhausted', error.resetAtMs)
-          : quotaMessage('chat.quotaUnavailable');
-        setMessages(prev => [...prev, { role: 'model', text }]);
-        return;
-      }
-    }
+    // Synchronous single-flight: state updates lag a render, so rapid
+    // double taps could otherwise pass the isAiBusy check twice.
+    if (sendingRef.current) return;
+    sendingRef.current = true;
 
     const userMessage = textToSend.trim();
+    // Snapshot everything the optimistic echo consumes, so a rejected
+    // send restores the exact composer state with no loss.
+    const replySnapshot = replyTo;
+    const photosToSend = attachedImages;
 
     // WhatsApp-style reply: quoted answer travels as prompt context and as
-    // a visible quote on the sent bubble. Captured here, cleared on send.
-    const replyContext = replyTo
-      ? `(הקשר: המשתמש ממשיך ושואל שאלת המשך על התשובה הקודמת הבאה: "${replyTo.text.slice(0, 800)}")\n\n`
+    // a visible quote on the sent bubble.
+    const replyContext = replySnapshot
+      ? `(הקשר: המשתמש ממשיך ושואל שאלת המשך על התשובה הקודמת הבאה: "${replySnapshot.text.slice(0, 800)}")\n\n`
       : null;
-    const replyQuote = replyTo ? replyTo.text.slice(0, 220) : undefined;
+    const replyQuote = replySnapshot ? replySnapshot.text.slice(0, 220) : undefined;
 
-    // Attached photos travel to the model full-resolution and stay visible
-    // on the sent bubble via their session preview URLs.
-    const photosToSend = attachedImages;
+    // Optimistic echo: bubble first, guards after.
     setAttachedImages([]);
-
     setInput('');
     setReplyTo(null);
-
     setMessages(prev => [
       ...prev,
       {
@@ -1093,96 +1081,155 @@ export default function PublicRulebookAI() {
         ...(photosToSend.length ? { files: photosToSend.map(a => ({ url: a.url, key: a.file.name })) } : {})
       }
     ]);
-    
-    setLoading(true);
-    resetThinkCycle();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    requestFinishedRef.current = false;
-    stopHandledRef.current = false;
-    setRenderingResponse(false);
-    try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
+
+    /** Undo the echo and hand the composer its exact prior state back. */
+    const rollback = () => {
+      setMessages(prev => {
+        const idx = prev.reduce((found, m, i) => (m.role === 'user' && m.text === userMessage ? i : found), -1);
+        if (idx < 0) return prev;
+        return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+      });
+      setInput(userMessage);
+      setReplyTo(replySnapshot);
+      setAttachedImages(photosToSend);
+    };
+
+    /** Roll the echo back and leave the guard's notice as a model bubble. */
+    const rejectWithNotice = (notice: string) => {
+      rollback();
+      setMessages(prev => [...prev, { role: 'model', text: notice }]);
+    };
 
     try {
-      const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
-      
-      const { GeminiService } = await import('../services/geminiService');
-      const response = await GeminiService.askRulebook(
-        finalPrompt,
-        messages,
-        requestRulebookFiles,
-        seasonNameRef.current,
-        photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
-        (chunkText) => {
-          if (controller.signal.aborted) return;
-          setMessages(prev => {
-            const newMessages = [...prev];
-            const lastMsg = newMessages[newMessages.length - 1];
-            if (lastMsg?.role === 'model') {
-              newMessages[newMessages.length - 1] = {
-                ...lastMsg,
-                text: lastMsg.text + chunkText
-              };
-            } else {
-              newMessages.push({ role: 'model', text: chunkText });
-            }
-            return newMessages;
-          });
-        },
-        language,
-        controller.signal
-      );
-      
-      if (controller.signal.aborted) {
-        handleStop();
-      } else {
-        // Owner questions are invisible to analytics: not counted and not
-        // logged to the journal.
-        // Count only questions that actually got an answer: stopped or
-        // failed requests never reach here, so they are not counted.
-        if (!isCurrentUserOwner()) {
-          trackQuestion(resolveRefereeUid() || 'anon');
+      let requestRulebookFiles: RulebookFile[];
+      try {
+        if (rulebookMutationRef.current) await rulebookMutationRef.current;
+        requestRulebookFiles = await rulebookLoadBarrierRef.current.ready();
+      } catch {
+        rejectWithNotice('טעינת חוברת החוקים נכשלה. נסו שוב בעוד רגע.');
+        return;
+      }
+
+      // Never answer blind: with no rulebook files loaded at all, the model
+      // would fabricate. Tell the user instead of guessing.
+      if (requestRulebookFiles.length === 0) {
+        rejectWithNotice('אין חוברת חוקים טעונה כרגע, ולכן אני לא עונה כדי לא להמציא. העלו קובץ חוקים דרך מסך ההעלאה ונסו שוב.');
+        return;
+      }
+
+      // Fast browser guard first; Firestore's daily quota remains authoritative.
+      const clientLimit = consumeClientRateLimit();
+      if (!clientLimit.allowed) {
+        rejectWithNotice(clientLimit.message || 'נסו שוב מאוחר יותר.');
+        return;
+      }
+
+      // Server-enforced daily budget: consumes one unit from chat_quota/{uid}.
+      // Rules enforce strictly-+1 inside a rolling 24h window with a hard cap,
+      // so clearing localStorage or switching devices cannot dodge it.
+      const quotaUid = resolveRefereeUid();
+      if (quotaUid) {
+        try {
+          await consumeChatQuota(quotaUid);
+        } catch (error) {
+          const text = error instanceof ChatQuotaExhaustedError
+            ? quotaMessage('chat.quotaExhausted', error.resetAtMs)
+            : quotaMessage('chat.quotaUnavailable');
+          rejectWithNotice(text);
+          return;
+        }
+      }
+
+      setLoading(true);
+      resetThinkCycle();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      requestFinishedRef.current = false;
+      stopHandledRef.current = false;
+      setRenderingResponse(false);
+      try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
+
+      try {
+        const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
+
+        const { GeminiService } = await import('../services/geminiService');
+        const response = await GeminiService.askRulebook(
+          finalPrompt,
+          messages,
+          requestRulebookFiles,
+          seasonNameRef.current,
+          photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
+          (chunkText) => {
+            if (controller.signal.aborted) return;
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMsg = newMessages[newMessages.length - 1];
+              if (lastMsg?.role === 'model') {
+                newMessages[newMessages.length - 1] = {
+                  ...lastMsg,
+                  text: lastMsg.text + chunkText
+                };
+              } else {
+                newMessages.push({ role: 'model', text: chunkText });
+              }
+              return newMessages;
+            });
+          },
+          language,
+          controller.signal
+        );
+
+        if (controller.signal.aborted) {
+          handleStop();
+        } else {
+          // Owner questions are invisible to analytics: not counted and not
+          // logged to the journal.
+          // Count only questions that actually got an answer: stopped or
+          // failed requests never reach here, so they are not counted.
+          const outcome = resolveResponseOutcome(response, t('chat.commError'));
+          if (!isCurrentUserOwner() && outcome.answered) {
+            trackQuestion(resolveRefereeUid() || 'anon');
+          }
           logRefereeQA({
             question: userMessage,
-            answer: stripThinkBlocks(response) || response || t('chat.commError'),
+            answer: outcome.logAnswer,
             season: seasonName,
             language,
             uid: resolveRefereeUid(),
             model: 'gemini-3.6-flash',
-            ok: true,
+            ok: outcome.answered,
           });
+          requestFinishedRef.current = true;
+          setRenderingResponse(true);
+          setMessages(prev => finalizeModelResponse(prev, response, t('chat.commError')));
+          if (outcome.answered) maybePromptFeedback();
         }
-        requestFinishedRef.current = true;
-        setRenderingResponse(true);
-        setMessages(prev => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.role === 'model') return prev;
-          return [...prev, { role: 'model', text: response || t('chat.commError') }];
-        });
-        maybePromptFeedback();
-      }
-    } catch (error: any) {
-      if (controller.signal.aborted) {
-        handleStop();
-      } else {
-        const errMsg = error?.message || t('chat.connectionLost');
-        logRefereeQA({
-          question: userMessage,
-          answer: errMsg,
-          season: seasonName,
-          language,
-          uid: resolveRefereeUid(),
-          model: 'gemini-3.6-flash',
-          ok: false,
-        });
-        setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
+      } catch (error: any) {
+        if (controller.signal.aborted) {
+          handleStop();
+        } else {
+          const errMsg = error?.message || t('chat.connectionLost');
+          logRefereeQA({
+            question: userMessage,
+            answer: errMsg,
+            season: seasonName,
+            language,
+            uid: resolveRefereeUid(),
+            model: 'gemini-3.6-flash',
+            ok: false,
+          });
+          setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
+        }
+      } finally {
+        if (!requestFinishedRef.current) abortControllerRef.current = null;
+        setLoading(false);
+        if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
       }
     } finally {
-      if (!requestFinishedRef.current) abortControllerRef.current = null;
-      setLoading(false);
-      if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
+      sendingRef.current = false;
     }
   };
+
 
   const quickQuestions = [
     t('chat.suggestion1'),
