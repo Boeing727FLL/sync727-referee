@@ -37,7 +37,7 @@ export default function ChatComposer(props: Props) {
             exit={{ opacity: 0, y: 8, scaleY: 0.9, clipPath: 'inset(100% 0 0 0 round 16px)' }}
             transition={MOTION.morph}
             style={{ transformOrigin: 'bottom center' }}
-            className="w-full max-w-3xl lg:max-w-[1400px] mx-auto mb-2 flex items-center gap-2.5 rounded-xl border-r-2 border-[rgba(159,216,198,0.5)] bg-white/[0.03] px-3 py-2"
+            className="w-full max-w-3xl lg:max-w-[1400px] mx-auto mb-2 flex items-center gap-2.5 rounded-xl border border-white/[0.12] border-r-2 border-r-[rgba(159,216,198,0.5)] bg-[#04060c]/45 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_6px_20px_rgba(0,0,0,0.28)] px-3 py-2"
           >
             <Reply className="shrink-0 w-4 h-4 text-[#9fd8c6]/80" />
             <div className="flex-1 min-w-0 text-right"><div className="text-[10px] font-black text-[#9fd8c6]/80">{t('chat.replyTo')}</div><div className="truncate text-xs text-slate-200">{replyTo.text}</div></div>
