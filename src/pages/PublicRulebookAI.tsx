@@ -35,7 +35,7 @@ import ParticleBurst from '../components/ParticleBurst';
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
-import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MAX_ATTACHED_IMAGES, MENU_ROW_CLASS } from '../features/referee/config';
+import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MENU_ROW_CLASS } from '../features/referee/config';
 import { applyStopToMessages } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
 import { safeUserFacingError } from '../features/referee/chat/userFacingError';
@@ -71,6 +71,7 @@ import {
 } from '../features/referee/session/entryFlow';
 import { clearAllChatStates, clearChatState } from '../features/referee/chat/localHistory';
 import { consumeClientRateLimit, refundClientRateLimit } from '../features/referee/chat/clientRateLimit';
+import { selectAttachableImages } from '../features/referee/chat/attachImages';
 import { extractSeasonFromFilename } from '../features/referee/rulebook/season';
 import { createRulebookLoadBarrier } from '../features/referee/rulebook/loadBarrier';
 import { selectActiveRulebookSources } from '../features/referee/rulebook/activeFiles';
@@ -1069,16 +1070,16 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     const picked = Array.from(e.target.files || []);
     e.target.value = '';
     if (!picked.length) return;
-    const images = picked.filter(f => f.type.startsWith('image/'));
-    if (images.length < picked.length) showToast(t('chat.imagesOnly'));
-    if (!images.length) return;
-    if (attachedImages.length + images.length > MAX_ATTACHED_IMAGES) {
-      showToast(t('chat.maxImages'));
-    }
-    setAttachedImages(prev => {
-      const room = Math.max(0, MAX_ATTACHED_IMAGES - prev.length);
-      return [...prev, ...images.slice(0, room).map(file => ({ file, url: URL.createObjectURL(file) }))];
+    const selection = selectAttachableImages(picked, {
+      count: attachedImages.length,
+      bytes: attachedImages.reduce((sum, a) => sum + a.file.size, 0),
     });
+    if (selection.rejected.nonImage) showToast(t('chat.imagesOnly'));
+    if (selection.rejected.unsupportedType) showToast(t('chat.unsupportedImageType'));
+    if (selection.rejected.tooMany) showToast(t('chat.maxImages'));
+    if (selection.rejected.tooLarge) showToast(t('chat.imageTooLarge'));
+    if (!selection.accepted.length) return;
+    setAttachedImages(prev => [...prev, ...selection.accepted.map(file => ({ file, url: URL.createObjectURL(file) }))]);
   };
   const removeAttachedImage = (url: string) => {
     setAttachedImages(prev => prev.filter(a => a.url !== url));
