@@ -15,7 +15,30 @@
   Cache-Control: public, max-age=31536000, immutable
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
-/*.webp
-  Cache-Control: public, max-age=31536000, immutable
-/*.png
-  Cache-Control: public, max-age=31536000, immutable
+# Root-level artwork is NOT content-hashed: it ships under stable names and
+# changes between deploys, so it must revalidate. (Hashed files under
+# /assets/* and /fonts/* above keep the year-long immutable cache.)
+# The boeing logo png keeps Netlify's default revalidating cache because its
+# filename contains characters that cannot be written literally here.
+/logoref.webp
+  Cache-Control: public, max-age=3600, must-revalidate
+/referee-logo.webp
+  Cache-Control: public, max-age=3600, must-revalidate
+/chat-glow.webp
+  Cache-Control: public, max-age=3600, must-revalidate
+/chat-glow-tall.webp
+  Cache-Control: public, max-age=3600, must-revalidate
+/bioglow-table.webp
+  Cache-Control: public, max-age=3600, must-revalidate
+/AppLogo.png
+  Cache-Control: public, max-age=3600, must-revalidate
+/logo.png
+  Cache-Control: public, max-age=3600, must-revalidate
+/favicon-32.png
+  Cache-Control: public, max-age=3600, must-revalidate
+/favicon-48.png
+  Cache-Control: public, max-age=3600, must-revalidate
+/favicon-192.png
+  Cache-Control: public, max-age=3600, must-revalidate
+/favicon-512.png
+  Cache-Control: public, max-age=3600, must-revalidate

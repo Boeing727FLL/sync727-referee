@@ -23,11 +23,63 @@
     ],
     "headers": [
       {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.google.com https://www.gstatic.com https://*.firebaseio.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev https://*.r2.dev https://*.cloudflarestorage.com https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com wss://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://*.cloudflarestorage.com https://pub-9b07ff19511b4468a47d28bb2cb58176.r2.dev https://accounts.google.com https://www.googleapis.com https://www.google.com wss://*.firebaseio.com; frame-src https://accounts.google.com https://www.google.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=()"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/version.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(webp|jpg|jpeg|png|gif|svg|woff|woff2|ttf|eot)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=300, must-revalidate"
+            "value": "public, max-age=3600, must-revalidate"
           }
         ]
       }
