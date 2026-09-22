@@ -64,7 +64,7 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
                     <label className={LABEL_CLASS}>אימייל</label>
                     <div className="relative">
                       <Mail className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
+                      <input type="email" name="email" autoComplete="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
                     </div>
                   </div>
                   {error && <div className={FORM_ERROR_CLASS}>{error}</div>}
@@ -100,7 +100,7 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
                   <label className={LABEL_CLASS}>אימייל</label>
                   <div className="relative">
                     <Mail className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
+                    <input type="email" name="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
                   </div>
                 </div>
                 <div className="login-field login-stage pb-2 login-row" style={d('0.7s')}>

@@ -166,6 +166,8 @@ export default function LoginPage() {
                           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input
                             type="email"
+                            name="email"
+                            autoComplete="email"
                             value={resetEmail}
                             onChange={(e) => setResetEmail(e.target.value)}
                             placeholder="your@email.com"
@@ -264,6 +266,8 @@ export default function LoginPage() {
                           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
                           <input
                             type="email"
+                            name="email"
+                            autoComplete="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="your@email.com"

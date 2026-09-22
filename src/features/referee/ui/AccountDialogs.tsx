@@ -24,7 +24,7 @@ export function DeleteAccountDialog({ open, password, error, deleting, setPasswo
         <div className="p-6 text-center space-y-4">
           <h3 className="text-xl font-bold text-white">{t('account.deleteTitle')}</h3>
           <p className="text-slate-400 text-sm">{t('account.deleteBody')}</p>
-          <input type="password" value={password} onChange={event => { setPassword(event.target.value); clearError(); }} onKeyDown={event => event.key === 'Enter' && !deleting && onConfirm()} placeholder={t('account.passwordPlaceholder')} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all" />
+          <input type="password" name="current-password" autoComplete="current-password" value={password} onChange={event => { setPassword(event.target.value); clearError(); }} onKeyDown={event => event.key === 'Enter' && !deleting && onConfirm()} placeholder={t('account.passwordPlaceholder')} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all" />
           {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
         </div>
         <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex gap-3 justify-center">
