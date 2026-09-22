@@ -3,7 +3,6 @@ import test from 'node:test';
 import { decideSendPreflight, type GuardCopy } from '../src/features/referee/chat/sendGuards.ts';
 
 const copy: GuardCopy = {
-  rulebookLoadFailed: 'LOAD_FAILED',
   noRulebook: 'NO_RULEBOOK',
   cooldown: 'COOLDOWN',
   hourlyLimit: 'HOURLY',

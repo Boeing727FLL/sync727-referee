@@ -23,7 +23,6 @@ interface GuardInput {
 }
 
 export interface GuardCopy {
-  rulebookLoadFailed: string;
   noRulebook: string;
   cooldown: string;
   hourlyLimit: string;

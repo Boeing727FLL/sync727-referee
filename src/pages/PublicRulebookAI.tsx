@@ -1173,7 +1173,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       const guard = decideSendPreflight(
         { rulebookCount: requestRulebookFiles.length, clientLimit, quotaError },
         {
-          rulebookLoadFailed: t('chat.guardRulebookLoadFailed'),
           noRulebook: t('chat.guardNoRulebook'),
         cooldown: t('chat.guardCooldown'),
         hourlyLimit: t('chat.guardHourlyLimit'),
