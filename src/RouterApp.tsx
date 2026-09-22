@@ -1,10 +1,11 @@
-import {lazy, Suspense} from 'react';
+import {Suspense} from 'react';
+import { lazyWithReload } from './lib/lazyWithReload';
 import {BrowserRouter, Route, Routes} from 'react-router-dom';
 
-const RefereeApp = lazy(() => import('./pages/RefereeApp'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
+const RefereeApp = lazyWithReload('referee-app', () => import('./pages/RefereeApp'));
+const LoginPage = lazyWithReload('login-page', () => import('./pages/LoginPage'));
+const PrivacyPage = lazyWithReload('privacy-page', () => import('./pages/PrivacyPage'));
+const LandingPage = lazyWithReload('landing-page', () => import('./pages/LandingPage'));
 
 function RouteFrame() {
   return <main className="h-full bg-slate-950" aria-hidden />;

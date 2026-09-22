@@ -1,9 +1,10 @@
 /** Route shell. The public landing page starts without router, Firebase, or app code. */
-import {lazy, startTransition, Suspense, useEffect, useState} from 'react';
+import {startTransition, Suspense, useEffect, useState} from 'react';
+import { lazyWithReload } from './lib/lazyWithReload';
 import LandingPage, {hasSavedSession} from './pages/LandingPage';
 import {warmIdleRoutes} from './routeWarmup';
 
-const RouterApp = lazy(() => import('./RouterApp'));
+const RouterApp = lazyWithReload('router-app', () => import('./RouterApp'));
 
 /** A quiet route-coloured frame for direct deep links, never a blocking message. */
 function RouteFrame() {
