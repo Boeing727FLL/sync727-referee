@@ -92,7 +92,8 @@ test('interactions stream: abort stops iteration and keeps partial text', async 
 });
 
 test('generateContent non-stream: returns text, empty when missing', async () => {
-  const client = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client: any = {
     interactions: { create: async () => ({}) },
     models: { generateContentStream: async () => iterate([]), generateContent: async () => ({ text: 'תשובה' }) },
   };
