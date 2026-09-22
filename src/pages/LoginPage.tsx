@@ -56,7 +56,7 @@ export default function LoginPage() {
       {/* Backdrop: FLL field + grid + FIRST glows, plus a Gemini violet aura */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
-          src="/bioglow-table.jpg"
+          src="/bioglow-table.webp"
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-[0.14]"
           loading="lazy"

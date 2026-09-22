@@ -44,7 +44,7 @@ function Backdrop() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
       <motion.img
-        src="/bioglow-table.jpg"
+        src="/bioglow-table.webp"
         alt=""
         className="absolute inset-0 w-full h-full object-cover opacity-25"
         loading="lazy"

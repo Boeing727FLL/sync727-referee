@@ -57,8 +57,10 @@ function LandingContent() {
     // Decode the chat backdrop's glow fields now, during the gate, instead
     // of on the main thread in the middle of the entrance animation.
     if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
-      const imgA = new Image(); imgA.src = '/chat-glow.jpg';
-      const imgB = new Image(); imgB.src = '/chat-glow-tall.jpg';
+      // Only the orientation the backdrop will actually show (md splits at
+      // 768px) - on a phone this halves the decode work before the entrance.
+      const wide = window.matchMedia('(min-width: 768px)').matches;
+      const img = new Image(); img.src = wide ? '/chat-glow.webp' : '/chat-glow-tall.webp';
     }
     // Deep-link param consumed: a reload from here on lands on the intro.
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login')) {

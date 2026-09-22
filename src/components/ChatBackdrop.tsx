@@ -9,8 +9,8 @@
  * conversation zone stays quiet so the liquid-glass UI refracts the glow
  * beneath it. A whisper of the active season's color rises from the
  * floor, film grain kills banding, and a seating vignette seats the
- * frame. The artwork is a pair of purpose-built renders (public/chat-glow.jpg
- * wide, public/chat-glow-tall.jpg portrait), center-anchored so the mark
+ * frame. The artwork is a pair of purpose-built renders (public/chat-glow.webp
+ * wide, public/chat-glow-tall.webp portrait), center-anchored so the mark
  * survives any aspect crop.
  */
 export default function ChatBackdrop({ tint = '#46536a' }: { tint?: string }) {
@@ -21,14 +21,14 @@ export default function ChatBackdrop({ tint = '#46536a' }: { tint?: string }) {
       {/* the liquid light, center-anchored so the mark holds on any crop;
           a purpose-built tall composition serves portrait screens */}
       <img
-        src="/chat-glow.jpg"
+        src="/chat-glow.webp"
         alt=""
         draggable={false}
         className="absolute inset-0 h-full w-full object-cover select-none hidden md:block"
         style={{ objectPosition: '50% 50%' }}
       />
       <img
-        src="/chat-glow-tall.jpg"
+        src="/chat-glow-tall.webp"
         alt=""
         draggable={false}
         className="absolute inset-0 h-full w-full object-cover select-none md:hidden"
