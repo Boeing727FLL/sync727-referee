@@ -2,7 +2,8 @@ import { db } from '../lib/firebase/firestore';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
-import { classifyFailure, errorText, KeyHealth, rotateCandidates } from '../features/referee/ai/retryPolicy';
+import { errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
+import { runModelChain } from '../features/referee/ai/modelChain';
 import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
@@ -409,74 +410,65 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
 
 
       let responseText = '';
-      let lastFailureKind: ReturnType<typeof classifyFailure>['kind'] | null = null;
       const allKeys = await getAllApiKeys();
       // True once any attempt has streamed final-answer chunks into the UI.
       let streamedBubbleLive = false;
 
-      modelLoop: for (let modelIndex = 0; modelIndex < effectiveChain.length; modelIndex++) {
-        const modelEntry = effectiveChain[modelIndex];
-        const availableKeys = keyHealth.available(allKeys);
-        if (!availableKeys.length) {
-          lastFailureKind = 'quota';
-          break;
-        }
-        const rotationIndex = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
-        const candidates = rotateCandidates(availableKeys, rotationIndex);
-        localStorage.setItem('gemini_key_rotation_index', String((rotationIndex + 1) % availableKeys.length));
-        for (const key of candidates) {
-          if (signal?.aborted) return ASK_ABORTED;
+      // One rotation decision per ask: the starting key is read once and
+      // advanced per model iteration (see ai/modelChain.ts).
+      const rotationRaw = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+      const outcome = await runModelChain({
+        models: effectiveChain,
+        keys: allKeys,
+        health: keyHealth,
+        rotationIndex: Number.isInteger(rotationRaw) && rotationRaw >= 0 ? rotationRaw : 0,
+        onRotation: next => localStorage.setItem('gemini_key_rotation_index', String(next)),
+        signal,
+        attempt: async (key, modelEntry) => {
           const client = new GoogleGenAI({ apiKey: key });
-          try {
-            const draftText = await callModel(client, modelEntry, interactionInput, false);
+          const draftText = await callModel(client, modelEntry, interactionInput, false);
 
-            let finalAnswer = draftText;
-            // The critique re-sees the user's photos (rulebook images stay
-            // out to avoid resending them) so visual claims get verified.
-            const critiqueInput = critiquePlan({
-              textOnlyInput,
-              userPhotoParts,
-              draftText,
-              critiquePrompt: CRITIQUE_PROMPT,
-              photoAddendum: PHOTO_CRITIQUE_ADDENDUM,
+          let finalAnswer = draftText;
+          // The critique re-sees the user's photos (rulebook images stay
+          // out to avoid resending them) so visual claims get verified.
+          const critiqueInput = critiquePlan({
+            textOnlyInput,
+            userPhotoParts,
+            draftText,
+            critiquePrompt: CRITIQUE_PROMPT,
+            photoAddendum: PHOTO_CRITIQUE_ADDENDUM,
+          });
+          const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
+
+          if (visibleCritique(critiqueText)) {
+            const finalInput = finalPlan(critiqueInput, critiqueText, FINAL_PROMPT);
+            // A retried attempt restarts the answer from zero: the caller
+            // drops the partial bubble the failed attempt streamed, so a
+            // stale half-finished think block is never concatenated into
+            // the fresh answer.
+            let attemptStreamed = false;
+            const streamedText = await callModel(client, modelEntry, finalInput, true, (chunk: string) => {
+              if (!attemptStreamed) {
+                attemptStreamed = true;
+                if (streamedBubbleLive) onStreamReset?.();
+              }
+              streamedBubbleLive = true;
+              onChunk?.(chunk);
             });
-            const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
-
-            if (visibleCritique(critiqueText)) {
-              const finalInput = finalPlan(critiqueInput, critiqueText, FINAL_PROMPT);
-              // A retried attempt restarts the answer from zero: the caller
-              // drops the partial bubble the failed attempt streamed, so a
-              // stale half-finished think block is never concatenated into
-              // the fresh answer.
-              let attemptStreamed = false;
-              const streamedText = await callModel(client, modelEntry, finalInput, true, (chunk: string) => {
-                if (!attemptStreamed) {
-                  attemptStreamed = true;
-                  if (streamedBubbleLive) onStreamReset?.();
-                }
-                streamedBubbleLive = true;
-                onChunk?.(chunk);
-              });
-              finalAnswer = streamedText || draftText;
-            }
-
-            responseText = finalAnswer;
-            break modelLoop;
-
-          } catch (error: unknown) {
-            const decision = classifyFailure(error, signal?.aborted);
-            lastFailureKind = decision.kind;
-            if (decision.kind === 'aborted') return ASK_ABORTED;
-            keyHealth.coolDown(key, decision.cooldownMs);
-            if (decision.tryNextKey) continue;
-            if (decision.tryNextModel) continue modelLoop;
-            throw error;
+            finalAnswer = streamedText || draftText;
           }
-        }
-      }
 
+          responseText = finalAnswer;
+          return true;
+        },
+      });
+
+      // An abort landing mid-stream unwinds the stream early with partial
+      // text; the contract still resolves ASK_ABORTED so the partial answer
+      // is never counted or logged.
+      if (signal?.aborted || outcome.status === 'aborted') return ASK_ABORTED;
       if (!responseText) {
-        throw new Error(lastFailureKind === 'quota' ? '429 RESOURCE_EXHAUSTED: all keys cooling down' : 'All models and API keys were exhausted without a successful answer.');
+        throw new Error(outcome.status === 'exhausted' && outcome.lastFailureKind === 'quota' ? '429 RESOURCE_EXHAUSTED: all keys cooling down' : 'All models and API keys were exhausted without a successful answer.');
       }
 
       return responseText;
