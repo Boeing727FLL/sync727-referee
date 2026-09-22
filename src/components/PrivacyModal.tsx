@@ -67,7 +67,7 @@ export default function PrivacyModal({ isOpen, onClose }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
             exit={{ opacity: 0, transition: { duration: 1.4, ease: [0.22, 1, 0.36, 1] } }}
-            className="fixed inset-0 z-[9000] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9000] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center modal-safe-4"
             dir="rtl"
           >
             <motion.div

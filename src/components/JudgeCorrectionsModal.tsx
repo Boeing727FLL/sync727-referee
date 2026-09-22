@@ -262,7 +262,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 md:p-4"
+          className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center modal-safe-3"
           dir="rtl"
           onClick={onClose}
         >

@@ -548,3 +548,20 @@
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
 }
+
+/* Modal overlays draw over the same full-bleed viewport as the chat shell,
+ * so they get the same notch / home-indicator clearance. max() keeps the
+ * modal's original padding where the device reports no insets (desktop,
+ * older phones): rendering there is byte-identical, inset devices only grow
+ * the padding. .modal-safe-3 mirrors `p-3 md:p-4`, .modal-safe-4 mirrors `p-4`. */
+.modal-safe-3 {
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+}
+.modal-safe-4 {
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+@media (min-width: 768px) {
+  .modal-safe-3 {
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+}
