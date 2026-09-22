@@ -53,7 +53,7 @@ export default function AuthProgressOverlay({ stage: authOverlay, leaving: authL
                   aria-hidden
                 />
                 <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-[0_18px_50px_rgba(0,0,0,0.55)] relative overflow-hidden">
-                  <img src="/logoref.png" alt="שופט וירטואלי" className="w-16 h-16 object-contain" />
+                  <img src="/logoref.webp" alt="שופט וירטואלי" className="w-16 h-16 object-contain" />
                 </div>
                 <AnimatePresence>
                   {authOverlay === 'success' && (

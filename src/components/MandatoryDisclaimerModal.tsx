@@ -163,7 +163,7 @@ function FoldCluster({ t, foldAt, nodeDelay, logoHidden, slicing, drawNow, budTr
 
       {/* the base logo (hidden while the flyer or the slices own the visual) */}
       <img
-        src="/logoref.png"
+        src="/logoref.webp"
         width="770" height="770"
         alt={t('app.title')}
         className="absolute object-contain select-none drop-shadow-[0_10px_28px_rgba(0,0,0,0.5)]"

@@ -138,7 +138,7 @@ function CenterLogo({ t, logoPx }: { t: (key: string) => string; logoPx: number 
         }}
       />
       <img
-        src="/logoref.png"
+        src="/logoref.webp"
         width="770" height="770"
         alt={t('app.title')}
         className="assoc-logo relative object-contain select-none drop-shadow-[0_18px_50px_rgba(0,0,0,0.55)]"

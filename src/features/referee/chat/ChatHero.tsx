@@ -31,7 +31,7 @@ export default function ChatHero({ greeting, questions, disabled, onQuestion, t 
       className="relative min-h-[58vh] flex flex-col items-center justify-center text-center select-none py-6 md:py-8"
     >
       <motion.img
-        src="/logoref.png"
+        src="/logoref.webp"
         alt={t('app.title')}
         draggable={false}
         initial={{ opacity: 0, scale: 0.7 }}

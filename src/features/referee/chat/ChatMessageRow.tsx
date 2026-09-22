@@ -20,7 +20,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
   const { message, index, thinking, thinkContent, text, typewriting, liveAnswer } = view;
   if (thinking) return (
     <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.morph} className="flex gap-2.5 md:gap-3">
-      <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center"><img src="/logoref.png" alt="" className="w-full h-full object-contain" /></div>
+      <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center"><img src="/logoref.webp" alt="" className="w-full h-full object-contain" /></div>
       <div className={`bg-[#04060c]/55 border border-white/[0.12] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3 flex flex-col items-center gap-2 max-w-[85%] md:max-w-[75%] ${thinkContent ? 'rounded-2xl' : 'rounded-full'}`}>
         <ThinkIndicator />
         {thinkContent && <div className="text-[10px] md:text-xs font-mono text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">{thinkContent}</div>}
@@ -32,7 +32,7 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
     <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 18, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, y: 0, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, y: -6, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.filmReveal} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
         {isUser ? (userPicture ? <img src={userPicture} alt="" className="w-full h-full object-cover rounded-full ring-1 ring-white/20" /> : <div className="w-full h-full rounded-full bg-white/10 flex items-center justify-center"><span className="text-xs md:text-sm font-black text-white">{(userName || 'U').trim().charAt(0)}</span></div>)
-          : <div className="w-full h-full rounded-full bg-white overflow-hidden ring-1 ring-white/15"><img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain" /></div>}
+          : <div className="w-full h-full rounded-full bg-white overflow-hidden ring-1 ring-white/15"><img src="/logoref.webp" alt={t('app.title')} className="w-full h-full object-contain" /></div>}
       </div>
       <div className={`flex flex-col gap-1.5 md:gap-2 min-w-0 ${isUser ? 'max-w-[85%] md:max-w-[70%] items-end' : 'min-w-0 max-w-[88%] md:max-w-[80%] lg:max-w-[72rem]'}`}>
         {!isUser && <div className="flex items-center gap-2 px-1"><span className="text-[10px] font-bold tracking-wide text-white/30">{t('chat.refereeTag')}</span>{text.includes('שריקה') && <span className="text-[10px] font-bold text-[#ff7a66]/80">{t('chat.foulTag')}</span>}</div>}

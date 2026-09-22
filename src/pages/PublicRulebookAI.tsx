@@ -1313,7 +1313,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         <div className="px-3 py-2 md:px-4 md:py-2.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden ring-1 ring-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_14px_rgba(0,0,0,0.35)]">
-              <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain select-none" />
+              <img src="/logoref.webp" alt={t('app.title')} className="w-full h-full object-contain select-none" />
             </div>
             <h1 className="min-w-0 truncate text-base md:text-xl font-bold text-white/95 tracking-tight cursor-default select-none leading-tight">
               {t('app.title')}
@@ -1544,7 +1544,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         {loading && messages[messages.length - 1]?.role === 'user' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
             <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
-              <img src="/logoref.png" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
+              <img src="/logoref.webp" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
             </div>
             <div className="bg-[#04060c]/55 border border-white/[0.12] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3 rounded-full flex items-center">
               <ThinkIndicator />

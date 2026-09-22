@@ -115,7 +115,7 @@ export default function LoginPage() {
             <div className="relative w-16 h-16 mx-auto mb-5">
               <div className="absolute -inset-3 bg-yellow-400/20 blur-2xl rounded-full pointer-events-none" aria-hidden />
               <div className="relative w-16 h-16 bg-white rounded-full flex items-center justify-center ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.35)] overflow-hidden">
-                {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.png" alt="שופט וירטואלי" className="w-11 h-11 object-contain" />}
+                {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.webp" alt="שופט וירטואלי" className="w-11 h-11 object-contain" />}
               </div>
             </div>
 

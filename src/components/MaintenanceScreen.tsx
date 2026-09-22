@@ -88,7 +88,7 @@ function LogoMark({ onLogoTap }: { onLogoTap?: () => void }) {
       />
       <div className="absolute -inset-1.5 rounded-full border border-yellow-400/25 pointer-events-none" aria-hidden />
       <div className="relative w-full h-full rounded-full bg-white ring-2 ring-yellow-400/70 shadow-[0_0_44px_rgba(250,204,21,0.4)] overflow-hidden flex items-center justify-center">
-        <img src="/logoref.png" alt={t('app.title')} className="w-full h-full object-contain" />
+        <img src="/logoref.webp" alt={t('app.title')} className="w-full h-full object-contain" />
       </div>
       <div className="absolute -bottom-1 -left-1 w-10 h-10 rounded-full bg-gradient-to-b from-yellow-300 to-yellow-500 flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.5)] border-2 border-slate-950">
         <Wrench className="w-4 h-4 text-slate-950" />
