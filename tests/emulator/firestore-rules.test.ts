@@ -1,8 +1,8 @@
 /**
  * Firestore security-rule tests against the local emulator.
  * Run: npx firebase emulators:exec --only firestore --project demo-referee \
- *   'node --experimental-strip-types --test tests/firestore-rules.test.ts'
- * These are NOT part of `npm test` (they need the emulator running).
+ *   'node --experimental-strip-types --test tests/emulator/firestore-rules.test.ts'
+ * These live outside tests/*.test.ts so `npm test` skips them (they need the emulator).
  */
 import test from 'node:test';
 import {
