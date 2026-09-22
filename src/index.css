@@ -565,3 +565,15 @@
     padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   }
 }
+
+/* Real viewport height: 100vh on iOS Safari spans under the dynamic
+   toolbar; dvh tracks the visible area. Tailwind sorts arbitrary values
+   before named utilities, so the "h-screen h-[100dvh]" class pair always
+   resolved to 100vh - these single-declaration fallbacks are the working
+   form (unsupported browsers drop the dvh line and keep vh). */
+.h-screen-fix { height: 100vh; }
+.min-h-screen-fix { min-height: 100vh; }
+@supports (height: 100dvh) {
+  .h-screen-fix { height: 100dvh; }
+  .min-h-screen-fix { min-height: 100dvh; }
+}

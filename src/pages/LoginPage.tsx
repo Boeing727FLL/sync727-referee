@@ -52,7 +52,7 @@ export default function LoginPage() {
   } = useLoginAuth({ onSuccess: () => navigate('/app?enter=chat') });
 
   return (
-    <div className="min-h-screen h-full bg-slate-950 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen-fix h-full bg-slate-950 flex flex-col relative overflow-hidden">
       {/* Backdrop: FLL field + grid + FIRST glows, plus a Gemini violet aura */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img

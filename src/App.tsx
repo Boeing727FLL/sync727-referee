@@ -27,7 +27,7 @@ export default function App() {
   }, [isLandingRoute, likelyPath]);
 
   return (
-    <div className="h-screen h-[100dvh] w-full">
+    <div className="h-screen-fix w-full">
       <Suspense fallback={<RouteFrame />}>
         {isLandingRoute
           ? <LandingPage />

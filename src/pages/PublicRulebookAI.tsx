@@ -1317,7 +1317,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   return (
     <motion.div
       initial={false}
-      className="h-screen h-[100dvh] w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
+      className="h-screen-fix w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
       <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop tint={seasonIdentity?.via} /></motion.div>
