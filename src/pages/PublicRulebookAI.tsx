@@ -634,13 +634,20 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
+    // Empty chat shows the hero, not a conversation. The disclaimer's scroll
+    // position carries into this scroller, so an explicit top reset keeps
+    // the greeting from opening above the fold on short screens.
+    if (messages.length === 0) {
+      if (!loading && chatStarted) scroller.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
     scroller.scrollTo({
       top: scroller.scrollHeight,
       behavior: !reduce && distance < scroller.clientHeight * 1.25 ? 'smooth' : 'auto',
     });
-  }, [messages, loading]);
+  }, [messages, loading, chatStarted]);
 
   useEffect(() => () => {
     abortControllerRef.current?.abort();
