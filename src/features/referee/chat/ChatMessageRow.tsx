@@ -1,5 +1,5 @@
 /** One chat row. Streaming and typewriter clocks remain coordinator-owned. */
-import { Suspense } from 'react';
+import { Suspense, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Copy, FileText, Reply } from 'lucide-react';
 import ThinkIndicator from '../../../components/ThinkIndicator';
@@ -16,7 +16,7 @@ type Props = {
   t: (key: string) => string;
 };
 
-export default function ChatMessageRow({ view, userPicture, userName, onCopy, onReply, t }: Props) {
+function ChatMessageRow({ view, userPicture, userName, onCopy, onReply, t }: Props) {
   const { message, index, thinking, thinkContent, text, typewriting, liveAnswer } = view;
   if (thinking) return (
     <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.morph} className="flex gap-2.5 md:gap-3">
@@ -51,3 +51,30 @@ export default function ChatMessageRow({ view, userPicture, userName, onCopy, on
     </motion.div>
   );
 }
+
+/**
+ * Long-chat guard: the coordinator re-renders on every composer keystroke
+ * and typewriter tick, rebuilding each view object by value. Re-rendering
+ * every row costs a full react-markdown re-parse per model message
+ * (~145-270ms at 200 messages under jsdom, reproduced). Rows only need to
+ * re-render when their own visible inputs change, so compare the view by
+ * value. onCopy/onReply are inline closures with stable semantics (they
+ * capture only stable helpers and t); t itself is compared, so a language
+ * switch still re-renders every row.
+ */
+function areEqual(prev: Props, next: Props): boolean {
+  const a = prev.view, b = next.view;
+  return a.message === b.message
+    && a.index === b.index
+    && a.thinking === b.thinking
+    && a.thinkContent === b.thinkContent
+    && a.text === b.text
+    && a.fullText === b.fullText
+    && a.typewriting === b.typewriting
+    && a.liveAnswer === b.liveAnswer
+    && prev.userPicture === next.userPicture
+    && prev.userName === next.userName
+    && prev.t === next.t;
+}
+
+export default memo(ChatMessageRow, areEqual);
