@@ -6,7 +6,20 @@ export const TIME_FILTERS = [
   { key: 'month', label: '30 ימים', days: 30 },
 ] as const;
 export type TimeFilter = typeof TIME_FILTERS[number]['key'];
-export type LogEntry = { id: string; question?: string; answer?: string; season?: string; language?: string; uid?: string; model?: string; ok?: boolean; createdAt?: any };
+export type LogEntry = { id: string; question?: string; answer?: string; season?: string; language?: string; uid?: string; askerName?: string; model?: string; ok?: boolean; createdAt?: any };
+export type UserNameMap = Record<string, string>;
+
+const ANONYMOUS_UIDS = new Set(['', 'anon', 'anonymous']);
+
+/** Resolve only a display name. Never expose an email or UID in the journal. */
+export function resolveAskerName(entry: LogEntry, names: UserNameMap = {}): string {
+  const snapshotName = String(entry.askerName || '').trim();
+  if (snapshotName) return snapshotName;
+  const uid = String(entry.uid || '').trim();
+  if (ANONYMOUS_UIDS.has(uid.toLowerCase())) return 'אורח';
+  const historicalName = String(names[uid] || '').trim();
+  return historicalName || 'משתמש לא זמין';
+}
 const DAY_MS = 86_400_000;
 const MINUTE_MS = 60_000;
 
@@ -30,13 +43,13 @@ export function timeAgo(value: any, now = Date.now()): string {
   return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
 }
 export function fullDate(value: any): string { const date = toDate(value); return date ? date.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
-export function filterLogs(logs: LogEntry[], search: string, filter: TimeFilter, newestFirst: boolean, now = Date.now()) {
+export function filterLogs(logs: LogEntry[], search: string, filter: TimeFilter, newestFirst: boolean, now = Date.now(), names: UserNameMap = {}) {
   const query = search.trim().toLowerCase();
   const days = TIME_FILTERS.find(item => item.key === filter)?.days || 0;
   const list = logs.filter(log => {
     const date = toDate(log.createdAt);
     if (days > 0 && (!date || now - date.getTime() > days * DAY_MS)) return false;
-    return !query || [log.question, log.answer, log.season].some(value => String(value || '').toLowerCase().includes(query));
+    return !query || [log.question, log.answer, log.season, resolveAskerName(log, names)].some(value => String(value || '').toLowerCase().includes(query));
   });
   return newestFirst ? list : [...list].reverse();
 }

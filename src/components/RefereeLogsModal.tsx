@@ -28,7 +28,7 @@ import { onValue, remove, ref, update } from 'firebase/database';
 import { rtdb } from '../lib/firebase/rtdb';
 import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
-import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter } from '../features/referee/logs/model';
+import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter, type UserNameMap } from '../features/referee/logs/model';
 import { EmptyState, EntryRow, FilterChip, LoadingSkeleton, NoticeBanner } from '../features/referee/logs/LogViews';
 import { chunkedNullUpdates, logEntries } from '../features/referee/data/snapshots';
 import { useModalA11y } from '../lib/modalA11y';
@@ -86,6 +86,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
 
   // -- live data ----------------------------------------------------------------
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [userNames, setUserNames] = useState<UserNameMap>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -153,6 +154,29 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     );
     return () => unsub();
   }, [unlocked]);
+
+  // Old journal records contain only a uid. The owner may list the existing
+  // Firestore user profiles, so join uid -> name in memory without copying
+  // emails or identifiers into the UI. A deleted/missing profile stays a
+  // clean fallback; journal access itself is unchanged for non-owner viewers.
+  useEffect(() => {
+    if (!unlocked || !canDelete) return;
+    let cancelled = false;
+    getDocs(collection(db, 'users'))
+      .then((snap) => {
+        if (cancelled) return;
+        const names: UserNameMap = {};
+        snap.forEach((profile) => {
+          const data = profile.data();
+          const uid = String(data?.uid || profile.id || '').trim();
+          const name = String(data?.name || '').trim();
+          if (uid && name) names[uid] = name.slice(0, 120);
+        });
+        setUserNames(names);
+      })
+      .catch((err) => console.warn('historical journal names unavailable:', err));
+    return () => { cancelled = true; };
+  }, [unlocked, canDelete]);
 
   /** Code gate: exact match opens the journal, anything else shakes the box. */
   const handleUnlock = () => {
@@ -238,7 +262,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
     }
   };
 
-  const filtered = useMemo(() => filterLogs(logs, search, filter, sortNew), [logs, search, filter, sortNew]);
+  const filtered = useMemo(() => filterLogs(logs, search, filter, sortNew, Date.now(), userNames), [logs, search, filter, sortNew, userNames]);
 
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
@@ -429,6 +453,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         <EntryRow
                           key={entry.id}
                           entry={entry}
+                          names={userNames}
                           index={idx}
                           isExpanded={expanded.has(entry.id)}
                           onToggle={() => toggleExpand(entry.id)}

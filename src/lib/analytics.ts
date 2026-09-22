@@ -78,6 +78,7 @@ type QuestionLog = {
   season?: string;
   language?: string;
   uid?: string | null;
+  askerName?: string | null;
   model?: string;
   ok?: boolean;
 };
@@ -208,6 +209,7 @@ export async function logRefereeQA(payload: QuestionLog): Promise<void> {
       season: payload.season || '',
       language: payload.language || '',
       uid: payload.uid || 'anon',
+      ...(payload.askerName?.trim() ? { askerName: payload.askerName.trim().slice(0, 120) } : {}),
       model: payload.model || '',
       // Absent means success; only an explicit false marks a failure.
       ok: payload.ok !== false,

@@ -1,7 +1,7 @@
 /** Pure presentation pieces for the referee journal. */
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bot, CalendarDays, Check, ChevronDown, ChevronUp, Copy, Loader2, MessageCircle, Sparkles, Trash2 } from 'lucide-react';
-import { fullDate, timeAgo, type LogEntry } from './model';
+import { Bot, CalendarDays, Check, ChevronDown, ChevronUp, Copy, Loader2, MessageCircle, Sparkles, Trash2, UserRound } from 'lucide-react';
+import { fullDate, resolveAskerName, timeAgo, type LogEntry, type UserNameMap } from './model';
 
 const STAGGER_STEP = 0.03;
 const STAGGER_MAX = 0.3;
@@ -84,8 +84,9 @@ export function EmptyState() {
 }
 
 /** One expandable journal row: collapsed header + expandable Q/A detail. */
-export function EntryRow({ entry, index, isExpanded, onToggle, onDelete, canDelete, deleting, copiedKey, onCopy }: {
+export function EntryRow({ entry, names, index, isExpanded, onToggle, onDelete, canDelete, deleting, copiedKey, onCopy }: {
   entry: LogEntry;
+  names: UserNameMap;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
@@ -126,7 +127,11 @@ export function EntryRow({ entry, index, isExpanded, onToggle, onDelete, canDele
                 {entry.season}
               </span>
             )}
-            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+            <span className="min-w-0 max-w-full text-[10px] text-slate-300 font-bold flex items-center gap-1" title={resolveAskerName(entry, names)}>
+              <UserRound className="w-3 h-3 shrink-0 text-blue-300" />
+              <span className="truncate">{resolveAskerName(entry, names)}</span>
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 shrink-0">
               <CalendarDays className="w-3 h-3" />
               {timeAgo(entry.createdAt)}
             </span>

@@ -1271,6 +1271,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             season: seasonName,
             language,
             uid: resolveRefereeUid(),
+            askerName: (displayUser as any)?.name || null,
             model: 'gemini-3.6-flash',
             ok: outcome.answered,
           });
@@ -1290,6 +1291,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             season: seasonName,
             language,
             uid: resolveRefereeUid(),
+            askerName: (displayUser as any)?.name || null,
             model: 'gemini-3.6-flash',
             ok: false,
           });
