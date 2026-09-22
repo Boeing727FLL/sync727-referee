@@ -380,7 +380,7 @@ export default function MandatoryDisclaimerModal({ isOpen, onConfirm, t, handoff
                 {Array.from({ length: SLICE_COUNT }, (_, i) => (
                   <img
                     key={i}
-                    src="/logoref.png"
+                    src="/logoref.webp"
                     width="770" height="770"
                     alt=""
                     aria-hidden
