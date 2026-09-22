@@ -685,6 +685,21 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     return () => unsubSettings();
   }, [chatStarted, seasonName]);
 
+  // Offline recovery: if the rulebook load died with the network (offline
+  // boot, tunnel, captive portal), onSnapshot does not re-fire when
+  // connectivity returns and every send would stay rejected until reload.
+  // Retry once per 'online' event, only while the barrier is still empty.
+  useEffect(() => {
+    if (!chatStarted) return;
+    const retryEmptyRulebook = () => {
+      if (rulebookLoadBarrierRef.current.snapshot().length === 0) {
+        void refreshLatestRulebook().catch(() => {});
+      }
+    };
+    window.addEventListener('online', retryEmptyRulebook);
+    return () => window.removeEventListener('online', retryEmptyRulebook);
+  }, [chatStarted, seasonName]);
+
   /**
    * Load every rulebook source for the active season and detect the season
    * from their filenames, syncing it back to the shared config when it changes.
