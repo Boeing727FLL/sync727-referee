@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ASK_ABORTED, isAbortResult } from '../src/features/referee/ai/askContract.ts';
+import { ASK_ABORTED, failureResult, isAbortResult, isFailureResult, unwrapFailure } from '../src/features/referee/ai/askContract.ts';
 import { resolveResponseOutcome } from '../src/features/referee/chat/finalizeResponse.ts';
 
 test('abort sentinel is the empty string and detected by isAbortResult', () => {
@@ -26,4 +26,20 @@ test('normal answers pass through answered with markup intact for display', () =
   assert.equal(outcome.answered, true);
   assert.equal(outcome.displayText, '**תשובה** <think>hidden</think>');
   assert.equal(outcome.logAnswer, '**תשובה**');
+});
+
+test('failure sentinel round-trips and never collides with plain text', () => {
+  const marked = failureResult('תקלה זמנית');
+  assert.equal(isFailureResult(marked), true);
+  assert.equal(unwrapFailure(marked), 'תקלה זמנית');
+  assert.equal(isFailureResult('תקלה זמנית'), false);
+  assert.equal(unwrapFailure('תשובה רגילה'), 'תשובה רגילה');
+  assert.equal(isAbortResult(marked), false);
+});
+
+test('failure result is never an answered outcome but keeps its honest text', () => {
+  const outcome = resolveResponseOutcome(failureResult('השופט נתקל בתקלה'), 'COMM_ERROR');
+  assert.equal(outcome.answered, false);
+  assert.equal(outcome.displayText, 'השופט נתקל בתקלה');
+  assert.equal(outcome.logAnswer, 'השופט נתקל בתקלה');
 });

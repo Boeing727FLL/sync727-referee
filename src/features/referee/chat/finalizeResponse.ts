@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../types';
+import { isFailureResult, unwrapFailure } from '../ai/askContract.ts';
 import { stripThinkBlocks } from './text.ts';
 
 /**
@@ -12,6 +13,12 @@ export function resolveResponseOutcome(response: string, commError: string): {
   displayText: string;
   logAnswer: string;
 } {
+  if (isFailureResult(response)) {
+    // Honest failure fallback: displayed and journaled as the failure it
+    // is, never counted as an answer (no analytics, no feedback prompt).
+    const failureText = unwrapFailure(response);
+    return { answered: false, displayText: failureText, logAnswer: failureText };
+  }
   const visible = stripThinkBlocks(response);
   const answered = visible.length > 0;
   return {
@@ -31,7 +38,7 @@ export function finalizeModelResponse(prev: ChatMessage[], response: string, com
   const last = prev[prev.length - 1];
   if (last?.role === 'model') {
     if (!answered && stripThinkBlocks(last.text).length === 0) {
-      return [...prev.slice(0, -1), { role: 'model', text: commError }];
+      return [...prev.slice(0, -1), { role: 'model', text: displayText }];
     }
     return prev;
   }

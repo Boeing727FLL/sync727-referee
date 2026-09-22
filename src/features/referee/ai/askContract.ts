@@ -3,10 +3,13 @@
  *
  * 1. resolves ASK_ABORTED ('')  -> the request was aborted (Stop pressed /
  *    session kicked). The caller must not render, count, or log anything.
- * 2. resolves a non-empty string -> user-visible answer text. This includes
- *    the honest Hebrew fallback messages for quota/technical failures and
- *    the rulebook-incomplete notice: those are answers the user reads, so
- *    they are resolved, never thrown.
+ * 2. resolves a non-empty string -> user-visible answer text, counted and
+ *    logged as an answer.
+ * 2b. resolves failureResult(text) -> the honest localized fallback messages
+ *    for quota/technical failures and the rulebook-incomplete notice: the
+ *    user READS them, so they are resolved, never thrown - but they are
+ *    marked with ASK_FAILURE_MARK so the caller displays them WITHOUT
+ *    counting analytics, logging ok:true, or prompting feedback.
  * 3. never rejects for expected failures; a rejection means a programmer
  *    error and may crash to the boundary.
  *
@@ -19,3 +22,13 @@ export const ASK_ABORTED = '';
 
 /** True when a resolved askRulebook value means "aborted, ignore it". */
 export const isAbortResult = (response: string): boolean => response === ASK_ABORTED;
+
+/**
+ * Failure sentinel: wraps the localized fallback messages so the caller can
+ * show honest failure text while never treating it as an answer. A control
+ * prefix keeps the mark out of any real model output.
+ */
+export const ASK_FAILURE_MARK = '\u0001ask-failure\u0001';
+export const failureResult = (text: string): string => ASK_FAILURE_MARK + text;
+export const isFailureResult = (response: string): boolean => response.startsWith(ASK_FAILURE_MARK);
+export const unwrapFailure = (response: string): string => (isFailureResult(response) ? response.slice(ASK_FAILURE_MARK.length) : response);

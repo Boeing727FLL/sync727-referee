@@ -10,7 +10,7 @@ import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/
 import { runModel } from '../features/referee/ai/modelRunner';
 import { assertListedPagesComplete, RulebookIncompleteError } from '../features/referee/rulebook/completeness';
 import { translateFor } from '../locales/index.ts';
-import { ASK_ABORTED } from '../features/referee/ai/askContract';
+import { ASK_ABORTED, failureResult } from '../features/referee/ai/askContract';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -477,16 +477,16 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       if (signal?.aborted) return ASK_ABORTED;
       if (error instanceof RulebookIncompleteError) {
         console.error('Active rulebook completeness check failed:', error.diagnostic);
-        return translateFor(language, 'chat.rulebookIncomplete');
+        return failureResult(translateFor(language, 'chat.rulebookIncomplete'));
       }
       const errMsg = errorText(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
         console.warn("Quota exceeded, returning friendly message");
-        return translateFor(language, 'chat.serviceBusy');
+        return failureResult(translateFor(language, 'chat.serviceBusy'));
       }
       console.warn("Gemini error:", errMsg.substring(0, 200));
-      return translateFor(language, 'chat.serviceTemporaryFailure');
+      return failureResult(translateFor(language, 'chat.serviceTemporaryFailure'));
     }
   }
 };
