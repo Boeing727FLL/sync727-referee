@@ -116,3 +116,50 @@ test('default deny: unknown collections are closed', async () => {
   await assertFails(getDoc(doc(asUser('u11'), 'random_collection/x')));
   await assertFails(setDoc(doc(asUser('u11'), 'random_collection/x'), { a: 1 }));
 });
+
+// --- season_identities: shared badge, owner-published ---
+test('season_identities: signed-in read, anonymous denied, owner-only write', async () => {
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'season_identities/2026'), { via: '#FFC400', season: '2026' });
+  });
+  await assertSucceeds(getDoc(doc(asUser('u10'), 'season_identities/2026')));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'season_identities/2026')));
+  await assertFails(setDoc(doc(asUser('u10'), 'season_identities/2026'), { via: '#000000' }));
+  await assertSucceeds(setDoc(doc(asOwner(), 'season_identities/2026'), { via: '#111111', season: '2026' }));
+});
+
+// --- quota: window-forgery abuse ---
+test('quota: cannot reset an active window by forging windowStart', async () => {
+  const db = asUser('u11');
+  const ref = doc(db, 'chat_quota/u11');
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'chat_quota/u11'), { count: 54, windowStart: Timestamp.now() });
+  });
+  // Window is still fresh: dropping back to count=1 with a new timestamp is forgery.
+  await assertFails(updateDoc(ref, { count: 1, windowStart: serverTimestamp() }));
+  // Skipping ahead inside the window is also rejected (strictly +1), and the 55 cap holds.
+  await assertFails(updateDoc(ref, { count: 56, windowStart: serverTimestamp() }));
+  // The only legal move: +1 while keeping the original windowStart.
+  const snap = await getDoc(ref);
+  await assertSucceeds(updateDoc(ref, { count: 55, windowStart: snap.data()!.windowStart }));
+});
+
+// --- logs: size boundaries ---
+test('logs: question/answer size limits are enforced at the boundary', async () => {
+  const base = { question: 'x'.repeat(1999), season: 'S', language: 'he', uid: 'u12', model: 'm', ok: true, createdAt: serverTimestamp() };
+  await assertSucceeds(setDoc(doc(asUser('u12'), 'referee_logs/b1'), base));
+  await assertFails(setDoc(doc(asUser('u12'), 'referee_logs/b2'), { ...base, question: 'x'.repeat(2000) }));
+  await assertSucceeds(setDoc(doc(asUser('u12'), 'referee_logs/b3'), { ...base, answer: 'y'.repeat(19999) }));
+  await assertFails(setDoc(doc(asUser('u12'), 'referee_logs/b4'), { ...base, answer: 'y'.repeat(20001) }));
+  await assertFails(setDoc(doc(asUser('u12'), 'referee_logs/b5'), { ...base, answer: 42 }));
+});
+
+// --- users: create forgery ---
+test('users: cannot create with a forged uid field', async () => {
+  await assertFails(setDoc(doc(asUser('u13'), 'users/u13'), { uid: 'u14', role: 'member' }));
+  await assertSucceeds(setDoc(doc(asUser('u13'), 'users/u13'), { uid: 'u13', role: 'member' }));
+  // KNOWN GAP (reported, semantics preserved per owner-pending decision): the
+  // create rule binds only the uid FIELD, not the doc id, and leaves role
+  // unchecked at create - a signed-in user can plant users docs at arbitrary
+  // ids with arbitrary role values.
+});
