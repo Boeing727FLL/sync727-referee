@@ -20,6 +20,7 @@ import {
 import { resetQuestions } from '../lib/analytics';
 import { subscribeMaintenance, setMaintenance, resetFeedbackForAll } from '../lib/refereeFlags';
 import { isCurrentUserOwner } from '../lib/owner';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -220,6 +221,7 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
 export default function SettingsModal({
   isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenCorrections, onOpenFeedback, onOpenPrivacy,
 }: SettingsModalProps) {
+  const a11yRef = useModalA11y(onClose);
   const [owner] = useState(() => isCurrentUserOwner());
   const [maintenance, setMaintenanceState] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -327,9 +329,12 @@ export default function SettingsModal({
             exit={{ scale: 0.94, opacity: 0, y: 24 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
+            ref={a11yRef}
             className="w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden rounded-[28px] border border-yellow-400/25 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_50px_rgba(250,204,21,0.08)]"
             role="dialog"
+            aria-modal="true"
             aria-label="הגדרות"
+            tabIndex={-1}
           >
             {/* Header: glowing gear + title + close */}
             <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/10 bg-white/[0.03] shrink-0 relative overflow-hidden">

@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
 import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,6 +111,7 @@ function LockGate({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------------
 
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
+  const a11yRef = useModalA11y(onClose);
   const [unlocked, setUnlocked] = useState(false);
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [onlineUsers, setOnlineUsers] = useState(0);
@@ -171,6 +173,10 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
             exit={{ scale: 0.94, opacity: 0, y: 20 }}
             onClick={e => e.stopPropagation()}
             className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="px-5 pt-5 pb-4 border-b border-white/[0.07] flex items-center justify-between">
               <div className="flex items-center gap-2.5">

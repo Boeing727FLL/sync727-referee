@@ -12,6 +12,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,6 +80,7 @@ export default function ConfirmationModal({
   variant = 'danger'
 }: ConfirmationModalProps) {
   const { t, isRTL } = useLanguage();
+  const a11yRef = useModalA11y(onClose);
   const confirmLabel = confirmText ?? t('common.confirm');
   const cancelLabel = cancelText ?? t('common.cancel');
   const color = VARIANTS[variant];
@@ -102,6 +104,10 @@ export default function ConfirmationModal({
             transition={{ type: 'spring', stiffness: 300, damping: 26 }}
             onClick={e => e.stopPropagation()}
             className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] w-full max-w-sm overflow-hidden"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="p-6 md:p-7 text-center">
               <div className="relative w-16 h-16 mx-auto mb-4">

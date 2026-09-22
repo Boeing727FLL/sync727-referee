@@ -29,6 +29,7 @@ import { db } from '../lib/firebase/firestore';
 import { invalidateCorrectionsCache } from '../services/geminiService';
 import { isCurrentUserOwner } from '../lib/owner';
 import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from '../features/referee/corrections/model';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -149,6 +150,7 @@ function CorrectionRow({ num, value, onChange, onDelete }: {
 // ---------------------------------------------------------------------------
 
 export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrectionsModalProps) {
+  const a11yRef = useModalA11y(onClose);
   // -- gate + document state ----------------------------------------------------
   const [unlocked, setUnlocked] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
@@ -273,6 +275,10 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="flex w-full h-1 shrink-0" aria-hidden>
               <div className="flex-1 bg-blue-600" />

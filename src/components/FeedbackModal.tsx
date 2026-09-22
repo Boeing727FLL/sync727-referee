@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, MessageSquareHeart } from 'lucide-react';
 import { logRefereeFeedback } from '../lib/analytics';
 import { useLanguage } from '../hooks/useLanguage';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants & copy
@@ -75,6 +76,7 @@ function StarsInput({ rating, hovered, onRate, onHover }: {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }: FeedbackModalProps) {
+  const a11yRef = useModalA11y(onClose);
   const { t, language, isRTL } = useLanguage();
   const labels = {
     title: t('feedback.title'),
@@ -164,6 +166,10 @@ export default function FeedbackModal({ isOpen, onClose, onSubmit, season, uid }
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 26 }}
             className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="p-6">
               {done ? (

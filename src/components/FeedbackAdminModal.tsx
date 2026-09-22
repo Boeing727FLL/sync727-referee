@@ -21,6 +21,7 @@ import { isCurrentUserOwner } from '../lib/owner';
 import { feedbackStats, type FeedbackEntry } from '../features/referee/feedback/model';
 import { chunkedNullUpdates, feedbackEntries } from '../features/referee/data/snapshots';
 import { DangerButton, EmptyView, FeedbackCard, GhostButton, LoadingView, LockGate, StatTile } from '../features/referee/feedback/FeedbackViews';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -49,6 +50,7 @@ interface FeedbackAdminModalProps {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminModalProps) {
+  const a11yRef = useModalA11y(onClose);
   // -- gate + data --------------------------------------------------------------
   const [unlocked, setUnlocked] = useState(false);
   const [items, setItems] = useState<FeedbackEntry[]>([]);
@@ -194,6 +196,10 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-[28px] border border-emerald-400/25 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(52,211,153,0.08)]"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             {/* Header: glowing identity + live pulse + close */}
             <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-white/10 bg-white/[0.03] shrink-0 relative overflow-hidden">

@@ -31,6 +31,7 @@ import { isCurrentUserOwner } from '../lib/owner';
 import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter } from '../features/referee/logs/model';
 import { EmptyState, EntryRow, FilterChip, LoadingSkeleton, NoticeBanner } from '../features/referee/logs/LogViews';
 import { chunkedNullUpdates, logEntries } from '../features/referee/data/snapshots';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)
@@ -77,6 +78,7 @@ interface RefereeLogsModalProps { isOpen: boolean; onClose: () => void; }
 // ---------------------------------------------------------------------------
 
 export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalProps) {
+  const a11yRef = useModalA11y(onClose);
   // -- gate state (head-referee code) -----------------------------------------
   const [code, setCode] = useState('');
   const [unlocked, setUnlocked] = useState(false);
@@ -259,6 +261,10 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+            ref={a11yRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="flex w-full h-1 shrink-0" aria-hidden>
               <div className="flex-1 bg-blue-600" />

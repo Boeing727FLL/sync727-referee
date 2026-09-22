@@ -13,6 +13,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, X, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useModalA11y } from '../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Shared policy copy (single source for the modal AND the /privacy route)
@@ -58,6 +59,7 @@ interface Props {
 
 export default function PrivacyModal({ isOpen, onClose }: Props) {
   const { t } = useLanguage();
+  const a11yRef = useModalA11y(onClose);
   // No early return here on purpose: AnimatePresence needs the tree mounted
   // to play the 2s divine exit animation. Returning null would kill it instantly.
   return (
@@ -78,8 +80,10 @@ export default function PrivacyModal({ isOpen, onClose }: Props) {
               { duration: 2.25, ease: [0.22, 1, 0.36, 1], times: [0, 0.7, 1] } as any
             }
             className="relative bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden"
+            ref={a11yRef}
             role="dialog"
             aria-modal="true"
+            tabIndex={-1}
           >
             {/* Divine gold bloom on exit */}
             <motion.div
