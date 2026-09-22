@@ -36,7 +36,7 @@ export function filterLogs(logs: LogEntry[], search: string, filter: TimeFilter,
   const list = logs.filter(log => {
     const date = toDate(log.createdAt);
     if (days > 0 && (!date || now - date.getTime() > days * DAY_MS)) return false;
-    return !query || [log.question, log.answer, log.season].some(value => (value || '').toLowerCase().includes(query));
+    return !query || [log.question, log.answer, log.season].some(value => String(value || '').toLowerCase().includes(query));
   });
   return newestFirst ? list : [...list].reverse();
 }
