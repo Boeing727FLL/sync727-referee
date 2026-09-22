@@ -25,7 +25,9 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { onValue, remove, ref, update } from 'firebase/database';
+import { collection, getDocs } from 'firebase/firestore';
 import { rtdb } from '../lib/firebase/rtdb';
+import { db } from '../lib/firebase/firestore';
 import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
 import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter, type UserNameMap } from '../features/referee/logs/model';

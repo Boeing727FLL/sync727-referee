@@ -25,6 +25,7 @@ export function logEntries(value: unknown): LogEntry[] {
     season: typeof item.season === 'string' ? item.season : undefined,
     language: typeof item.language === 'string' ? item.language : undefined,
     uid: typeof item.uid === 'string' ? item.uid : undefined,
+    askerName: typeof item.askerName === 'string' ? item.askerName : undefined,
     model: typeof item.model === 'string' ? item.model : undefined,
     ok: typeof item.ok === 'boolean' ? item.ok : undefined,
     createdAt: item.createdAt,
