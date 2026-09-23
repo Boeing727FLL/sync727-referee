@@ -3,6 +3,7 @@ import {startTransition, Suspense, useEffect, useState} from 'react';
 import { lazyWithReload } from './lib/lazyWithReload';
 import LandingPage, {hasSavedSession} from './pages/LandingPage';
 import {warmIdleRoutes} from './routeWarmup';
+import {isRouterPath} from './routePaths';
 
 const RouterApp = lazyWithReload('router-app', () => import('./RouterApp'));
 
@@ -13,7 +14,9 @@ function RouteFrame() {
 
 export default function App() {
   const [pathname, setPathname] = useState(window.location.pathname);
-  const isLandingRoute = pathname === '/';
+  // Any path the router does not own (/, /index.html, stray or mistyped
+  // paths) is the landing page, rendered without a router.
+  const isLandingRoute = !isRouterPath(pathname);
   const likelyPath = hasSavedSession() ? '/app' : '/login';
 
   useEffect(() => {
@@ -21,6 +24,12 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!isLandingRoute || window.location.pathname === '/') return;
+    const { search, hash } = window.location;
+    window.history.replaceState(window.history.state, '', '/' + search + hash);
+  }, [isLandingRoute]);
 
   useEffect(() => {
     if (!isLandingRoute) return;
