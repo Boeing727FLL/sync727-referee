@@ -39,8 +39,9 @@ test('quota failure cools the key and the next key answers', async () => {
   });
   assert.equal(outcome.status, 'answered');
   assert.deepEqual(attempts, ['k1', 'k2']);
-  // k1 is cooling (60s quota cooldown), k2/k3 stay available
-  assert.deepEqual(health.available(KEYS, Date.now()), ['k2', 'k3']);
+  // k1 is cooling on m1 only (quota is per model); it still serves m2
+  assert.deepEqual(health.available(KEYS, Date.now(), 'm1'), ['k2', 'k3']);
+  assert.deepEqual(health.available(KEYS, Date.now(), 'm2'), KEYS);
 });
 
 test('invalid-key failure cools the key for 15 minutes', async () => {
@@ -74,10 +75,13 @@ test('request-class failure skips to the next model without cooling the key', as
   assert.deepEqual(health.available(KEYS), KEYS);
 });
 
-test('server-class failure skips to the next model', async () => {
+test('server-class failure retries the model once after a backoff, then skips it', async () => {
   const attempts: string[] = [];
+  const sleeps: number[] = [];
+  const health = new KeyHealth();
   const outcome = await runModelChain({
-    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    models: MODELS, keys: KEYS, health, rotationIndex: 0,
+    sleep: async ms => { sleeps.push(ms); },
     attempt: async (key, model) => {
       attempts.push(`${key}@${model}`);
       if (model === 'm1') throw new Error('503 Service Unavailable');
@@ -85,7 +89,58 @@ test('server-class failure skips to the next model', async () => {
     },
   });
   assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m1', 'k1@m2']);
+  assert.equal(sleeps.length, 1);
+  assert.ok(sleeps[0] >= 1500);
+  // the overloaded model rests briefly for every key; others unaffected
+  assert.deepEqual(health.available(KEYS, Date.now(), 'm1'), []);
+  assert.deepEqual(health.available(KEYS, Date.now(), 'm2'), KEYS);
+});
+
+test('a 503 that clears on retry answers from the same model', async () => {
+  const attempts: string[] = [];
+  let failures = 0;
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    sleep: async () => {},
+    attempt: async (key, model) => {
+      attempts.push(`${key}@${model}`);
+      if (failures++ === 0) throw new Error('503 UNAVAILABLE: The model is overloaded');
+      return true;
+    },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m1']);
+});
+
+test('no-free-tier model (429 limit: 0) is skipped at once, not tried on every key', async () => {
+  const attempts: string[] = [];
+  const health = new KeyHealth();
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health, rotationIndex: 0,
+    attempt: async (key, model) => {
+      attempts.push(`${key}@${model}`);
+      if (model === 'm1') throw new Error('429 RESOURCE_EXHAUSTED: Quota exceeded for metric generate_content_free_tier_requests, limit: 0');
+      return true;
+    },
+  });
+  assert.equal(outcome.status, 'answered');
   assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
+  assert.deepEqual(health.available(KEYS, Date.now() + 60 * 60_000, 'm1'), []);
+});
+
+test('quota on every key for one model still lets the next model answer', async () => {
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    attempt: async (key, model) => {
+      attempts.push(`${key}@${model}`);
+      if (model === 'm1') throw new Error('429 Too Many Requests');
+      return true;
+    },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k3@m1', 'k1@m2']);
 });
 
 test('transient failure propagates, never swallowed', async () => {

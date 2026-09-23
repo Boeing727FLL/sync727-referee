@@ -33,7 +33,8 @@ const PHOTO_CRITIQUE_ADDENDUM = '\n[ביקורת חזותית: צורפה תמו
 const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.6-flash', kind: 'interactions', config: INTERACTION_CONFIG },
   { name: 'gemini-3.5-flash', kind: 'interactions', config: INTERACTION_CONFIG },
-  { name: 'gemini-3.1-pro-preview', kind: 'interactions', config: { temperature: 1, max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, topP: 0.95, thinking_level: 'high' } },
+  // gemini-3.1-pro-preview removed: it has no free tier (every free key
+  // answers 429 "limit: 0"), so it only added failed requests.
   { name: 'gemini-3.5-flash-lite', kind: 'generateContent', config: { thinkingConfig: { thinkingLevel: 'HIGH' }, mediaResolution: 'MEDIA_RESOLUTION_HIGH' } },
 ];
 
@@ -421,6 +422,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         models: effectiveChain,
         keys: allKeys,
         health: keyHealth,
+        modelId: entry => entry.name,
         rotationIndex: Number.isInteger(rotationRaw) && rotationRaw >= 0 ? rotationRaw : 0,
         onRotation: next => localStorage.setItem('gemini_key_rotation_index', String(next)),
         signal,
