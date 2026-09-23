@@ -36,6 +36,7 @@ const ar: TranslationMap = {
     'chat.unsupportedImageType': 'صيغة غير مدعومة - PNG أو JPEG أو WEBP أو HEIC فقط',
     'chat.imageTooLarge': 'الصور كبيرة جدا - 10MB كحد أقصى إجمالا',
     'chat.stop': 'إيقاف',
+    'chat.stoppedByUser': 'لقد أوقفت هذا الرد.',
     'chat.greet_morning': 'صباح الخير، {name}!',
     'chat.greet_afternoon': 'طاب يومك، {name}!',
     'chat.greet_evening': 'مساء الخير، {name}!',

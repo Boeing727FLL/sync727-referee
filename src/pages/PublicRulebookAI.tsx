@@ -36,7 +36,7 @@ import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
 import type { ChatMessage, RulebookFile } from '../features/referee/types';
 import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS, MENU_ROW_CLASS } from '../features/referee/config';
-import { applyStopToMessages } from '../features/referee/chat/stopResponse';
+import { applyStopToMessages, dropInvisibleAnswer, withoutStopNotes } from '../features/referee/chat/stopResponse';
 import { finalizeModelResponse, resolveResponseOutcome } from '../features/referee/chat/finalizeResponse';
 import { safeUserFacingError } from '../features/referee/chat/userFacingError';
 import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from '../features/referee/chat/requestMachine';
@@ -589,6 +589,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // One request lifecycle state machine replaces the old sending /
   // requestFinished / stopHandled boolean trio (see requestMachine.ts).
   const requestRef = useRef<RequestMachine>(initialRequestMachine);
+  // Request id whose client rate-limit slot was consumed; Stop refunds only that.
+  const clientSlotRequestRef = useRef<number | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   // Grow the composer with its content (up to 5 lines), shrink back on send.
   const autoresizeComposer = () => {
@@ -1060,12 +1062,21 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   const handleStop = () => {
     const stop = applyStop(requestRef.current);
     if (!stop.tookEffect) return;
+    const stoppedId = requestRef.current.requestId;
     requestRef.current = stop.next;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    // The UI is released on the spot: the aborted request may take a moment
+    // to unwind (network, file fetch), but the chat must not wait for it.
+    setLoading(false);
     typewriter.finish();
-    refundClientRateLimit();
-    setMessages(applyStopToMessages);
+    if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}); wakeLockRef.current = null; }
+    if (clientSlotRequestRef.current === stoppedId) {
+      clientSlotRequestRef.current = null;
+      refundClientRateLimit();
+    }
+    const note = t('chat.stoppedByUser');
+    setMessages(prev => applyStopToMessages(prev, note));
   };
 
   /**
@@ -1146,6 +1157,11 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       }
     ]);
 
+    // Busy from the first frame: Stop is available while the guards run.
+    setLoading(true);
+    /** True once this send was stopped or superseded; every await re-checks it. */
+    const isDead = () => requestRef.current.requestId !== sendRequestId || requestRef.current.stopHandled;
+
     /** Undo the echo and hand the composer its exact prior state back. */
     const rollback = () => {
       setMessages(prev => {
@@ -1170,6 +1186,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         if (rulebookMutationRef.current) await rulebookMutationRef.current;
         requestRulebookFiles = await rulebookLoadBarrierRef.current.ready();
       } catch {
+        if (isDead()) return;
         rejectWithNotice(t('chat.guardRulebookLoadFailed'));
         return;
       }
@@ -1177,7 +1194,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       // Guard chain (pure decisions; order test-locked in sendGuards.ts):
       // blind-answer guard -> client rate limit -> server daily quota.
       // The quota unit is consumed only when the cheaper guards passed.
+      if (isDead()) return;
       const clientLimit = consumeClientRateLimit();
+      if (clientLimit.allowed) clientSlotRequestRef.current = sendRequestId;
       let quotaError: { exhausted: boolean; resetAtMs?: number | null } | null = null;
       const quotaUid = resolveRefereeUid();
       if (quotaUid && requestRulebookFiles.length > 0 && clientLimit.allowed) {
@@ -1203,6 +1222,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
           quotaExhausted: quotaMessage('chat.quotaExhausted', quotaError?.resetAtMs),
           quotaUnavailable: quotaMessage('chat.quotaUnavailable'),
         });
+      if (isDead()) return;
       if (guard.kind === 'reject') {
         rejectWithNotice(guard.notice);
         return;
@@ -1214,7 +1234,11 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setRenderingResponse(false);
-      try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {}
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        if (isDead()) lock.release().catch(() => {}); else wakeLockRef.current = lock;
+      } catch(e) {}
+      if (isDead()) { controller.abort(); return; }
 
       try {
         const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
@@ -1222,7 +1246,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         const { GeminiService } = await import('../services/geminiService');
         const response = await GeminiService.askRulebook(
           finalPrompt,
-          messages,
+          withoutStopNotes(messages),
           requestRulebookFiles,
           seasonNameRef.current,
           photosToSend.map(a => ({ url: '' as string, key: a.file.name, actualFile: a.file })),
@@ -1255,7 +1279,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         );
 
         if (controller.signal.aborted) {
-          handleStop();
+          // Stop already released the UI; only an abort from elsewhere
+          // (unmount) on the still-current request needs handling here.
+          if (requestRef.current.requestId === sendRequestId) handleStop();
         } else {
           // Owner questions are invisible to analytics: not counted and not
           // logged to the journal.
@@ -1282,7 +1308,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         }
       } catch (error: any) {
         if (controller.signal.aborted) {
-          handleStop();
+          if (requestRef.current.requestId === sendRequestId) handleStop();
         } else {
           const errMsg = safeUserFacingError(error, t('chat.connectionLost'));
           logRefereeQA({
@@ -1297,16 +1323,22 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
           });
           // A partial bubble that never reached a visible answer (still
           // inside private thinking) is dropped, never shown as raw markup.
-          setMessages(prev => [...applyStopToMessages(prev), { role: 'model', text: errMsg }]);
+          setMessages(prev => [...dropInvisibleAnswer(prev), { role: 'model', text: errMsg }]);
         }
       } finally {
-        if (requestRef.current.phase !== 'rendering') abortControllerRef.current = null;
-        requestRef.current = settle(requestRef.current);
-        setLoading(false);
-        if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; }
+        // A stopped request's late tail must never touch a newer send.
+        if (requestRef.current.requestId === sendRequestId) {
+          if (requestRef.current.phase !== 'rendering') abortControllerRef.current = null;
+          requestRef.current = settle(requestRef.current);
+          setLoading(false);
+          if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}); wakeLockRef.current = null; }
+        }
       }
     } finally {
-      requestRef.current = settle(requestRef.current);
+      if (requestRef.current.requestId === sendRequestId) {
+        requestRef.current = settle(requestRef.current);
+        if (requestRef.current.phase === 'idle') setLoading(false);
+      }
     }
   };
 

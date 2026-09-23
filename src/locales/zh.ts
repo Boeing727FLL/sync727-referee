@@ -36,6 +36,7 @@ const zh: TranslationMap = {
     'chat.unsupportedImageType': '不支持的格式 - 仅限 PNG、JPEG、WEBP 或 HEIC',
     'chat.imageTooLarge': '图片过大 - 总计最多 10MB',
     'chat.stop': '停止',
+    'chat.stoppedByUser': '你已停止此回答。',
     'chat.greet_morning': '早上好，{name}！',
     'chat.greet_afternoon': '下午好，{name}！',
     'chat.greet_evening': '晚上好，{name}！',

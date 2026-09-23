@@ -36,6 +36,7 @@ const ko: TranslationMap = {
     'chat.unsupportedImageType': '지원하지 않는 형식 - PNG, JPEG, WEBP, HEIC만 가능',
     'chat.imageTooLarge': '이미지가 너무 큼 - 합계 최대 10MB',
     'chat.stop': '중지',
+    'chat.stoppedByUser': '이 응답을 중지했습니다.',
     'chat.greet_morning': '좋은 아침이에요, {name}님!',
     'chat.greet_afternoon': '안녕하세요, {name}님!',
     'chat.greet_evening': '좋은 저녁이에요, {name}님!',

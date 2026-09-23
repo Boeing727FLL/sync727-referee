@@ -36,6 +36,7 @@ const pt: TranslationMap = {
     'chat.unsupportedImageType': 'Formato não suportado - apenas PNG, JPEG, WEBP ou HEIC',
     'chat.imageTooLarge': 'Imagens muito grandes - máx. 10MB no total',
     'chat.stop': 'Parar',
+    'chat.stoppedByUser': 'Você interrompeu esta resposta.',
     'chat.greet_morning': 'Bom dia, {name}!',
     'chat.greet_afternoon': 'Boa tarde, {name}!',
     'chat.greet_evening': 'Boa noite, {name}!',

@@ -13,6 +13,9 @@ export type ChatMessage = {
   isProgress?: boolean;
   /** WhatsApp-style quoted context attached to a follow-up question. */
   quote?: string;
+  /** Local note left when the user stopped before any answer text appeared.
+   *  Display-only: never sent to the model as history. */
+  stopped?: boolean;
 };
 
 export type RulebookFile = { name: string; url: string };

@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyStopToMessages, hasVisibleAnswer } from '../src/features/referee/chat/stopResponse.ts';
+import { applyStopToMessages, dropInvisibleAnswer, hasVisibleAnswer, withoutStopNotes } from '../src/features/referee/chat/stopResponse.ts';
 import { buildMessageView, typewriterLength } from '../src/features/referee/chat/messageView.ts';
 import type { ChatMessage } from '../src/features/referee/types.ts';
 
 const STOPPED_SENTENCE = 'הפעולה הופסקה על ידי המשתמש.';
+const NOTE = 'עצרת את התשובה.';
+const noteMsg: ChatMessage = { role: 'model', text: NOTE, stopped: true };
 const question: ChatMessage = { role: 'user', text: 'מה הניקוד על משימה 3?' };
 
 const viewOptions = (overrides: Partial<Parameters<typeof buildMessageView>[2]> = {}) => ({
@@ -27,23 +29,32 @@ test('hasVisibleAnswer: empty, whitespace and thinking-only text are not answers
   assert.equal(hasVisibleAnswer('תשובה חלקית'), true);
 });
 
-test('stop before the first token leaves the question without an answer bubble', () => {
-  const before: ChatMessage[] = [question];
-  const after = applyStopToMessages(before);
-  assert.deepEqual(after, before);
-  assert.equal(after.some(m => m.text.includes(STOPPED_SENTENCE)), false);
+test('stop before the first token leaves a "you stopped it" note', () => {
+  const after = applyStopToMessages([question], NOTE);
+  assert.deepEqual(after, [question, noteMsg]);
 });
 
-test('stop during private thinking removes the never-visible model bubble', () => {
+test('stop during private thinking replaces the never-visible bubble with the note', () => {
   const before: ChatMessage[] = [question, { role: 'model', text: '<think>המודל חושב על חוקים' }];
-  const after = applyStopToMessages(before);
-  assert.deepEqual(after, [question]);
+  assert.deepEqual(applyStopToMessages(before, NOTE), [question, noteMsg]);
+});
+
+test('stop notes are never sent to the model as history', () => {
+  const history: ChatMessage[] = [question, noteMsg, { role: 'user', text: 'שאלה חדשה' }];
+  assert.deepEqual(withoutStopNotes(history), [question, { role: 'user', text: 'שאלה חדשה' }]);
+  const clean: ChatMessage[] = [question, { role: 'model', text: 'תשובה' }];
+  assert.equal(withoutStopNotes(clean), clean);
+});
+
+test('error cleanup drops an invisible bubble without adding a note', () => {
+  assert.deepEqual(dropInvisibleAnswer([question, { role: 'model', text: '<think>x' }]), [question]);
+  assert.deepEqual(dropInvisibleAnswer([question, noteMsg]), [question, noteMsg]);
 });
 
 test('stop mid-stream preserves the partial answer verbatim as the final message', () => {
   const partial = '**חוק R12:** לפי החוברת [עמוד 4], הרובוט חייב להיות בתוך הבסיס כשהשריקה';
   const before: ChatMessage[] = [question, { role: 'model', text: partial }];
-  const after = applyStopToMessages(before);
+  const after = applyStopToMessages(before, NOTE);
   assert.equal(after.length, 2);
   assert.equal(after[1].text, partial);
   assert.equal(after[1].text.includes(STOPPED_SENTENCE), false);
@@ -51,17 +62,17 @@ test('stop mid-stream preserves the partial answer verbatim as the final message
 
 test('stop keeps a completed think block plus partial answer intact', () => {
   const text = '<think>בדיקת חוקים</think>התשובה החלקית **עם עיצוב**';
-  const after = applyStopToMessages([question, { role: 'model', text }]);
+  const after = applyStopToMessages([question, { role: 'model', text }], NOTE);
   assert.equal(after[1].text, text);
 });
 
 test('stop is idempotent across rapid double clicks', () => {
   const partial = 'תשובה חלקית';
-  const once = applyStopToMessages([question, { role: 'model', text: partial }]);
-  const twice = applyStopToMessages(once);
+  const once = applyStopToMessages([question, { role: 'model', text: partial }], NOTE);
+  const twice = applyStopToMessages(once, NOTE);
   assert.deepEqual(twice, once);
-  const emptyOnce = applyStopToMessages([question]);
-  assert.deepEqual(applyStopToMessages(emptyOnce), emptyOnce);
+  const emptyOnce = applyStopToMessages([question], NOTE);
+  assert.deepEqual(applyStopToMessages(emptyOnce, NOTE), emptyOnce);
 });
 
 test('stopped view reveals received-but-not-yet-typewritten text with no animation', () => {
@@ -96,18 +107,17 @@ test('completion racing stop: fully received answer stays complete and static', 
   assert.equal(historyView.text, fullText);
 });
 
-test('stop never injects stopped-by-user copy in any language', () => {
-  const scenarios: ChatMessage[][] = [
-    [question],
-    [question, { role: 'model', text: '<think>thinking' }],
-    [question, { role: 'model', text: 'תשובה חלקית בעברית' }],
-    [question, { role: 'model', text: 'A partial English answer' }],
+test('the note appears only when no answer text was visible', () => {
+  const scenarios: [ChatMessage[], boolean][] = [
+    [[question], true],
+    [[question, { role: 'model', text: '<think>thinking' }], true],
+    [[question, { role: 'model', text: 'תשובה חלקית בעברית' }], false],
+    [[question, { role: 'model', text: 'A partial English answer' }], false],
   ];
-  const stoppedCopy = /הופסקה|נעצרה|stopped by the user|action stopped|aborted by/i;
-  for (const before of scenarios) {
-    const after = applyStopToMessages(before);
-    assert.equal(after.some(m => stoppedCopy.test(m.text)), false);
-    // The user question and any visible partial answer survive untouched.
+  for (const [before, expectNote] of scenarios) {
+    const after = applyStopToMessages(before, NOTE);
+    assert.equal(after.some(m => m.stopped), expectNote);
+    assert.equal(after.some(m => m.text.includes(STOPPED_SENTENCE)), false);
     assert.equal(after[0], question);
   }
 });

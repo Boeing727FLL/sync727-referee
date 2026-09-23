@@ -28,6 +28,8 @@ export function buildMessageView(message: ChatMessage, index: number, options: {
   stopped: boolean;
 }): MessageView {
   const isModel = message.role === 'model';
+  // The "you stopped this" note is plain UI text: no typewriter, no markdown.
+  if (message.stopped) return { message, index, thinking: false, thinkContent: '', text: message.text, fullText: message.text, typewriting: false, liveAnswer: false };
   // Reasoning markup is stripped with the same tolerant rules everywhere
   // (text.ts): variant tags, unclosed blocks and truncated fragments from a
   // live stream must never reach the visible answer.

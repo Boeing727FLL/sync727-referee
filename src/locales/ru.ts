@@ -36,6 +36,7 @@ const ru: TranslationMap = {
     'chat.unsupportedImageType': 'Неподдерживаемый формат - только PNG, JPEG, WEBP или HEIC',
     'chat.imageTooLarge': 'Изображения слишком большие - максимум 10MB суммарно',
     'chat.stop': 'Стоп',
+    'chat.stoppedByUser': 'Вы остановили этот ответ.',
     'chat.greet_morning': 'Доброе утро, {name}!',
     'chat.greet_afternoon': 'Добрый день, {name}!',
     'chat.greet_evening': 'Добрый вечер, {name}!',

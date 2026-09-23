@@ -27,6 +27,12 @@ function ChatMessageRow({ view, userPicture, userName, onCopy, onReply, t }: Pro
       </div>
     </motion.div>
   );
+  if (message.stopped) return (
+    <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={MOTION.filmReveal} className="flex gap-2.5 md:gap-3.5 flex-row">
+      <div className="w-8 h-8 md:w-9 md:h-9 rounded-full shrink-0 overflow-hidden bg-white ring-1 ring-white/15 opacity-60"><img src="/logoref.webp" alt="" className="w-full h-full object-contain" /></div>
+      <div className="flex items-center min-h-8 md:min-h-9"><div className="rounded-full border border-white/[0.12] bg-[#04060c]/50 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_6px_20px_rgba(0,0,0,0.3)] px-3.5 py-1.5 text-[13px] md:text-sm font-medium text-white/70" role="status">{text}</div></div>
+    </motion.div>
+  );
   const isUser = message.role === 'user';
   return (
     <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 18, scale: 0.985, clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ opacity: 1, y: 0, scale: 1, clipPath: 'inset(0 0 0% 0 round 16px)' }} exit={{ opacity: 0, y: -6, scale: 0.99, clipPath: 'inset(0 0 100% 0 round 16px)' }} transition={MOTION.filmReveal} className={`flex gap-2.5 md:gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>

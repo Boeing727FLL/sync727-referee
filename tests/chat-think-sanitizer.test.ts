@@ -3,7 +3,7 @@ import test from 'node:test';
 import { stripThinkBlocks } from '../src/features/referee/chat/text.ts';
 import { buildMessageView } from '../src/features/referee/chat/messageView.ts';
 import { finalizeModelResponse, resolveResponseOutcome } from '../src/features/referee/chat/finalizeResponse.ts';
-import { applyStopToMessages, hasVisibleAnswer } from '../src/features/referee/chat/stopResponse.ts';
+import { dropInvisibleAnswer, hasVisibleAnswer } from '../src/features/referee/chat/stopResponse.ts';
 import type { ChatMessage } from '../src/features/referee/types.ts';
 
 const COMM = 'COMM_ERROR';
@@ -99,5 +99,5 @@ test('finalize replaces the leaked think-only bubble with the clean failure', ()
 
 test('error/stop cleanup drops a partial bubble with variant think tags', () => {
   const prev: ChatMessage[] = [question, { role: 'model', text: '<THINK>ניתוח חלקי' }];
-  assert.deepEqual(applyStopToMessages(prev), [question]);
+  assert.deepEqual(dropInvisibleAnswer(prev), [question]);
 });

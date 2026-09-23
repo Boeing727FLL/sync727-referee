@@ -36,6 +36,7 @@ const ja: TranslationMap = {
     'chat.unsupportedImageType': '非対応の形式です - PNG、JPEG、WEBP、HEICのみ',
     'chat.imageTooLarge': '画像が大きすぎます - 合計10MBまで',
     'chat.stop': '停止',
+    'chat.stoppedByUser': 'この回答を停止しました。',
     'chat.greet_morning': 'おはようございます、{name}さん！',
     'chat.greet_afternoon': 'こんにちは、{name}さん！',
     'chat.greet_evening': 'こんばんは、{name}さん！',
