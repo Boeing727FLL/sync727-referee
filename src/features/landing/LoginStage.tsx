@@ -11,6 +11,7 @@
  * success the caller navigates.
  */
 
+import { useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { useLoginAuth } from '../auth/useLoginAuth';
 import { exitResetView, showResetView, toggleSignMode } from '../auth/loginFlow';
@@ -21,7 +22,7 @@ const INPUT_CLASS = 'w-full bg-transparent px-1 py-2 text-white text-base md:tex
 const INPUT_ICON_CLASS = INPUT_CLASS + ' pl-7';
 const FORM_ERROR_CLASS = 'p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-right';
 
-export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
+export default function LoginStage({ onBack, onSuccess, onFailure }: { onBack: () => void; onSuccess: () => void; onFailure?: () => void }) {
   const {
     view, setView, isSignUp, showReset,
     email, setEmail, password, setPassword, name, setName,
@@ -32,6 +33,13 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
   } = useLoginAuth({ onSuccess, handoff: 'inline' });
   // The inline handoff: no gather, no morph - on success the gate opens
   // directly over the stable form and the logo is cut where it stands.
+  // A failed entry plays the orbit's red X instead of the small error box:
+  // when the parent takes failure errors, consume them before they render.
+  useEffect(() => {
+    if (!error || showReset || !onFailure) return;
+    setError(null);
+    onFailure();
+  }, [error, showReset, onFailure, setError]);
   const d = (entrance: string) => ({ animationDelay: entrance });
 
   return (
@@ -83,7 +91,7 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
             </>
           ) : (
             <>
-              <h1 className="login-stage login-row text-2xl font-black text-white text-center mb-1.5" style={d('0.4s')}>
+              <h1 data-orbit className="login-stage login-row text-2xl font-black text-white text-center mb-1.5" style={d('0.4s')}>
                 {isSignUp ? 'יצירת חשבון' : 'התחברות'}
               </h1>
               <p className="login-stage login-row login-sub text-white/45 text-xs text-center mb-7" style={d('0.5s')}>
@@ -91,19 +99,19 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
               </p>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {isSignUp && (
-                  <div className="login-field login-stage login-row pb-2" style={d('0.55s')}>
+                  <div data-orbit className="login-field login-stage login-row pb-2" style={d('0.55s')}>
                     <label className={LABEL_CLASS}>שם מלא</label>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="השם שלך" className={INPUT_CLASS + ' text-right'} dir="auto" />
                   </div>
                 )}
-                <div className="login-field login-stage pb-2 login-row" style={d('0.62s')}>
+                <div data-orbit className="login-field login-stage pb-2 login-row" style={d('0.62s')}>
                   <label className={LABEL_CLASS}>אימייל</label>
                   <div className="relative">
                     <Mail className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                     <input type="email" name="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required className={INPUT_ICON_CLASS} dir="ltr" />
                   </div>
                 </div>
-                <div className="login-field login-stage pb-2 login-row" style={d('0.7s')}>
+                <div data-orbit className="login-field login-stage pb-2 login-row" style={d('0.7s')}>
                   <label className={LABEL_CLASS}>סיסמה</label>
                   <div className="relative">
                     <Lock className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -116,7 +124,7 @@ export default function LoginStage({ onBack, onSuccess }: { onBack: () => void; 
                 {error && <div className={FORM_ERROR_CLASS + ' login-row'}>{error}</div>}
                 {
                   <div className="login-stage login-row pt-3" style={d('0.8s')}>
-                    <button type="submit" disabled={loading} className="w-full text-white font-black py-2 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[15px] transition-colors">
+                    <button type="submit" data-orbit disabled={loading} className="w-full text-white font-black py-2 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 text-[15px] transition-colors">
                       {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="border-b border-yellow-400/60 hover:border-yellow-300 transition-colors pb-1">{isSignUp ? 'צור חשבון' : 'התחבר'}</span>}
                     </button>
                     <div className="flex items-center justify-between mt-4 text-xs font-bold">

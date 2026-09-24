@@ -371,6 +371,142 @@
    (0.35s cover + margin) - the form never visibly folds or collapses. */
 .login-stage-out { opacity: 0; pointer-events: none; transition: opacity 0.35s ease 0.25s; }
 
+/* When the orbit exit owns the handoff the real form is cut behind the
+   ghost tiles - a fast fade that lands with the tiles' own fade-in. */
+.login-stage-cut { opacity: 0; pointer-events: none; transition: opacity 0.15s ease; }
+
+/* ===== Login -> disclaimer: the orbit exit ==============================
+   The form's rows lift off as ghost tiles, curl onto a ring around the
+   form's center, spin a turn and a quarter while screwing down into the
+   hub, and land as one verified tile; the gate opens out of that beat.
+   Transform/opacity only. */
+.login-orbit {
+  position: fixed;
+  inset: 0;
+  z-index: 10003;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+.login-orbit[data-fading] { opacity: 0; }
+.login-orbit-ring {
+  position: absolute;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+.login-orbit-tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: rgba(13, 25, 38, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  will-change: transform;
+  animation: orbit-tile-sweep 0.55s both ease;
+}
+.login-orbit-tile > span {
+  max-width: 156px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The verified sweep lights the tiles mint mid-spin (delay set inline so
+   it lands inside the turn). */
+@keyframes orbit-tile-sweep {
+  to {
+    border-color: rgba(159, 216, 198, 0.55);
+    background: rgba(159, 216, 198, 0.10);
+    box-shadow: 0 0 22px rgba(159, 216, 198, 0.22);
+  }
+}
+
+/* The hairline orbit and hub dot that tie the cluster into one piece
+   (drawn in the reference behind the boxes). They ride the ring, so the
+   screw-down takes them too. */
+.login-orbit-loop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  opacity: 0;
+  animation: orbit-loop-in 0.5s both ease;
+}
+@keyframes orbit-loop-in { to { opacity: 1; } }
+.login-orbit-hubdot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 0;
+  animation: orbit-loop-in 0.4s both ease;
+}
+
+/* The one tile the whole ring screws down into. */
+.login-orbit-verified {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 18px;
+  background: rgba(159, 216, 198, 0.10);
+  border: 1px solid rgba(159, 216, 198, 0.55);
+  box-shadow: 0 0 34px rgba(159, 216, 198, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(0);
+  animation: orbit-verified-in 0.55s both cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes orbit-verified-in {
+  from { transform: scale(0) rotate(-160deg); }
+  to   { transform: scale(1) rotate(0deg); }
+}
+.login-orbit-dashring {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: orbit-dashring-in 0.5s both ease, orbit-dashring-turn 9s linear infinite;
+}
+@keyframes orbit-dashring-in { to { opacity: 1; } }
+@keyframes orbit-dashring-turn { to { transform: rotate(360deg); } }
+.login-orbit-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: orbit-check-draw 0.38s both cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes orbit-check-draw { to { stroke-dashoffset: 0; } }
+
+/* Failure: the same landing tile in FIRST red, with an X. After the hold
+   it screws back out while the cluster returns the tiles to the form.
+   animationDelay is set inline (two values: pop-in, screw-out). */
+.login-orbit-rejected {
+  background: rgba(211, 47, 47, 0.12);
+  border-color: rgba(255, 122, 102, 0.6);
+  box-shadow: 0 0 34px rgba(211, 47, 47, 0.35);
+  animation: orbit-verified-in 0.55s both cubic-bezier(0.34, 1.56, 0.64, 1), orbit-rejected-out 0.32s both cubic-bezier(0.5, 0, 0.75, 0.4);
+}
+@keyframes orbit-rejected-out {
+  from { transform: scale(1) rotate(0deg); }
+  to   { transform: scale(0) rotate(120deg); }
+}
+
 /* Chat stage: the referee app mounts hidden behind the disclaimer and is
    revealed by the entrance choreography — an iOS-style de-blur and settle
    onto the same surface, no flash, no cut. */

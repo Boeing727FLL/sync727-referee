@@ -1,6 +1,7 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
 import { Suspense, lazy, useEffect, useState } from 'react';
 import IntroScreen from '../components/IntroScreen';
+import LoginOrbitExit, { type OrbitSeed } from '../features/landing/LoginOrbitExit';
 import ParticleBurst from '../components/ParticleBurst';
 import { LandingLanguageProvider, useLandingLanguage } from '../features/landing/language';
 import { LanguageProvider } from '../hooks/useLanguage';
@@ -31,6 +32,36 @@ export function hasSavedSession() {
   }
 }
 
+
+/**
+ * Snapshot the login form's orbit rows (geometry + a short label each) at
+ * the moment of success - the ghost tiles lift off from exactly where the
+ * real rows stood, like the disclaimer's own burst seeds. Empty under
+ * reduced motion: the gate then opens directly, as before.
+ */
+function collectOrbitSeeds(): OrbitSeed[] {
+  if (typeof window === 'undefined') return [];
+  const reduce = typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return [];
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-orbit]'))
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      const input = el.querySelector('input');
+      let label = '';
+      if (input) {
+        label = input.type === 'password'
+          ? '\u2022'.repeat(Math.max(input.value.length, 8))
+          : (input.value || input.placeholder || '');
+      } else {
+        const span = el.querySelector('button span, span');
+        label = (span?.textContent ?? el.textContent ?? '').trim();
+      }
+      return { left: r.left, top: r.top, width: r.width, height: r.height, label: label.slice(0, 32) };
+    })
+    .filter((s) => s.width > 0 && s.height > 0 && s.label.length > 0);
+}
+
 type Stage = 'intro' | 'login' | 'disclaimer' | 'entering' | 'chat';
 
 /** How long the entrance choreography runs before the chat is fully live. */
@@ -39,8 +70,19 @@ const ENTERING_MS = 2600;
 function LandingContent() {
   const { t } = useLandingLanguage();
   const signedIn = hasSavedSession();
+  const [orbitSeeds, setOrbitSeeds] = useState<OrbitSeed[] | null>(null);
+  const [gateOpen, setGateOpen] = useState(false);
+  // Failed login: the same orbit plays in red and the form comes back.
+  const [failSeeds, setFailSeeds] = useState<OrbitSeed[] | null>(null);
+  const reduceMotion = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const handleLoginFailure = () => {
+    const seeds = collectOrbitSeeds();
+    if (seeds.length >= 3) setFailSeeds(seeds);
+  };
   const [stage, setStage] = useState<Stage>(
-    () => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login') ? 'login' : 'intro'),
+    () => (typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('login') || new URLSearchParams(window.location.search).has('orbit-demo')) ? 'login' : 'intro'),
   );
 
   useEffect(() => {
@@ -66,8 +108,31 @@ function LandingContent() {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('login')) {
       window.history.replaceState({}, '', '/');
     }
+    const seeds = collectOrbitSeeds();
+    const orbit = seeds.length >= 3;
+    setOrbitSeeds(orbit ? seeds : null);
+    setGateOpen(!orbit);
     setStage('disclaimer');
   };
+
+  // Preview hook: ?orbit-demo renders the login stage and plays the success
+  // handoff once, so the choreography can be reviewed without credentials.
+  const orbitDemo = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).has('orbit-demo');
+  useEffect(() => {
+    if (!orbitDemo || stage !== 'login') return;
+    const fail = new URLSearchParams(window.location.search).get('orbit-demo') === 'fail';
+    const id = setTimeout(() => { if (fail) { handleLoginFailure(); } else { beginEntry(); } }, 2200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orbitDemo, stage]);
+
+  // The orbit owns the gate's timing; if it ever can't report, open anyway.
+  useEffect(() => {
+    if (stage !== 'disclaimer' || gateOpen) return;
+    const id = setTimeout(() => setGateOpen(true), 4000);
+    return () => clearTimeout(id);
+  }, [stage, gateOpen]);
 
   const chatLive = stage === 'entering' || stage === 'chat';
 
@@ -111,13 +176,27 @@ function LandingContent() {
         />
       )}
       {(stage === 'login' || stage === 'disclaimer') && (
-        <div className={stage === 'login' ? undefined : 'login-stage-out'}>
+        <div className={stage === 'login' ? (failSeeds ? 'login-stage-cut' : undefined) : orbitSeeds ? 'login-stage-cut' : 'login-stage-out'}>
           <Suspense fallback={null}>
-            <LoginStage onBack={() => setStage('intro')} onSuccess={beginEntry} />
+            <LoginStage onBack={() => setStage('intro')} onSuccess={beginEntry} onFailure={reduceMotion ? undefined : handleLoginFailure} />
           </Suspense>
         </div>
       )}
-      {(stage === 'disclaimer' || chatLive) && (
+      {orbitSeeds && (
+        <LoginOrbitExit
+          seeds={orbitSeeds}
+          onGate={() => setGateOpen(true)}
+          onDone={() => setOrbitSeeds(null)}
+        />
+      )}
+      {failSeeds && (
+        <LoginOrbitExit
+          seeds={failSeeds}
+          variant="fail"
+          onDone={() => setFailSeeds(null)}
+        />
+      )}
+      {((stage === 'disclaimer' && gateOpen) || chatLive) && (
         <>
           {/* The app mounts hidden behind the disclaimer so it is live and
               settled before the entrance reveals it. */}
