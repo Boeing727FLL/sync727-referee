@@ -211,7 +211,8 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 @keyframes v12-wob{50%{transform:rotate(-8deg)}}
 .v12-ai-nm{font-family:'Heebo',sans-serif;font-weight:800;font-size:14px;letter-spacing:-.2px;color:#F2F5FA;line-height:1.1}
 .v12-ai-st{font-size:12px;font-weight:600;color:rgba(238,243,250,.5);margin-top:2px}
-.v12-think{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0 4px}
+.v12-think{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 0 12px}
+.v12-think-lbl{font-size:14px;font-weight:800;letter-spacing:.15em;color:rgba(238,243,250,.82)}
 .v12-ai-tx{margin-top:10px;font-size:17px;line-height:1.6;color:rgba(238,243,250,.92)}
 .v12-acts{display:flex;gap:4px;margin-top:8px;animation:v12-fade .4s ease both}
 .v12-act{width:32px;height:32px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:0;color:rgba(238,243,250,.62);cursor:pointer;transition:background .2s,color .2s}

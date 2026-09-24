@@ -9,7 +9,7 @@ const RouterApp = lazyWithReload('router-app', () => import('./RouterApp'));
 
 /** A quiet route-coloured frame for direct deep links, never a blocking message. */
 function RouteFrame() {
-  return <main className="h-full bg-slate-950" aria-hidden />;
+  return <main className="h-full" style={{ background: 'linear-gradient(178deg,#082A63 0%,#0B3478 45%,#0D367A 72%,#22306F 100%)' }} aria-hidden />;
 }
 
 export default function App() {

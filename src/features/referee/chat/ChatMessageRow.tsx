@@ -2,7 +2,6 @@
 import { Suspense, memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Copy, FileText, Reply, ThumbsDown, ThumbsUp } from 'lucide-react';
-import ThinkIndicator from '../../../components/ThinkIndicator';
 import Referee from '../../v12/Referee';
 import { MarkdownMessage } from '../ui/lazyComponents';
 import type { MessageView } from './messageView';
@@ -33,8 +32,8 @@ export function RefereeBadge({ thinking = false, happy = false }: { thinking?: b
   return <div className={`v12-ai-o ${thinking ? 'is-think' : ''}`}><Referee size={46} happy={happy} /></div>;
 }
 
-/** The thinking card: FIRST-colour edge light around the glass, with the
- *  app's own phase animation (ThinkIndicator) inside it. */
+/** The thinking card: FIRST-colour edge light around the glass and a
+ *  quiet "חושב" inside (the old orb animation was removed on request). */
 export function ThinkingCard({ thinkContent, t }: { thinkContent?: string; t: (key: string) => string }) {
   return (
     <div className="v12-cardx">
@@ -46,7 +45,11 @@ export function ThinkingCard({ thinkContent, t }: { thinkContent?: string; t: (k
           <div><div className="v12-ai-nm">{t('chat.refereeTag')}</div><div className="v12-ai-st">{t('v12.thinking')}</div></div>
         </div>
         <div className="v12-think">
-          <ThinkIndicator />
+          <span className="v12-think-lbl" role="status">
+            {t('chat.thinking2').replace(/[.…]+$/u, '').split('').map((ch, i) => (
+              <span key={i} className="thinking-letter" style={{ animationDelay: `${i * 0.07}s` }}>{ch === ' ' ? '\u00A0' : ch}</span>
+            ))}
+          </span>
           {thinkContent && <div className="text-[10px] md:text-xs font-mono text-white/45 whitespace-pre-wrap max-h-48 overflow-y-auto w-full">{thinkContent}</div>}
         </div>
       </div>

@@ -8,7 +8,7 @@ const LoginPage = lazyWithReload('login-page', () => import('./pages/LoginPage')
 const PrivacyPage = lazyWithReload('privacy-page', () => import('./pages/PrivacyPage'));
 
 function RouteFrame() {
-  return <main className="h-full bg-slate-950" aria-hidden />;
+  return <main className="h-full" style={{ background: 'linear-gradient(178deg,#082A63 0%,#0B3478 45%,#0D367A 72%,#22306F 100%)' }} aria-hidden />;
 }
 
 /**
