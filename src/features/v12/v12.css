@@ -21,7 +21,7 @@
 /* ---- Referee character ---- */
 .v12-ref{position:relative;width:1em;height:1em;flex:none}
 .v12-ref-bd{position:absolute;inset:0;filter:drop-shadow(0 12px 18px rgba(2,14,44,.45))}
-.v12-ref-svg{animation:v12-breathe 3.2s ease-in-out infinite;transform-origin:50% 100%}
+.v12-ref-bb{position:absolute;inset:0;animation:v12-breathe 3.2s ease-in-out infinite;transform-origin:50% 100%}
 @keyframes v12-breathe{50%{transform:scale(1.025,.985)}}
 .v12-ref-float .v12-ref-bd{animation:v12-float 3s ease-in-out infinite}
 @keyframes v12-float{50%{transform:translateY(-4px) rotate(-3deg)}}
@@ -89,7 +89,8 @@
 .v12-title p{margin-top:8px;font-size:15px;font-weight:600;color:rgba(238,243,250,.72)}
 .v12-skip{position:absolute;inset:0;z-index:7;background:transparent;border:0;cursor:pointer}
 
-.v12-col{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:max(24px,calc((100dvh - 610px) / 2)) 20px max(20px,env(safe-area-inset-bottom));overflow-y:auto;z-index:8}
+.v12-col{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:max(24px,calc((100dvh - 610px) / 2)) 20px max(20px,env(safe-area-inset-bottom));overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;touch-action:pan-y;z-index:8}
+.v12-col::-webkit-scrollbar{display:none}
 .v12-col>*{flex:none}
 .v12-logo-slot{width:74px;height:74px;margin-bottom:62px}
 .v12-cardwrap{position:relative;width:min(100%,390px)}
@@ -147,7 +148,7 @@
  .v12-bg{animation:none}
 }
 .v12-buddy.is-read .v12-ref-ey{animation:v12-read 2.2s linear .3s both}
-@keyframes v12-read{0%{transform:translate(-50%,-55%)}8%{transform:translate(-10%,-10%)}30%{transform:translate(-90%,-10%)}33%{transform:translate(-10%,0%)}58%{transform:translate(-90%,0%)}61%{transform:translate(-10%,10%)}85%{transform:translate(-90%,10%)}100%{transform:translate(-50%,-50%)}}
+@keyframes v12-read{0%{transform:translate(-50%,-55%)}8%{transform:translate(-28%,-60%)}30%{transform:translate(-72%,-60%)}33%{transform:translate(-28%,-50%)}58%{transform:translate(-72%,-50%)}61%{transform:translate(-28%,-40%)}85%{transform:translate(-72%,-40%)}100%{transform:translate(-50%,-50%)}}
 html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-land.is-leaving{background:transparent}
 .v12-land.is-leaving .v12-bg,.v12-land.is-leaving .v12-vig{opacity:0;transition:opacity .6s ease}
@@ -206,7 +207,7 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-ai-h{display:flex;align-items:center;gap:10px;min-height:38px}
 .v12-ai-o{position:relative;width:38px;height:38px;border-radius:50%;overflow:hidden;flex:none;background:radial-gradient(circle at 50% 30%,#5AA8F0,#0B5DA8);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35),0 4px 10px -4px rgba(0,0,0,.5)}
 .v12-ai-o .v12-ref{position:absolute;left:3px;top:3px}
-.v12-ai-o .v12-ref-svg{animation:none}
+.v12-ai-o .v12-ref-bb{animation:none}
 .v12-ai-o.is-think .v12-ref-bd{animation:v12-wob .6s ease-in-out infinite}
 @keyframes v12-wob{50%{transform:rotate(-8deg)}}
 .v12-ai-nm{font-family:'Heebo',sans-serif;font-weight:800;font-size:14px;letter-spacing:-.2px;color:#F2F5FA;line-height:1.1}
@@ -243,3 +244,6 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 /* Narrow phones: the season tag takes the credit's room in the header; the credit moves to the foot line. */
 .v12-foot-cr{display:none}
 @media (max-width:440px){.v12-hdr-cr{display:none}.v12-foot-cr{display:inline}}
+/* Short phone screens (in-browser iPhone heights): the sign-up card fits
+   without scrolling. */
+@media (max-height:760px){.v12-col{padding-top:14px}.v12-logo-slot{margin-bottom:44px}.v12-lbl{margin-top:12px}.v12-go{margin-top:18px}}

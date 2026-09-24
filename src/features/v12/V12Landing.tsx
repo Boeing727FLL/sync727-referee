@@ -176,7 +176,7 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
       const halo = p.classList.contains('h');
       push(p.animate([{ opacity: 1 }, { opacity: 0, strokeWidth: halo ? 26 : 9 }], { duration: 1200, delay: 3000 + (i % 3) * 50, fill: 'forwards', easing: 'ease' }));
     });
-    const mid = paths[4];
+    const mid = paths[paths.length - 2]; // the white core track
     if (mid && robotRef.current) {
       const d = mid.getAttribute('d') || '';
       const f = frac(d) * 100;
@@ -193,10 +193,10 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
       { opacity: 0, transform: 'scale(.3)' }, { opacity: 1, offset: 0.25 }, { opacity: 0, transform: 'scale(1.25)' },
     ], { duration: 1300, delay: 1550, fill: 'both', easing: 'ease-out' }));
     push(tileRef.current?.animate([
-      { opacity: 0, transform: 'scale(.4)', filter: 'blur(10px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' },
+      { opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'none' },
     ], { duration: 900, delay: 1620, fill: 'both', easing: 'cubic-bezier(.34,1.4,.5,1)' }));
     const [h1, p] = titleRef.current ? Array.from(titleRef.current.children) as HTMLElement[] : [];
-    const rise = [{ opacity: 0, transform: 'translateY(14px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }];
+    const rise = [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }];
     push(h1?.animate(rise, { duration: 1000, delay: 3000, fill: 'both', easing: 'cubic-bezier(.22,1,.36,1)' }));
     push(p?.animate(rise, { duration: 800, delay: 3350, fill: 'both', easing: 'cubic-bezier(.22,1,.36,1)' }));
     push(titleRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, delay: 3800, fill: 'forwards' }));
@@ -298,8 +298,10 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
       {phase === 'intro' && (
         <>
           <svg ref={tracksRef} className="v12-tracks" width={size.w} height={size.h}>
-            <defs><filter id="v12soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="4" /></filter></defs>
-            {paths.map((d, i) => <path key={`h${i}`} className="h" d={d} stroke={colors[i]} strokeWidth={10} strokeOpacity={i === 1 ? 0.3 : 0.35} filter="url(#v12soft)" />)}
+            {/* Glow without SVG filters: iOS Safari drew a stray line from the
+                blur filter region, so the halo is two soft plain strokes. */}
+            {paths.map((d, i) => <path key={`h${i}`} className="h" d={d} stroke={colors[i]} strokeWidth={14} strokeOpacity={i === 1 ? 0.1 : 0.13} />)}
+            {paths.map((d, i) => <path key={`g${i}`} className="h" d={d} stroke={colors[i]} strokeWidth={7} strokeOpacity={i === 1 ? 0.16 : 0.2} />)}
             {paths.map((d, i) => <path key={`c${i}`} d={d} stroke={colors[i]} strokeWidth={2.4} />)}
           </svg>
           <div ref={robotRef} className="v12-robot"><RobotSvg /></div>
