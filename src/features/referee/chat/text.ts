@@ -21,9 +21,40 @@ const ORPHAN_CLOSE_RE = new RegExp(`^[\\s\\S]*?${CLOSE}`, 'i');
 // the stream died mid-tag, so the fragment is markup, never answer text.
 const TRAILING_FRAGMENT_RE = /<\s*\/?\s*(?:t|th|thi|thin|think|thinki|thinkin|thinking)?\s*$/i;
 
+/**
+ * Follow-up suggestions (v12 chips): the model ends its answer with a
+ * `<followups>` block of short next questions, one per line. The block is
+ * UI data, never answer text - stripped everywhere the think block is, and
+ * read back only by extractFollowUps.
+ */
+const FU_OPEN = '<\\s*follow-?ups?\\s*>';
+const FU_CLOSE = '<\\s*\\/\\s*follow-?ups?\\s*>';
+const FU_BLOCK_RE = new RegExp(`${FU_OPEN}([\\s\\S]*?)(?:${FU_CLOSE}|$)`, 'i');
+const FU_STRIP_RE = new RegExp(`${FU_OPEN}[\\s\\S]*$`, 'i');
+const FU_TRAILING_RE = /<\s*(?:f|fo|fol|foll|follo|follow|follow-|followu|followup|followups)?\s*$/i;
+
+/** Remove the follow-up block (complete, unclosed, or a stream cut mid-tag). */
+export const stripFollowUpBlock = (text: string): string =>
+  (text || '').replace(FU_STRIP_RE, '').replace(new RegExp(FU_CLOSE, 'gi'), '').replace(FU_TRAILING_RE, '');
+
+/** The model's suggested follow-up questions (max 3), only once the block closed. */
+export const extractFollowUps = (text: string): string[] => {
+  const src = text || '';
+  if (!new RegExp(FU_CLOSE, 'i').test(src)) return [];
+  const m = src.match(FU_BLOCK_RE);
+  if (!m) return [];
+  const seen = new Set<string>();
+  return m[1]
+    .split(/\n+/)
+    .map(line => line.replace(/^\s*(?:[-*•·]|\d+[.)])\s*/, '').replace(/[*_`#<>]/g, '').trim())
+    .filter(line => line.length >= 3 && line.length <= 120)
+    .filter(line => (seen.has(line) ? false : (seen.add(line), true)))
+    .slice(0, 3);
+};
+
 /** Remove private model-reasoning blocks before display, logs or team history. */
 export const stripThinkBlocks = (text: string): string => {
-  let out = text || '';
+  let out = stripFollowUpBlock(text || '');
   // Complete reasoning blocks; loop so adjacent/nested shapes all go.
   let prev: string;
   do {

@@ -86,6 +86,7 @@ import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
 import { ReplyGlyph } from '../features/v12/glyphs';
+import { extractFollowUps } from '../features/referee/chat/text';
 import ChatHero from '../features/referee/chat/ChatHero';
 import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
 
@@ -1356,11 +1357,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     t('chat.suggestion4')
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
-  // Follow-up chips (v12 #9): the app's own starter questions the user has
-  // not asked yet - never invented model output.
-  const askedTexts = new Set(messages.filter(m => m.role === 'user').map(m => (m.text || '').trim()));
-  const followUps = quickQuestions.filter(q => !askedTexts.has(q.trim())).slice(0, 3);
+  // Follow-up chips (v12 #9): Gemini suggests them inside the same answer
+  // (a <followups> block, stripped from the visible text - no extra quota).
+  // No block (old answer, failure text) means no chips - never canned ones.
   const lastMessage = messages[messages.length - 1];
+  const askedTexts = new Set(messages.filter(m => m.role === 'user').map(m => (m.text || '').trim()));
+  const followUps = (lastMessage?.role === 'model' ? extractFollowUps(lastMessage.text) : [])
+    .filter(q => !askedTexts.has(q.trim()));
   const showFollowUps = chatStarted && !isAiBusy && !renderingResponse && followUps.length > 0
     && lastMessage?.role === 'model' && !!lastMessage.text && !lastMessage.isProgress && !lastMessage.stopped;
 
