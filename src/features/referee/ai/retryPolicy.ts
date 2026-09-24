@@ -116,10 +116,15 @@ export class KeyHealth {
     } catch { /* storage full/blocked: in-memory still works */ }
   }
 
-  available(keys: string[], now = Date.now(), model?: string): string[] {
+  /** Remaining model-wide rest in ms (0 when the model is not resting). */
+  modelRestMs(model: string, now = Date.now()): number {
+    return Math.max(0, (this.retryAfter.get(`*\u0000${model}`) || 0) - now);
+  }
+
+  available(keys: string[], now = Date.now(), model?: string, ignoreModelRest = false): string[] {
     this.prune(now);
     const until = (id: string) => this.retryAfter.get(id) || 0;
-    if (model !== undefined && until(`*\u0000${model}`) > now) return [];
+    if (model !== undefined && !ignoreModelRest && until(`*\u0000${model}`) > now) return [];
     return keys.filter(key => until(key) <= now && (model === undefined || until(`${key}\u0000${model}`) <= now));
   }
 

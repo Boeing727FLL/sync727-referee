@@ -78,11 +78,17 @@ export async function runModelChain<M>(options: {
   const outcomeKind = (): FailureKind | null => (sawQuota ? 'quota' : lastFailureKind);
 
   const now = options.now ?? Date.now;
-  modelLoop: for (const model of models) {
+  // A model resting after a short overload / dropped-connection rest is
+  // tried last instead of skipped: skipping every model right after a bad
+  // question turned the next question into an instant "busy" answer.
+  // Long rests (no free tier, 6h) are still skipped.
+  const shortRest = (model: M) => { const ms = health.modelRestMs(idOf(model)); return ms > 0 && ms <= MODEL_OVERLOADED_COOLDOWN_MS; };
+  const ordered_models = [...models.filter(model => !shortRest(model)), ...models.filter(shortRest)];
+  modelLoop: for (const model of ordered_models) {
     const modelId = idOf(model);
     const modelStarted = now();
     let serverFailures = 0;
-    const available = health.available(keys, Date.now(), modelId);
+    const available = health.available(keys, Date.now(), modelId, shortRest(model));
     if (!available.length) {
       // Keys cooling on this model only: the next model may still answer.
       lastFailureKind = lastFailureKind ?? 'quota';

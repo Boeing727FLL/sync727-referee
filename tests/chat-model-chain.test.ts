@@ -338,3 +338,16 @@ test('rule book pages with a public URL are sent by link in URL mode, by bytes o
   // generateContent path keeps the link as fileData
   assert.deepEqual(stepsToContents(byUrl)[0].parts[1], { fileData: { fileUri: 'https://pub.example/page_1.jpg', mimeType: 'image/jpeg' } });
 });
+
+test('models on a short rest are tried last, not skipped (no instant "busy" right after a bad question)', async () => {
+  const health = new KeyHealth();
+  health.coolDownModel('m1', 60_000);
+  health.coolDownModel('m2', 60_000);
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: ['m1', 'm2', 'm3'], keys: KEYS, health, rotationIndex: 0, sleep: async () => {},
+    attempt: async (key, model) => { attempts.push(`${key}@${model}`); if (model === 'm3') throw new Error('503 overloaded'); return true; },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m3', 'k1@m1']);
+});
