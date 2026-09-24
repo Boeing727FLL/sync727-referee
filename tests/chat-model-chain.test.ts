@@ -75,7 +75,7 @@ test('request-class failure skips to the next model without cooling the key', as
   assert.deepEqual(health.available(KEYS), KEYS);
 });
 
-test('server-class failure retries the model once after a backoff, then skips it', async () => {
+test('server-class failure retries the model once on another key after a backoff, then skips it', async () => {
   const attempts: string[] = [];
   const sleeps: number[] = [];
   const health = new KeyHealth();
@@ -89,7 +89,7 @@ test('server-class failure retries the model once after a backoff, then skips it
     },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1@m1', 'k1@m1', 'k1@m2']);
+  assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k1@m2']);
   assert.equal(sleeps.length, 1);
   assert.ok(sleeps[0] >= 1500);
   // the overloaded model rests briefly for every key; others unaffected
@@ -97,7 +97,7 @@ test('server-class failure retries the model once after a backoff, then skips it
   assert.deepEqual(health.available(KEYS, Date.now(), 'm2'), KEYS);
 });
 
-test('a 503 that clears on retry answers from the same model', async () => {
+test('a 503 that clears on retry answers from the same model (next key)', async () => {
   const attempts: string[] = [];
   let failures = 0;
   const outcome = await runModelChain({
@@ -110,7 +110,7 @@ test('a 503 that clears on retry answers from the same model', async () => {
     },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1@m1', 'k1@m1']);
+  assert.deepEqual(attempts, ['k1@m1', 'k2@m1']);
 });
 
 test('no-free-tier model (429 limit: 0) is skipped at once, not tried on every key', async () => {
@@ -217,4 +217,68 @@ test('a failing attempt that streamed nothing loses nothing: next attempt wins',
     },
   });
   assert.equal(outcome.status, 'answered');
+});
+
+// --- rotation rules (2026-09-24) ---
+import { MAX_KEYS_PER_MODEL, MODEL_TIME_BUDGET_MS } from '../src/features/referee/ai/modelChain.ts';
+import { classifyFailure, msUntilDailyReset } from '../src/features/referee/ai/retryPolicy.ts';
+
+const POOL = Array.from({ length: 120 }, (_, i) => `k${i}`);
+
+test('429s walk at most MAX_KEYS_PER_MODEL keys per model, then fall back', async () => {
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: ['m1', 'm2', 'm3'], keys: POOL, health: new KeyHealth(), rotationIndex: 7,
+    attempt: async (key, model) => { attempts.push(`${key}@${model}`); if (model !== 'm3') throw new Error('429 RESOURCE_EXHAUSTED'); return true; },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.equal(attempts.filter(a => a.endsWith('@m1')).length, MAX_KEYS_PER_MODEL);
+  assert.equal(attempts.filter(a => a.endsWith('@m2')).length, MAX_KEYS_PER_MODEL);
+  assert.equal(attempts[0], 'k7@m1');
+});
+
+test('a network failure (no HTTP answer) moves to the next key instead of ending the ask', async () => {
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    attempt: async key => { attempts.push(key); if (key === 'k1') throw new TypeError('Failed to fetch'); return true; },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1', 'k2']);
+});
+
+test('any quota answer makes an exhausted ask report quota (busy), even if a later model failed differently', async () => {
+  const outcome = await runModelChain({
+    models: ['m1', 'm2'], keys: KEYS, health: new KeyHealth(), rotationIndex: 0, sleep: async () => {},
+    attempt: async (_key, model) => { throw new Error(model === 'm1' ? '429 Too Many Requests' : '503 Service Unavailable'); },
+  });
+  assert.deepEqual(outcome, { status: 'exhausted', lastFailureKind: 'quota' });
+});
+
+test('the key walk on one model stops at the time budget', async () => {
+  let clock = 0;
+  const attempts: string[] = [];
+  await runModelChain({
+    models: ['m1', 'm2'], keys: POOL, health: new KeyHealth(), rotationIndex: 0, now: () => clock,
+    attempt: async (key, model) => { attempts.push(`${key}@${model}`); if (model === 'm1') { clock += MODEL_TIME_BUDGET_MS; throw new Error('429'); } return true; },
+  });
+  assert.deepEqual(attempts, ['k0@m1', 'k0@m2']);
+});
+
+test('daily-limit 429 parks the key until the daily reset; per-minute uses retryDelay', () => {
+  const daily = classifyFailure(new Error('429 Quota exceeded for metric generate_content_free_tier_requests, quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier'));
+  assert.equal(daily.kind, 'quota');
+  assert.ok(daily.cooldownMs > 60 * 60_000 || daily.cooldownMs === msUntilDailyReset());
+  const minute = classifyFailure(new Error('429 RESOURCE_EXHAUSTED ... "retryDelay": "23s"'));
+  assert.equal(minute.cooldownMs, 23_000);
+});
+
+test('cooldowns survive a reload through storage, stored without key values', () => {
+  const mem = new Map<string, string>();
+  const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v); } };
+  const keys = ['AIzaSECRET1', 'AIzaSECRET2'];
+  const store = () => ({ storage, name: 'h', idOf: (id: string) => id.replace(/AIzaSECRET(\d)/, '#$1'), fromId: (s: string) => s.replace(/#(\d)/, 'AIzaSECRET$1') });
+  new KeyHealth(store()).coolDown('AIzaSECRET1', 60_000, Date.now(), 'm1');
+  assert.ok(!mem.get('h')!.includes('AIza'));
+  assert.deepEqual(new KeyHealth(store()).available(keys, Date.now(), 'm1'), ['AIzaSECRET2']);
 });

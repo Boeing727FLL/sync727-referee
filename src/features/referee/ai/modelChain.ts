@@ -14,6 +14,16 @@ import { classifyFailure, MODEL_OVERLOADED_COOLDOWN_MS, rotateCandidates, type F
 
 /** Backoff before the single retry of an overloaded (5xx) model, per Google's guidance. */
 const SERVER_RETRY_BASE_MS = 1_500;
+/**
+ * Key budget per model: up to MAX_KEYS_PER_MODEL different keys (starting
+ * at a random pool position), then the next model. Walking all 100+ keys
+ * after 429s turned one question into a flood of full rule-book requests.
+ * The key walk on one model also stops after MODEL_TIME_BUDGET_MS.
+ */
+export const MAX_KEYS_PER_MODEL = 5;
+export const MODEL_TIME_BUDGET_MS = 40_000;
+/** 503s (on different keys) that mark a model as overloaded for everyone. */
+export const SERVER_FAILURES_BEFORE_FALLBACK = 2;
 
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise(resolve => {
@@ -42,6 +52,8 @@ export async function runModelChain<M>(options: {
   attempt: (key: string, model: M) => Promise<boolean>;
   /** Stable model id for per-model cooldowns (default String(model)). */
   modelId?: (model: M) => string;
+  /** Test seam for the time budget. */
+  now?: () => number;
   /** Test seam for the 5xx backoff. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
 }): Promise<ChainOutcome> {
@@ -49,19 +61,28 @@ export async function runModelChain<M>(options: {
   const idOf = options.modelId ?? ((model: M) => String(model));
   const sleep = options.sleep ?? abortableSleep;
   let lastFailureKind: FailureKind | null = null;
+  // Any quota answer means "busy, try in a minute", even if a later model
+  // failed differently - the user sees the honest busy message.
+  let sawQuota = false;
+  const outcomeKind = (): FailureKind | null => (sawQuota ? 'quota' : lastFailureKind);
 
+  const now = options.now ?? Date.now;
   modelLoop: for (const model of models) {
     const modelId = idOf(model);
+    const modelStarted = now();
+    let serverFailures = 0;
     const available = health.available(keys, Date.now(), modelId);
     if (!available.length) {
       // Keys cooling on this model only: the next model may still answer.
       lastFailureKind = lastFailureKind ?? 'quota';
+      sawQuota = true;
       continue;
     }
-    const candidates = rotateCandidates(available, rotationIndex);
+    const ordered = rotateCandidates(available, rotationIndex);
+    const candidates = ordered.slice(0, MAX_KEYS_PER_MODEL);
     onRotation?.((rotationIndex + 1) % available.length);
     for (const key of candidates) {
-      let serverRetried = false;
+      if (now() - modelStarted >= MODEL_TIME_BUDGET_MS) continue modelLoop;
       for (;;) {
         if (signal?.aborted) return { status: 'aborted' };
         try {
@@ -70,14 +91,17 @@ export async function runModelChain<M>(options: {
         } catch (error: unknown) {
           const decision = classifyFailure(error, signal?.aborted);
           lastFailureKind = decision.kind;
+          if (decision.kind === 'quota') sawQuota = true;
           if (decision.kind === 'aborted') return { status: 'aborted' };
+          if (decision.kind === 'network') break;
           if (decision.kind === 'server') {
-            // 503 "overloaded" is usually momentary: one backed-off retry
-            // of the same model, then rest the model and move on.
-            if (!serverRetried) {
-              serverRetried = true;
+            // 503 "overloaded" is model-wide and usually momentary: back
+            // off, try once more on a different key, and only then rest the
+            // model and fall back.
+            serverFailures++;
+            if (serverFailures < SERVER_FAILURES_BEFORE_FALLBACK) {
               await sleep(SERVER_RETRY_BASE_MS + Math.floor(Math.random() * 1_000), signal);
-              continue;
+              break;
             }
             health.coolDownModel(modelId, MODEL_OVERLOADED_COOLDOWN_MS);
             continue modelLoop;
@@ -95,5 +119,5 @@ export async function runModelChain<M>(options: {
       }
     }
   }
-  return { status: 'exhausted', lastFailureKind };
+  return { status: 'exhausted', lastFailureKind: outcomeKind() };
 }

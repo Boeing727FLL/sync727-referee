@@ -4,8 +4,8 @@ import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
 import { errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
 import { runModelChain } from '../features/referee/ai/modelChain';
-import { buildHistory, toInteractionInput, toInteractionTextOnly, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
-import { activeSeason, buildQuestionText, critiquePlan, finalPlan, visibleCritique } from '../features/referee/ai/requestPlan';
+import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
+import { activeSeason, buildQuestionText } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
 import { runModel } from '../features/referee/ai/modelRunner';
 import { assertListedPagesComplete, RulebookIncompleteError } from '../features/referee/rulebook/completeness';
@@ -27,9 +27,6 @@ type FetchedBlob = { data: Blob; mimeType: string };
 
 
 const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' };
-// When user photos are attached, the self-critique re-sees them so visual
-// claims in the draft get verified against the actual photo.
-const PHOTO_CRITIQUE_ADDENDUM = '\n[ביקורת חזותית: צורפה תמונת משתמש (ראה מעלה, USER PHOTO). בדוק שהזיהוי החזותי בטיוטה — משימה, מיקום, מגע, ניקוד — תואם את מה שבאמת רואים בתמונה. אם לא, תקן.]';
 const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.6-flash', kind: 'interactions', config: INTERACTION_CONFIG },
   { name: 'gemini-3.5-flash', kind: 'interactions', config: INTERACTION_CONFIG },
@@ -125,7 +122,39 @@ async function mapPool<T, R>(items: T[], size: number, fn: (item: T, index: numb
 // --- API key pool ---
 let GEMINI_KEYS: string[] = [];
 
-const keyHealth = new KeyHealth();
+// Cooldowns persist across refreshes, stored by pool position - never the
+// key value. Built after the pool loads so positions can be mapped back.
+const HEALTH_STORAGE = 'gemini_key_health_v1';
+let keyHealthInstance: KeyHealth | null = null;
+function keyHealthFor(keys: string[]): KeyHealth {
+  if (keyHealthInstance) return keyHealthInstance;
+  const storage = typeof localStorage !== 'undefined' ? localStorage : undefined;
+  const splitId = (id: string): [string, string | null] => {
+    const at = id.indexOf('\u0000');
+    return at < 0 ? [id, null] : [id.slice(0, at), id.slice(at + 1)];
+  };
+  keyHealthInstance = new KeyHealth(storage ? {
+    storage,
+    name: HEALTH_STORAGE,
+    idOf: id => {
+      const [head, model] = splitId(id);
+      const ref = head === '*' ? '*' : `#${keys.indexOf(head)}`;
+      return model === null ? ref : `${ref}\u0000${model}`;
+    },
+    fromId: stored => {
+      const [head, model] = splitId(stored);
+      const key = head === '*' ? '*' : keys[Number(head.slice(1))];
+      if (!key) return null;
+      return model === null ? key : `${key}\u0000${model}`;
+    },
+  } : undefined);
+  return keyHealthInstance;
+}
+
+/** A random starting key spreads every user's questions over the whole pool. */
+function randomStart(size: number): number {
+  return size > 0 ? Math.floor(Math.random() * size) : 0;
+}
 
 function getEnvKey(): string | undefined {
   return (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || import.meta.env?.VITE_GEMINI_API_KEY;
@@ -188,12 +217,9 @@ export function invalidateCorrectionsCache(): void {
  */
 export async function acquireApiKey(): Promise<string | null> {
   const keys = await getAllApiKeys();
-  const available = keyHealth.available(keys);
+  const available = keyHealthFor(keys).available(keys);
   if (!available.length) return null;
-  const raw = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
-  const index = Number.isInteger(raw) && raw >= 0 ? raw : 0;
-  localStorage.setItem('gemini_key_rotation_index', String((index + 1) % available.length));
-  return available[index % available.length];
+  return available[randomStart(available.length)];
 }
 
 // --- Core AI logic ---
@@ -217,7 +243,7 @@ export const GeminiService = {
   ) {
     try {
       console.log("Processing FLL Query directly on the client-side...");
-      const [{ GoogleGenAI }, { buildSystemPrompt, addCorrections, COGNITIVE_PROMPT, CRITIQUE_PROMPT, FINAL_PROMPT }] = await Promise.all([
+      const [{ GoogleGenAI }, { buildSystemPrompt, addCorrections, COGNITIVE_PROMPT, ANSWER_PROMPT }] = await Promise.all([
         import('@google/genai'),
         import('./geminiPrompts'),
       ]);
@@ -263,9 +289,6 @@ export const GeminiService = {
       };
 
       let attachedRulebookImages = 0;
-      // User-photo parts (tracked separately so the critique can re-see them
-      // without resending the whole rulebook).
-      const userPhotoParts: LegacyPart[] = [];
       if (allFiles.length) {
         currentParts.push({ text: `Below are all the rulebook pages and user photos loaded into your context.
 They are structured in sequence:
@@ -279,7 +302,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         
         for (const file of allFiles) {
           if (signal?.aborted) return ASK_ABORTED;
-          const partsBefore = currentParts.length;
           const { fileName, isPdf, isText, isUserPhoto, isR2Rulebook } = describeRequestFile(file);
 
           if (isPdf) {
@@ -379,7 +401,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               if (file.isRulebook) attachedRulebookImages++;
             }
           }
-          if (isUserPhoto) userPhotoParts.push(...currentParts.slice(partsBefore));
         }
         currentParts.push({ text: "\n--- END OF FILES ---\n\n" });
       }
@@ -389,7 +410,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       if (expectedRulebook > 0 && attachedRulebookImages === 0 && !hasUserFiles) {
         return translateFor(language, 'chat.rulebookPagesFailed');
       }
-      const modifiedQuestion = buildQuestionText(question, hasUserFiles, COGNITIVE_PROMPT);
+      const modifiedQuestion = buildQuestionText(question, hasUserFiles, COGNITIVE_PROMPT + ANSWER_PROMPT);
 
       currentParts.push({ text: modifiedQuestion });
 
@@ -403,7 +424,6 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       }
 
       const interactionInput = toInteractionInput(contents);
-      const textOnlyInput = toInteractionTextOnly(contents);
       const effectiveChain = MODEL_CHAIN;
 
       const callModel = (client: any, model: ModelChainEntry, input: Parameters<typeof runModel>[0]['input'], stream: boolean, onText?: (text: string) => void) =>
@@ -415,52 +435,33 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       // True once any attempt has streamed final-answer chunks into the UI.
       let streamedBubbleLive = false;
 
-      // One rotation decision per ask: the starting key is read once and
-      // advanced per model iteration (see ai/modelChain.ts).
-      const rotationRaw = parseInt(localStorage.getItem('gemini_key_rotation_index') || '0', 10);
+      // One call per question: the answer streams straight from the first
+      // request (the old draft -> critique -> final passes tripled the
+      // requests per question). Keys start at a random pool position.
       const outcome = await runModelChain({
         models: effectiveChain,
         keys: allKeys,
-        health: keyHealth,
+        health: keyHealthFor(allKeys),
         modelId: entry => entry.name,
-        rotationIndex: Number.isInteger(rotationRaw) && rotationRaw >= 0 ? rotationRaw : 0,
-        onRotation: next => localStorage.setItem('gemini_key_rotation_index', String(next)),
+        rotationIndex: randomStart(allKeys.length),
         signal,
         attempt: async (key, modelEntry) => {
           const client = new GoogleGenAI({ apiKey: key });
-          const draftText = await callModel(client, modelEntry, interactionInput, false);
-
-          let finalAnswer = draftText;
-          // The critique re-sees the user's photos (rulebook images stay
-          // out to avoid resending them) so visual claims get verified.
-          const critiqueInput = critiquePlan({
-            textOnlyInput,
-            userPhotoParts,
-            draftText,
-            critiquePrompt: CRITIQUE_PROMPT,
-            photoAddendum: PHOTO_CRITIQUE_ADDENDUM,
+          // A retried attempt restarts the answer from zero: the caller
+          // drops the partial bubble the failed attempt streamed, so a
+          // stale half-finished think block is never concatenated into
+          // the fresh answer.
+          let attemptStreamed = false;
+          const answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
+            if (!attemptStreamed) {
+              attemptStreamed = true;
+              if (streamedBubbleLive) onStreamReset?.();
+            }
+            streamedBubbleLive = true;
+            onChunk?.(chunk);
           });
-          const critiqueText = (await callModel(client, modelEntry, critiqueInput, false)) || "אין הערות קריטיות.";
-
-          if (visibleCritique(critiqueText)) {
-            const finalInput = finalPlan(critiqueInput, critiqueText, FINAL_PROMPT);
-            // A retried attempt restarts the answer from zero: the caller
-            // drops the partial bubble the failed attempt streamed, so a
-            // stale half-finished think block is never concatenated into
-            // the fresh answer.
-            let attemptStreamed = false;
-            const streamedText = await callModel(client, modelEntry, finalInput, true, (chunk: string) => {
-              if (!attemptStreamed) {
-                attemptStreamed = true;
-                if (streamedBubbleLive) onStreamReset?.();
-              }
-              streamedBubbleLive = true;
-              onChunk?.(chunk);
-            });
-            finalAnswer = streamedText || draftText;
-          }
-
-          responseText = finalAnswer;
+          if (!answer.trim()) throw new Error('503 empty model answer');
+          responseText = answer;
           return true;
         },
       });
