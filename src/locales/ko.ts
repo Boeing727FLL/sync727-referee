@@ -9,7 +9,7 @@ const ko: TranslationMap = {
     'chat.connectionLost': '연결이 끊어졌습니다. 나중에 다시 시도해 주세요.',
     'v12.quota': '오늘 {limit}개 중 {remaining}개 남음',
     'v12.heroSub': '오늘은 무엇을 확인할까요?',
-    'v12.thinking': '규칙서를 확인하는 중…',
+    'v12.thinking': '답변을 준비하는 중…',
     'v12.answering': '답변 중…',
     'v12.answered': '방금 답변함',
     'v12.sent': '보냄',

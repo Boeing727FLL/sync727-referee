@@ -9,7 +9,7 @@ const zh: TranslationMap = {
     'chat.connectionLost': '连接丢失。请稍后再试。',
     'v12.quota': '今天还剩 {remaining}/{limit}',
     'v12.heroSub': '今天查什么？',
-    'v12.thinking': '正在查阅规则手册…',
+    'v12.thinking': '正在准备回答…',
     'v12.answering': '正在回答…',
     'v12.answered': '刚刚回答',
     'v12.sent': '已发送',

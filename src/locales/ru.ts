@@ -9,7 +9,7 @@ const ru: TranslationMap = {
     'chat.connectionLost': 'Связь потеряна. Попробуйте позже.',
     'v12.quota': 'Осталось {remaining} из {limit} сегодня',
     'v12.heroSub': 'Что проверяем сегодня?',
-    'v12.thinking': 'Проверяет свод правил…',
+    'v12.thinking': 'Готовит ответ…',
     'v12.answering': 'Отвечает…',
     'v12.answered': 'Только что ответил',
     'v12.sent': 'Отправлено',

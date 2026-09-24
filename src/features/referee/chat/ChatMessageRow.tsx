@@ -32,8 +32,9 @@ export function RefereeBadge({ thinking = false, happy = false }: { thinking?: b
   return <div className={`v12-ai-o ${thinking ? 'is-think' : ''}`}><Referee size={46} happy={happy} /></div>;
 }
 
-/** The thinking card: FIRST-colour edge light around the glass and a
- *  quiet "חושב" inside (the old orb animation was removed on request). */
+/** The thinking card: FIRST-colour edge light around the glass and only
+ *  the status line in the header (the orb and the "thinking" label were
+ *  removed on request). */
 export function ThinkingCard({ thinkContent, t }: { thinkContent?: string; t: (key: string) => string }) {
   return (
     <div className="v12-cardx">
@@ -42,16 +43,9 @@ export function ThinkingCard({ thinkContent, t }: { thinkContent?: string; t: (k
         <div className="v12-edge" aria-hidden />
         <div className="v12-ai-h">
           <RefereeBadge thinking />
-          <div><div className="v12-ai-nm">{t('chat.refereeTag')}</div><div className="v12-ai-st">{t('v12.thinking')}</div></div>
+          <div><div className="v12-ai-nm">{t('chat.refereeTag')}</div><div className="v12-ai-st" role="status">{t('v12.thinking')}</div></div>
         </div>
-        <div className="v12-think">
-          <span className="v12-think-lbl" role="status">
-            {t('chat.thinking2').replace(/[.…]+$/u, '').split('').map((ch, i) => (
-              <span key={i} className="thinking-letter" style={{ animationDelay: `${i * 0.07}s` }}>{ch === ' ' ? '\u00A0' : ch}</span>
-            ))}
-          </span>
-          {thinkContent && <div className="text-[10px] md:text-xs font-mono text-white/45 whitespace-pre-wrap max-h-48 overflow-y-auto w-full">{thinkContent}</div>}
-        </div>
+        {thinkContent && <div className="v12-think"><div className="text-[10px] md:text-xs font-mono text-white/45 whitespace-pre-wrap max-h-48 overflow-y-auto w-full">{thinkContent}</div></div>}
       </div>
     </div>
   );

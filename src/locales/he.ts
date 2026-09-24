@@ -9,7 +9,7 @@ const he: TranslationMap = {
     'chat.connectionLost': 'אבד הקשר. נסה שוב מאוחר יותר.',
     'v12.quota': 'נותרו {remaining} מתוך {limit} היום',
     'v12.heroSub': 'מה בודקים היום?',
-    'v12.thinking': 'בודק בספר החוקים…',
+    'v12.thinking': 'מכין תשובה…',
     'v12.answering': 'עונה…',
     'v12.answered': 'ענה עכשיו',
     'v12.sent': 'נשלח',

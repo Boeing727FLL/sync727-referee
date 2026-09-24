@@ -9,7 +9,7 @@ const en: TranslationMap = {
     'chat.connectionLost': 'Connection lost. Try again later.',
     'v12.quota': '{remaining} of {limit} left today',
     'v12.heroSub': 'What are we checking today?',
-    'v12.thinking': 'Checking the rulebook…',
+    'v12.thinking': 'Preparing an answer…',
     'v12.answering': 'Answering…',
     'v12.answered': 'Just answered',
     'v12.sent': 'Sent',

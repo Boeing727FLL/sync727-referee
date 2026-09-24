@@ -9,7 +9,7 @@ const ar: TranslationMap = {
     'chat.connectionLost': 'فُقد الاتصال. حاول مرة أخرى لاحقاً.',
     'v12.quota': 'متبقي {remaining} من {limit} اليوم',
     'v12.heroSub': 'ماذا نتحقق اليوم؟',
-    'v12.thinking': 'يراجع كتاب القواعد…',
+    'v12.thinking': 'يُحضّر إجابة…',
     'v12.answering': 'يجيب…',
     'v12.answered': 'أجاب الآن',
     'v12.sent': 'أُرسلت',

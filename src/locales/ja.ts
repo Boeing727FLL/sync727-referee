@@ -9,7 +9,7 @@ const ja: TranslationMap = {
     'chat.connectionLost': '接続が失われました。後でもう一度お試しください。',
     'v12.quota': '本日残り {remaining}/{limit}',
     'v12.heroSub': '今日は何を確認しますか？',
-    'v12.thinking': 'ルールブックを確認中…',
+    'v12.thinking': '回答を準備中…',
     'v12.answering': '回答中…',
     'v12.answered': 'たった今回答',
     'v12.sent': '送信',
