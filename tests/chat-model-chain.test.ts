@@ -144,14 +144,33 @@ test('quota on every key for one model still lets the next model answer', async 
   assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k3@m1', 'k1@m2']);
 });
 
-test('transient failure propagates, never swallowed', async () => {
-  await assert.rejects(
-    runModelChain({
-      models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
-      attempt: async () => { throw new Error('network went sideways'); },
-    }),
-    /network went sideways/,
-  );
+test('unknown failure moves to the next model instead of ending the ask', async () => {
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    attempt: async (key, model) => {
+      attempts.push(`${key}@${model}`);
+      if (model === 'm1') throw new Error('something went sideways');
+      return true;
+    },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
+});
+
+test('in-stream "high demand" error (no HTTP code) retries another key, then falls back to the next model', async () => {
+  const attempts: string[] = [];
+  const outcome = await runModelChain({
+    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
+    sleep: async () => {},
+    attempt: async (key, model) => {
+      attempts.push(`${key}@${model}`);
+      if (model === 'm1') throw new Error('gemini-3.8-flash is currently experiencing high demand, spikes in demand are usually temporary. Please try again later.');
+      return true;
+    },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k1@m2']);
 });
 
 test('abort mid-attempt ends the chain as aborted and cools nothing', async () => {

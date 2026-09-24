@@ -7,7 +7,7 @@
  * rotation index is read and advanced per MODEL iteration (round-robin
  * across sessions via the caller's storage). A failure is classified and
  * either cools the key and tries the next one, skips to the next model,
- * or propagates (transient/unknown failures are never swallowed). An
+ * or moves on (unknown failures skip to the next model and are logged). An
  * abort short-circuits everything and is never counted as an answer.
  */
 import { classifyFailure, MODEL_OVERLOADED_COOLDOWN_MS, rotateCandidates, type FailureKind, type KeyHealth } from './retryPolicy';
@@ -91,6 +91,10 @@ export async function runModelChain<M>(options: {
         } catch (error: unknown) {
           const decision = classifyFailure(error, signal?.aborted);
           lastFailureKind = decision.kind;
+          if (decision.kind !== 'aborted') {
+            // Every failed attempt is visible in the console (key never logged).
+            console.warn(`[referee] ${modelId} attempt failed (${decision.kind}):`, errorMessage(error).slice(0, 300));
+          }
           if (decision.kind === 'quota') sawQuota = true;
           if (decision.kind === 'aborted') return { status: 'aborted' };
           if (decision.kind === 'network') break;
@@ -120,4 +124,9 @@ export async function runModelChain<M>(options: {
     }
   }
   return { status: 'exhausted', lastFailureKind: outcomeKind() };
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  try { return typeof error === 'string' ? error : JSON.stringify(error); } catch { return String(error); }
 }

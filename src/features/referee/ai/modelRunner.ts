@@ -17,7 +17,11 @@ async function collectInteractionStream(stream: AsyncIterable<unknown>, signal?:
     if (signal?.aborted) break;
     if (!value || typeof value !== 'object') continue;
     const event = value as StreamEvent;
-    if (event.event_type === 'error' && event.error) throw new Error(event.error.message || 'Interaction stream error');
+    if (event.event_type === 'error' && event.error) {
+      const err = event.error as { message?: string; code?: unknown; status?: unknown };
+      const code = [err.code, err.status].filter(v => v !== undefined && v !== null && v !== '').join(' ');
+      throw new Error(`${code ? code + ' ' : ''}${err.message || 'Interaction stream error'}`);
+    }
     if ((event.event_type === 'step.delta' || event.event_type === 'content.delta') && event.delta?.type === 'text' && event.delta.text) {
       text += event.delta.text;
       onText?.(event.delta.text);

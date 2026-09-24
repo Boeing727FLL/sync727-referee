@@ -503,10 +503,10 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       const errMsg = errorText(error);
       const is429 = errMsg.includes("429") || errMsg.includes("Too Many Requests") || errMsg.includes("quota");
       if (is429) {
-        console.warn("Quota exceeded, returning friendly message");
+        console.warn("[referee] quota exceeded on every key/model:", errMsg.substring(0, 300));
         return failureResult(translateFor(language, 'chat.serviceBusy'));
       }
-      console.warn("Gemini error:", errMsg.substring(0, 200));
+      console.error("[referee] ask failed:", errMsg.substring(0, 500), error);
       return failureResult(translateFor(language, 'chat.serviceTemporaryFailure'));
     }
   }

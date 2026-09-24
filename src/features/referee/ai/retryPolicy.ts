@@ -56,7 +56,11 @@ export function classifyFailure(error: unknown, aborted = false): RetryDecision 
   if (lower.includes('400') && ['schema', 'model', 'unsupported', 'not found', 'input format', 'unknown field', 'invalid argument', 'not enabled'].some(value => lower.includes(value))) {
     return { kind: 'request', tryNextKey: false, tryNextModel: true, cooldownMs: 0 };
   }
-  if (['500', '502', '503', '504', 'internal server error', 'service unavailable'].some(value => lower.includes(value))) {
+  // Overload can also arrive as an error event inside the stream, with no
+  // HTTP status in the text ("... is currently experiencing high demand ...
+  // Please try again later."). That used to fall through to 'transient' and
+  // end the whole ask on the first try.
+  if (['500', '502', '503', '504', 'internal server error', 'service unavailable', 'unavailable', 'high demand', 'overloaded', 'try again later', 'internal error', 'deadline exceeded', 'interaction stream error'].some(value => lower.includes(value))) {
     return { kind: 'server', tryNextKey: false, tryNextModel: true, cooldownMs: 0 };
   }
   // The request never got an HTTP answer (dropped connection, CORS-less
@@ -65,7 +69,8 @@ export function classifyFailure(error: unknown, aborted = false): RetryDecision 
   if (['failed to fetch', 'networkerror', 'network error', 'load failed', 'fetch failed', 'err_'].some(value => lower.includes(value))) {
     return { kind: 'network', tryNextKey: true, tryNextModel: true, cooldownMs: 0 };
   }
-  return { kind: 'transient', tryNextKey: false, tryNextModel: false, cooldownMs: 0 };
+  // Unknown failure: never end the ask on it - move on to the next model.
+  return { kind: 'transient', tryNextKey: false, tryNextModel: true, cooldownMs: 0 };
 }
 
 /**
