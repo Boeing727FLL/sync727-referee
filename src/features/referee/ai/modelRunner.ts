@@ -6,7 +6,7 @@ type StreamEvent = { event_type?: string; delta?: { type?: string; text?: string
 type Client = {
   interactions: { create: (params: unknown, options?: { signal: AbortSignal }) => Promise<unknown> };
   models: {
-    generateContentStream: (params: unknown) => Promise<AsyncIterable<{ text?: string }>>;
+    generateContentStream: (params: unknown) => Promise<AsyncIterable<GenChunk>>;
     generateContent: (params: unknown) => Promise<{ text?: string }>;
   };
 };
@@ -39,6 +39,13 @@ function interactionText(interaction: unknown): string {
   return response.outputs.filter((output): output is { type: 'text'; text: string } => !!output && typeof output === 'object' && (output as { type?: unknown }).type === 'text' && typeof (output as { text?: unknown }).text === 'string').map(output => output.text).join('');
 }
 
+type GenChunk = { text?: string; candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
+function partsText(chunk: GenChunk | undefined): string {
+  const parts = chunk?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return chunk?.text || '';
+  return parts.filter(part => !part.thought && typeof part.text === 'string').map(part => part.text).join('');
+}
+
 export async function runModel(options: {
   client: Client;
   model: ModelEntry;
@@ -57,7 +64,8 @@ export async function runModel(options: {
     if (stream) return collectInteractionStream(await client.interactions.create(params, requestOptions) as AsyncIterable<unknown>, signal, onText, onActivity);
     return interactionText(await client.interactions.create(params, requestOptions));
   }
-  const config: Record<string, unknown> = { thinkingConfig: { thinkingLevel: 'HIGH' } };
+  const liveEvents = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+  const config: Record<string, unknown> = { thinkingConfig: { thinkingLevel: 'HIGH', ...(liveEvents ? { includeThoughts: true } : {}) } };
   if (signal) config.abortSignal = signal;
   if (input.some(step => step.content.some(part => part.type === 'image'))) config.mediaResolution = 'MEDIA_RESOLUTION_HIGH';
   const params = { model: model.name, config, contents: stepsToContents(input), systemInstruction };
@@ -66,7 +74,9 @@ export async function runModel(options: {
     for await (const chunk of await client.models.generateContentStream(params)) {
       if (signal?.aborted) break;
       onActivity?.();
-      if (chunk?.text) { text += chunk.text; onText?.(chunk.text); }
+      // Thought parts keep the connection alive; only answer text is kept.
+      const answerText = partsText(chunk);
+      if (answerText) { text += answerText; onText?.(answerText); }
     }
     return text;
   }

@@ -26,10 +26,17 @@ type RequestFile = UserFile & { isRulebook: boolean };
 type FetchedBlob = { data: Blob; mimeType: string };
 
 
-const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' };
+// thinking_summaries streams short thought events while the model thinks.
+// Without them the connection sits silent for 10-40s, and phone networks
+// and proxies drop idle connections (measured: an idle stream was cut at
+// ~11s), which showed up as "network error" and a wasted attempt. The
+// summaries are not shown in the answer (only text deltas are collected).
+const LIVE_EVENTS = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+const SUMMARIES = LIVE_EVENTS ? { thinking_summaries: 'auto' } : {};
+const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high', ...SUMMARIES };
 // The owner's primary models run with medium thinking (his AI Studio
 // config). The Interactions API only accepts the snake_case field name.
-const PRIMARY_INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'medium' };
+const PRIMARY_INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'medium', ...SUMMARIES };
 const MODEL_CHAIN: ModelChainEntry[] = [
   { name: 'gemini-3.7-flash', kind: 'interactions', config: PRIMARY_INTERACTION_CONFIG },
   { name: 'gemini-3.6-flash', kind: 'interactions', config: INTERACTION_CONFIG },
