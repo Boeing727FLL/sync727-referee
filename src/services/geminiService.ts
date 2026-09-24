@@ -31,7 +31,7 @@ type FetchedBlob = { data: Blob; mimeType: string };
 // and proxies drop idle connections (measured: an idle stream was cut at
 // ~11s), which showed up as "network error" and a wasted attempt. The
 // summaries are not shown in the answer (only text deltas are collected).
-const LIVE_EVENTS = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+const LIVE_EVENTS = (() => { try { return localStorage.getItem('referee_page_urls') !== '0'; } catch { return false; } })();
 const SUMMARIES = LIVE_EVENTS ? { thinking_summaries: 'auto' } : {};
 const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high', ...SUMMARIES };
 // The owner's primary models run with medium thinking (his AI Studio
@@ -178,9 +178,9 @@ function keyHealthFor(keys: string[]): KeyHealth {
 }
 
 /** Session flag: false once Google failed to fetch the rule book page URLs.
- *  Until verified on the live site, URL mode is opt-in per browser:
- *  localStorage.referee_page_urls = '1'. */
-let pageUrlsWork = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+ *  URL mode:
+ *  on by default; ?fast=0 turns it off in a browser. */
+let pageUrlsWork = (() => { try { return localStorage.getItem('referee_page_urls') !== '0'; } catch { return false; } })();
 /** Errors that mean Google could not fetch a URL part (not overload/quota). */
 export function isUrlFetchError(error: unknown): boolean {
   const lower = errorText(error).toLowerCase();

@@ -64,7 +64,7 @@ export async function runModel(options: {
     if (stream) return collectInteractionStream(await client.interactions.create(params, requestOptions) as AsyncIterable<unknown>, signal, onText, onActivity);
     return interactionText(await client.interactions.create(params, requestOptions));
   }
-  const liveEvents = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+  const liveEvents = (() => { try { return localStorage.getItem('referee_page_urls') !== '0'; } catch { return false; } })();
   const config: Record<string, unknown> = { thinkingConfig: { thinkingLevel: 'HIGH', ...(liveEvents ? { includeThoughts: true } : {}) } };
   if (signal) config.abortSignal = signal;
   if (input.some(step => step.content.some(part => part.type === 'image'))) config.mediaResolution = 'MEDIA_RESOLUTION_HIGH';

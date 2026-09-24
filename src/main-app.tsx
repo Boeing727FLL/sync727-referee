@@ -12,11 +12,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Test switch for the faster Gemini path (rule book pages by link + live
 // thought events): open the site with ?fast=1 to turn it on in this
-// browser, ?fast=0 to turn it off. Off by default until verified.
+// browser, ?fast=0 to turn it off. On by default (verified 2026-09-24: Mission 4 answered 10/40/0 with pages by link).
 try {
   const fast = new URLSearchParams(window.location.search).get('fast');
-  if (fast === '1') localStorage.setItem('referee_page_urls', '1');
-  if (fast === '0') localStorage.removeItem('referee_page_urls');
+  if (fast === '1') localStorage.removeItem('referee_page_urls');
+  if (fast === '0') localStorage.setItem('referee_page_urls', '0');
 } catch { /* storage blocked: stays off */ }
 
 // Production: only critical errors reach the console.
