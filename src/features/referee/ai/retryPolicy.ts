@@ -39,7 +39,7 @@ export function classifyFailure(error: unknown, aborted = false): RetryDecision 
   if (['403', '401', 'leaked', 'permission_denied', 'api key not valid', 'api_key_invalid'].some(value => lower.includes(value))) {
     return { kind: 'invalid-key', tryNextKey: true, tryNextModel: true, cooldownMs: INVALID_KEY_COOLDOWN_MS };
   }
-  if (['429', 'too many requests', 'quota exceeded', 'resource_exhausted'].some(value => lower.includes(value))) {
+  if (['429', 'too many requests', 'quota exceeded', 'quota_exceeded', 'resource_exhausted', 'resource has been exhausted'].some(value => lower.includes(value))) {
     // "limit: 0" means this tier has no quota for the model at all: waiting
     // a minute or trying the other keys only produces more 429s.
     if (/limit:\s*0\b/.test(lower) || lower.includes('not available on the free tier') || lower.includes('free_tier') && lower.includes('limit: 0')) {

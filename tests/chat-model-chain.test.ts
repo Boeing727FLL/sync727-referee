@@ -302,3 +302,7 @@ test('cooldowns survive a reload through storage, stored without key values', ()
   assert.ok(!mem.get('h')!.includes('AIza'));
   assert.deepEqual(new KeyHealth(store()).available(keys, Date.now(), 'm1'), ['AIzaSECRET2']);
 });
+
+test('in-stream quota error ("quota_exceeded Resource has been exhausted") is quota, not transient', () => {
+  assert.equal(classifyFailure(new Error('quota_exceeded Resource has been exhausted (e.g. check quota).')).kind, 'quota');
+});
