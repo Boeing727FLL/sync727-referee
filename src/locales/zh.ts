@@ -2,6 +2,7 @@ import type { TranslationMap } from './types';
 
 const zh: TranslationMap = {
     'app.title': '虚拟裁判',
+    'app.cardSub': "解答本赛季机器人挑战赛的规则问题",
     'chat.thinking': '虚拟裁判正在思考...',
     'chat.placeholder': '提出关于FLL规则的问题...',
     'chat.send': '发送',

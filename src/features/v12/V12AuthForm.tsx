@@ -8,11 +8,13 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useLoginAuth } from '../auth/useLoginAuth';
 import { exitResetView, showResetView, toggleSignMode, type LoginView } from '../auth/loginFlow';
 import MaintenanceScreen from '../../components/MaintenanceScreen';
+import { useLanguage } from '../../hooks/useLanguage';
 import type { BuddyApi, SweepFn } from './V12Landing';
 
 type Props = { buddy: BuddyApi; sweep: SweepFn; onSuccess: () => void };
 
 export default function V12AuthForm({ buddy, sweep, onSuccess }: Props) {
+  const { t } = useLanguage();
   const {
     view, setView, isSignUp, showReset,
     email, setEmail, password, setPassword, name, setName,
@@ -102,7 +104,7 @@ export default function V12AuthForm({ buddy, sweep, onSuccess }: Props) {
     <form onSubmit={handleSubmit}>
       <div className="v12-ph">
         <h2>ברוכים השבים.</h2>
-        <div className="s">כל חוקי FIRST LEGO League, בשיחה אחת</div>
+        <div className="s">{t('app.cardSub')}</div>
         <button type="button" className="v12-lnk" onClick={() => go(toggleSignMode(view))}>אין חשבון? הרשמה</button>
       </div>
       <label className="v12-lbl" htmlFor="v12-em">אימייל</label>

@@ -297,7 +297,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center modal-safe-3"
+          className="fixed inset-0 z-[9999] v12-scrim flex items-center justify-center modal-safe-3"
           dir="rtl"
           onClick={onClose}
         >
@@ -307,42 +307,27 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
             exit={{ scale: 0.92, opacity: 0, y: 24 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+            className="v12-sheet w-full max-w-4xl max-h-[90dvh] flex flex-col"
             ref={a11yRef}
             role="dialog"
             aria-modal="true"
             tabIndex={-1}
           >
-            <div className="flex w-full h-1 shrink-0" aria-hidden>
-              <div className="flex-1 bg-blue-600" />
-              <div className="flex-1 bg-white" />
-              <div className="flex-1 bg-red-600" />
-            </div>
 
-            <div className="px-5 md:px-6 pt-4 md:pt-5 pb-4 border-b border-white/10 bg-white/[0.03] shrink-0">
+            <div className="px-5 md:px-6 pt-5 pb-4 border-b border-white/10 shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative shrink-0">
-                    <div className="absolute -inset-2 rounded-full pointer-events-none" aria-hidden>
-                      <div className="absolute inset-0 bg-blue-500/25 blur-xl rounded-full" />
-                      <div className="absolute inset-0 bg-red-500/15 blur-xl rounded-full" />
-                    </div>
-                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-red-600 p-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
-                      <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center">
-                        <ScrollText className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                  </div>
+                  <div className="v12-emblem"><ScrollText className="w-6 h-6" /></div>
                   <div className="min-w-0">
-                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">יומן שאלות ותשובות</h3>
-                    <p className="text-[11px] md:text-xs text-slate-400 font-medium">
+                    <h3 className="v12-sheet-title leading-tight">יומן שאלות ותשובות</h3>
+                    <p className="text-[11px] md:text-xs text-white/60 font-medium">
                       {unlocked ? `סך הכל ${logs.length} רשומות` : 'גישה לשופטים ראשיים בלבד'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="shrink-0 w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer"
+                  className="v12-sheet-x !static shrink-0"
                   aria-label="סגור"
                 >
                   <X className="w-4 h-4" />
@@ -355,12 +340,12 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                 <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
                     <div className="absolute -inset-3 bg-blue-500/15 blur-xl rounded-full" aria-hidden />
-                    <div className="relative w-full h-full rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-blue-400" />
+                    <div className="relative w-full h-full rounded-[20px] bg-white/[0.14] flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-white" />
                     </div>
                   </div>
-                  <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-                  <p className="text-slate-400 text-sm mb-5">הזינו קוד כדי לצפות ביומן</p>
+                  <h4 className="v12-sheet-title !text-xl mb-1">אזור מוגן</h4>
+                  <p className="text-white/60 text-sm mb-5">הזינו קוד כדי לצפות ביומן</p>
                   <input
                     type="password"
                     value={code}
@@ -370,35 +355,33 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
                     placeholder="קוד גישה"
-                    className={`w-full px-4 py-3 rounded-xl bg-slate-800/80 border text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 transition-all text-center font-bold tracking-widest ${
-                      error ? 'border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:ring-blue-500/30 focus:border-blue-500/50'
-                    }`}
+                    className={`v12-field text-base text-center font-bold tracking-widest ${error ? '!shadow-[inset_0_0_0_2px_#FF6B70]' : ''}`}
                   />
-                  {error && <p className="text-red-400 text-xs font-bold mt-2">קוד שגוי, נסו שוב</p>}
+                  {error && <p className="text-[#FFB3B6] text-xs font-bold mt-2">קוד שגוי, נסו שוב</p>}
                   <button
                     onClick={handleUnlock}
-                    className="mt-4 w-full py-3 rounded-xl bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-black transition-all shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                    className="mt-4 w-full v12-btn v12-btn-primary"
                   >
                     כניסה ליומן
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col flex-1 min-h-0">
-                  <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/5 shrink-0 space-y-3">
+                  <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/10 shrink-0 space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
-                        <Search className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Search className="w-4 h-4 text-white/50 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <input
                           type="text"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           placeholder="חיפוש בשאלה, בתשובה או בעונה"
-                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
+                          className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white text-base md:text-sm placeholder-white/40 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                         />
                         {search && (
                           <button
                             onClick={() => setSearch('')}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-white/5 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-white/5 text-white/60 hover:text-white flex items-center justify-center cursor-pointer"
                             aria-label="נקה חיפוש"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -408,9 +391,9 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                       <button
                         onClick={() => setSortNew((v) => !v)}
                         title={sortNew ? 'החדש ביותר למעלה' : 'הישן ביותר למעלה'}
-                        className="shrink-0 h-[42px] px-3 rounded-xl bg-slate-800/70 border border-white/10 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                        className="shrink-0 h-[42px] px-3 rounded-xl bg-white/10 border border-white/10 text-white/80 hover:text-white hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
                       >
-                        <ArrowDownWideNarrow className="w-4 h-4 text-blue-400" />
+                        <ArrowDownWideNarrow className="w-4 h-4 text-[#9CCBFF]" />
                         <span className="hidden sm:inline">{sortNew ? 'חדש קודם' : 'ישן קודם'}</span>
                       </button>
                     </div>
@@ -430,7 +413,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                             setSearch('');
                             setFilter('all');
                           }}
-                          className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-full text-xs font-bold text-white/60 hover:text-white flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           איפוס
@@ -440,11 +423,11 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
                         onClick={cleanOldLogs}
                         disabled={cleaning || logs.length === 0 || !canDelete}
                         title={canDelete ? undefined : 'ניקוי לבעלים בלבד'}
-                        className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-red-300 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-full text-xs font-bold text-white/60 hover:text-red-300 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
                       >
                         {cleaning ? 'מנקה' : confirmOld ? 'לחצו שוב למחיקת ישנות מ90 יום' : 'נקה ישנות מ90 יום'}
                       </button>
-                      <span className="mr-auto text-[11px] text-slate-500 font-medium">
+                      <span className="mr-auto text-[11px] text-white/50 font-medium">
                         מציג {filtered.length} מתוך {logs.length}
                       </span>
                     </div>

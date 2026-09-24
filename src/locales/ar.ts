@@ -2,6 +2,7 @@ import type { TranslationMap } from './types';
 
 const ar: TranslationMap = {
     'app.title': 'الحكم الافتراضي',
+    'app.cardSub': "إجابات حول قواعد Robot Game لهذا الموسم",
     'chat.thinking': 'الحكم الافتراضي يفكر...',
     'chat.placeholder': 'اسأل سؤالاً عن قوانين FLL...',
     'chat.send': 'إرسال',

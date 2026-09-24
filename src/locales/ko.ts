@@ -2,6 +2,7 @@ import type { TranslationMap } from './types';
 
 const ko: TranslationMap = {
     'app.title': '가상 심판',
+    'app.cardSub': "이번 시즌 로봇 게임 규칙에 대한 답변",
     'chat.thinking': '가상 심판이 생각하고 있습니다...',
     'chat.placeholder': 'FLL 규칙에 대해 질문하기...',
     'chat.send': '전송',

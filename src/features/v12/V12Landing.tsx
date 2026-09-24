@@ -350,7 +350,7 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
                     <div className="v12-hint">{t('disclaimerPopup.hint')}</div>
                   </>
                 ) : (
-                  <Suspense fallback={<div className="v12-ph"><h2>ברוכים השבים.</h2><div className="s">כל חוקי FIRST LEGO League, בשיחה אחת</div></div>}>
+                  <Suspense fallback={<div className="v12-ph"><h2>ברוכים השבים.</h2><div className="s">{t('app.cardSub')}</div></div>}>
                     <V12AuthForm buddy={buddy} sweep={sweep} onSuccess={handleAuthed} />
                   </Suspense>
                 )}

@@ -2,6 +2,7 @@ import type { TranslationMap } from './types';
 
 const ja: TranslationMap = {
     'app.title': 'バーチャル審判',
+    'app.cardSub': "今シーズンのロボットゲームのルールに答えます",
     'chat.thinking': 'バーチャル審判が考えています...',
     'chat.placeholder': 'FLLルールについて質問する...',
     'chat.send': '送信',

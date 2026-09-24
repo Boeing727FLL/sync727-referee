@@ -2,6 +2,7 @@ import type { TranslationMap } from './types';
 
 const en: TranslationMap = {
     'app.title': 'Virtual Referee',
+    'app.cardSub': "Answers about this season's Robot Game rules",
     'chat.thinking': 'The virtual referee is thinking...',
     'chat.placeholder': 'Ask a question about FLL rules...',
     'chat.send': 'Send',
