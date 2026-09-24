@@ -83,8 +83,8 @@ test('a 200-message conversation renders every row with intact text and wrapping
   assert.equal(userBubbles.length, 100, 'all user bubbles carry break-words');
   assert.ok(modelBubbles.length >= 100, 'all model bubbles carry break-words');
 
-  // Every row produced its avatar cell: one per non-thinking row.
-  const rowCount = container.querySelectorAll('div.w-8.h-8').length;
+  // Every row rendered: one user bubble wrapper or answer card per message.
+  const rowCount = container.querySelectorAll('div.v12-ub-wrap, div.v12-cardx').length;
   assert.equal(rowCount, 200, '200 rows in the DOM');
   unmount();
   cleanup();

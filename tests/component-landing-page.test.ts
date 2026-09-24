@@ -2,7 +2,7 @@ import './helpers/dom.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { render, fireEvent, cleanup } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import LandingPage, { hasSavedSession } from '../src/pages/LandingPage.tsx';
 
 test('hasSavedSession is false with empty storage, true with a saved auth marker', () => {
@@ -20,24 +20,20 @@ test('hasSavedSession detects a persisted firebase auth user key', () => {
   localStorage.clear();
 });
 
-test('LandingPage opens the login stage in-page for signed-out visitors and sends returning users to the disclaimer stage', () => {
+test('LandingPage shows the auth card in-page for signed-out visitors and sends returning users to the disclaimer', () => {
   localStorage.clear();
   const first = render(React.createElement(LandingPage));
-  fireEvent.click(first.getByRole('button'));
-  // No route change: the intro flips to its login stage on the same page.
-  // (The stage itself mounts Firebase — covered by browser harness, not node.)
-  assert.ok(first.container.querySelector('[data-mode="login"]'), 'intro should flip to login mode');
-  assert.equal(first.container.querySelector('[data-stage]')?.getAttribute('data-stage'), 'login');
+  // No route change: the landing stays mounted and shows the auth card view.
+  assert.equal(first.container.querySelector('[data-stage]')?.getAttribute('data-stage'), 'landing');
+  assert.equal(first.container.querySelector('[data-view]')?.getAttribute('data-view'), 'auth');
   first.unmount();
   cleanup();
 
-  // Signed-in continue: the disclaimer stage opens on the same page, before
-  // any chat entrance — never a navigation. (DisclaimerStage/RefereeApp are
-  // lazy; the stage marker flips synchronously on the click.)
+  // Signed-in: the disclaimer view opens on the same page, never a navigation.
   localStorage.setItem('auth_user', '{"uid":"u1"}');
   const second = render(React.createElement(LandingPage));
-  fireEvent.click(second.getByRole('button'));
-  assert.equal(second.container.querySelector('[data-stage]')?.getAttribute('data-stage'), 'disclaimer');
+  assert.equal(second.container.querySelector('[data-view]')?.getAttribute('data-view'), 'disclaimer');
+  assert.ok(second.getByRole('button', { name: /./ }), 'confirm button present');
   second.unmount();
   cleanup();
   localStorage.clear();

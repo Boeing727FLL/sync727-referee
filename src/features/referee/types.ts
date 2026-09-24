@@ -16,6 +16,8 @@ export type ChatMessage = {
   /** Local note left when the user stopped before any answer text appeared.
    *  Display-only: never sent to the model as history. */
   stopped?: boolean;
+  /** Local send time (ms) for the v12 "sent" line. Display-only. */
+  sentAt?: number;
 };
 
 export type RulebookFile = { name: string; url: string };

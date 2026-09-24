@@ -16,7 +16,7 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { LogOut, Trash2, Shield, ChevronDown, ChevronLeft, Globe, ScrollText, Wrench, Check, Settings, MailCheck } from 'lucide-react';
+import { LogOut, Trash2, Shield, ChevronLeft, Globe, ScrollText, Wrench, Check, Settings, MailCheck } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/firestore';
 import { rtdb } from '../lib/firebase/rtdb';
@@ -24,7 +24,6 @@ import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
 import { getPublicUrl } from '../lib/r2Config';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
-import ThinkIndicator from '../components/ThinkIndicator';
 import { ensureSeasonIdentity, useSeasonIdentity } from '../features/referee/season/identity';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
@@ -81,12 +80,12 @@ import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
-import ChatMessageRow from '../features/referee/chat/ChatMessageRow';
+import ChatMessageRow, { ThinkingCard } from '../features/referee/chat/ChatMessageRow';
 import { SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
-import ChatBackdrop from '../components/ChatBackdrop';
 import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
+import { ReplyGlyph } from '../features/v12/glyphs';
 import ChatHero from '../features/referee/chat/ChatHero';
 import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rulebook/RulebookDialogs';
 
@@ -107,6 +106,12 @@ function formatBuildVersion(raw: unknown): string {
   } catch {
     return String(raw);
   }
+}
+
+/** Up to two initials, as in the v12 header avatar ("יובל מרגלית" -> "ימ"). */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || 'U') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
 export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryStart?: 'chat'; onNavigateOut?: (to: string) => void } = {}) {
@@ -1152,6 +1157,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       {
         role: 'user',
         text: userMessage,
+        sentAt: Date.now(),
         ...(replyQuote ? { quote: replyQuote } : {}),
         ...(photosToSend.length ? { files: photosToSend.map(a => ({ url: a.url, key: a.file.name })) } : {})
       }
@@ -1350,6 +1356,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     t('chat.suggestion4')
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
+  // Follow-up chips (v12 #9): the app's own starter questions the user has
+  // not asked yet - never invented model output.
+  const askedTexts = new Set(messages.filter(m => m.role === 'user').map(m => (m.text || '').trim()));
+  const followUps = quickQuestions.filter(q => !askedTexts.has(q.trim())).slice(0, 3);
+  const lastMessage = messages[messages.length - 1];
+  const showFollowUps = chatStarted && !isAiBusy && !renderingResponse && followUps.length > 0
+    && lastMessage?.role === 'model' && !!lastMessage.text && !lastMessage.isProgress && !lastMessage.stopped;
 
 
 
@@ -1358,55 +1371,39 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   return (
     <motion.div
       initial={false}
-      className="h-screen-fix w-full flex flex-col bg-slate-950 overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
+      className="v12-root h-screen-fix w-full flex flex-col bg-[#0A2A60] overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <motion.div aria-hidden initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} transition={MOTION.filmReveal} className="absolute inset-0"><ChatBackdrop tint={seasonIdentity?.via} /></motion.div>
+      <div aria-hidden className="v12-chatbg"><div className="v12-bg" /><div className="v12-vig" /></div>
 
-      {/* Header - Liquid Glass bar */}
-      <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="mx-2.5 mt-2.5 md:mx-4 md:mt-3.5 rounded-[16px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_16px_44px_rgba(0,0,0,0.45)] z-30 shrink-0 relative">
-        {/* Row 1: Logo + Title + User */}
-        <div className="px-3 py-2 md:px-4 md:py-2.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full shrink-0 overflow-hidden ring-1 ring-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_4px_14px_rgba(0,0,0,0.35)]">
-              <img src="/logoref.webp" alt={t('app.title')} className="w-full h-full object-contain select-none" />
-            </div>
-            <h1 className="min-w-0 truncate text-base md:text-xl font-bold text-white/95 tracking-tight cursor-default select-none leading-tight">
-              {t('app.title')}
-            </h1>
-            <div className="flex md:hidden items-center shrink-0">
-              <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact identity={seasonIdentity} />
-            </div>
+      {/* Header - v12 glass pill */}
+      <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="v12-hdr">
+        <div className="contents">
+          <div className="v12-hdr-lg" role="img" aria-label={t('app.title')} />
+          <div className="v12-hdr-t">
+            <b>{t('app.title')}</b>
+            <small>
+              <i className={`v12-dot${isAiBusy || rulebookLoading ? ' is-busy' : ''}`} />
+              <span className="truncate">{rulebookLoading ? t('chat.updating') : isAiBusy ? t('v12.thinking') : t('v12.ready')}</span>
+              <span className="v12-sep">·</span>
+              <span className="shrink-0">{t('v12.from')} <span className="v12-b7">Boeing <i>727</i></span></span>
+            </small>
           </div>
-
-          <div className="hidden md:flex flex-1 items-center justify-center min-w-0 px-4">
-            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} identity={seasonIdentity} />
+          <div className="shrink-0 flex items-center">
+            <SeasonStatus learning={rulebookLoading} season={seasonName} label={t('chat.updating')} compact identity={seasonIdentity} />
           </div>
-
           <div className="flex items-center gap-1 md:gap-3">
             {sessionAlive && displayUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 p-1 pe-2 md:pe-2.5 min-h-[44px] sm:min-h-[40px] rounded-[12px] border border-white/[0.16] bg-white/[0.09] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/[0.14] hover:border-white/[0.26] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 min-h-[44px] rounded-full cursor-pointer" aria-label={displayUser.name}
                 >
-                  <div className="hidden sm:flex items-center ps-1.5">
-                    <span className="text-xs font-bold text-white/85 max-w-[120px] truncate leading-none">{displayUser.name}</span>
-                  </div>
-                  {displayUser.picture || gravatarPic ? (
-                    <img
-                      src={displayUser.picture || gravatarPic}
-                      alt=""
-                      className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-white/25 object-cover"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full ring-1 ring-white/20 bg-white/10 flex items-center justify-center">
-                      <span className="text-xs md:text-sm font-bold text-white/85">
-                        {(displayUser.name || 'U').trim().charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <ChevronDown className={`w-3.5 h-3.5 text-white/45 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  <span className="v12-av">
+                    {displayUser.picture || gravatarPic
+                      ? <img src={displayUser.picture || gravatarPic} alt="" />
+                      : initialsOf(displayUser.name || 'U')}
+                  </span>
                 </button>
                 <AnimatePresence>
                   {showUserMenu && (
@@ -1532,11 +1529,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                 <span>{sessionAlive ? t('auth.logout') : t('auth.login')}</span>
               </button>
             )}
-            <div className="hidden md:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 select-none">
-              <span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span>
-              <span className="text-[10px] font-semibold text-white tracking-wide [text-shadow:0_1px_8px_rgba(0,0,0,0.75)]">Boeing <span className="text-red-300">727</span> <span className="text-white/60">&</span> Yuval Margalit</span>
-            </div>
-
           </div>
         </div>
       </motion.div>
@@ -1592,20 +1584,26 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             userName={displayUser?.name || 'U'}
             onCopy={async text => { if (await copyText(text)) showToast(t('chat.copied')); }}
             onReply={text => { setReplyTo({ text: text.slice(0, 800) }); composerRef.current?.focus(); }}
+            onRate={() => showToast(t('v12.rated'))}
+            seen={message.role === 'user' && index < messages.length - 1}
+            latest={message.role === 'model' && index === messages.length - 1}
             t={t}
           />;
         })}
         </AnimatePresence>
         
         {loading && messages[messages.length - 1]?.role === 'user' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 md:gap-3">
-            <div className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white ring-1 ring-white/25 overflow-hidden flex items-center justify-center">
-              <img src="/logoref.webp" alt="" className="w-6 h-6 md:w-7 md:h-7 object-contain" />
-            </div>
-            <div className="bg-[#04060c]/55 border border-white/[0.12] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_24px_rgba(0,0,0,0.35)] px-4 py-3 rounded-full flex items-center">
-              <ThinkIndicator />
-            </div>
-          </motion.div>
+          <ThinkingCard t={t} />
+        )}
+        {showFollowUps && (
+          <div className="v12-fu" key={`fu-${messages.length}`}>
+            <div className="v12-fu-lbl">{t('v12.followups')}</div>
+            {followUps.map((question, i) => (
+              <button key={question} type="button" className="v12-chip" style={{ animationDelay: `${0.35 + i * 0.12}s` }} onClick={() => handleSend(question)} disabled={isAiBusy || rulebookLoading}>
+                <ReplyGlyph />{question}
+              </button>
+            ))}
+          </div>
         )}
         </div>
       </motion.div>
@@ -1626,6 +1624,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         onSend={() => handleSend()}
         onStop={handleStop}
         t={t}
+        quota={chatQuota ? { remaining: chatQuota.remaining, limit: chatQuota.limit } : null}
         quotaText={chatQuota ? t('chat.quotaRemaining').replace('{remaining}', String(chatQuota.remaining)).replace('{limit}', String(chatQuota.limit)) : null}
       />
 

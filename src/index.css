@@ -1,4 +1,5 @@
 @import "./fonts.css";
+@import "./features/v12/v12.css";
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -516,18 +517,11 @@
   z-index: 9000;
   opacity: 0;
   pointer-events: none;
-  transform: scale(1.055);
-  filter: blur(22px);
 }
 .chat-stage-live {
   opacity: 1;
   pointer-events: auto;
-  transform: scale(1);
-  filter: blur(0);
-  transition:
-    opacity 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.35s,
-    transform 1.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s,
-    filter 1.55s cubic-bezier(0.22, 1, 0.36, 1) 0.35s;
+  transition: opacity 0.6s ease;
 }
 
 /* A whisper of the intro's light accompanying the entrance, then gone. */

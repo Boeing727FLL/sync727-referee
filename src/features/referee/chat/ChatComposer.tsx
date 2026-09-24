@@ -1,6 +1,7 @@
 /** Message composer: reply preview, image attachments and send/stop controls. */
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, ImagePlus, Reply, Square, X } from 'lucide-react';
+import { Reply, Square, X } from 'lucide-react';
+import { CameraGlyph, SendGlyph } from '../../v12/glyphs';
 import { MOTION } from '../ui/motion';
 
 type Attachment = { file: File; url: string };
@@ -21,54 +22,79 @@ type Props = {
   onStop: () => void;
   t: (key: string) => string;
   quotaText?: string | null;
+  quota?: { remaining: number; limit: number } | null;
 };
 
 export default function ChatComposer(props: Props) {
   const { replyTo, clearReply, attachments, removeAttachment, attachInputRef, onAttach,
-    composerRef, input, setInput, resize, busy, learning, onSend, onStop, t, quotaText } = props;
+    composerRef, input, setInput, resize, busy, learning, onSend, onStop, t, quotaText, quota } = props;
+  const R = 24, C = 2 * Math.PI * R;
+  const used = quota && quota.limit > 0 ? Math.min(1, Math.max(0, (quota.limit - quota.remaining) / quota.limit)) : 0;
+  const canSend = !busy && !learning && (!!input.trim() || attachments.length > 0);
   return (
-    <div className="px-3 md:px-10 pt-1 lg:pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-2 shrink-0 relative z-10">
+    <div className="v12-cmpw">
       <AnimatePresence>
         {replyTo && (
           <motion.div
             layout
-            initial={{ opacity: 0, y: 12, scaleY: 0.82, clipPath: 'inset(100% 0 0 0 round 16px)' }}
-            animate={{ opacity: 1, y: 0, scaleY: 1, clipPath: 'inset(0% 0 0 0 round 16px)' }}
-            exit={{ opacity: 0, y: 8, scaleY: 0.9, clipPath: 'inset(100% 0 0 0 round 16px)' }}
+            initial={{ opacity: 0, y: 12, scaleY: 0.82 }}
+            animate={{ opacity: 1, y: 0, scaleY: 1 }}
+            exit={{ opacity: 0, y: 8, scaleY: 0.9 }}
             transition={MOTION.morph}
             style={{ transformOrigin: 'bottom center' }}
-            className="w-full max-w-3xl lg:max-w-[1400px] mx-auto mb-2 flex items-center gap-2.5 rounded-xl border border-white/[0.12] border-r-2 border-r-[rgba(159,216,198,0.5)] bg-[#04060c]/45 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_6px_20px_rgba(0,0,0,0.28)] px-3 py-2"
+            className="mb-2 flex items-center gap-2.5 rounded-[18px] v12-glass px-3 py-2"
           >
-            <Reply className="shrink-0 w-4 h-4 text-[#9fd8c6]/80" />
-            <div className="flex-1 min-w-0 text-right"><div className="text-[10px] font-black text-[#9fd8c6]/80">{t('chat.replyTo')}</div><div className="truncate text-xs text-slate-200">{replyTo.text}</div></div>
-            <button onClick={clearReply} aria-label="בטל תגובה" className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
+            <Reply className="shrink-0 w-4 h-4 text-[#9FD0FF]" />
+            <div className="flex-1 min-w-0 text-start"><div className="text-[10px] font-black text-[#9FD0FF]">{t('chat.replyTo')}</div><div className="truncate text-xs text-white/85">{replyTo.text}</div></div>
+            <button onClick={clearReply} aria-label="בטל תגובה" className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="w-full max-w-3xl lg:max-w-[1400px] mx-auto flex flex-col gap-1 rounded-[26px] border border-white/[0.13] bg-white/[0.07] backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.05),0_14px_40px_rgba(0,0,0,0.4)] px-2 pt-1.5 md:pt-2 focus-within:border-white/[0.3] transition-colors">
-        <AnimatePresence>
-          {attachments.length > 0 && (
-            <motion.div initial={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} animate={{ opacity: 1, height: 'auto', clipPath: 'inset(0% 0 0 0 round 12px)' }} exit={{ opacity: 0, height: 0, clipPath: 'inset(100% 0 0 0 round 12px)' }} transition={MOTION.morph} className="overflow-hidden">
-              <div className="flex gap-2 px-1 pt-1 pb-1"><AnimatePresence>{attachments.map(item => (
-                <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75, filter: 'blur(6px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} exit={{ opacity: 0, scale: 0.7, filter: 'blur(6px)' }} transition={MOTION.control} className="relative w-16 h-16 shrink-0">
-                  <img src={item.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/25 shadow-[0_4px_14px_rgba(0,0,0,0.45)]" />
-                  <button onClick={() => removeAttachment(item.url)} aria-label="הסר תמונה" className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-slate-950/90 border border-white/25 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"><X className="w-3 h-3" /></button>
-                </motion.div>
-              ))}</AnimatePresence></div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <textarea ref={composerRef} rows={1} value={input} onChange={event => { setInput(event.target.value); resize(); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !(event.nativeEvent as any).isComposing) { event.preventDefault(); onSend(); } }} placeholder={learning ? t('chat.researching') : t('chat.placeholder2')} disabled={busy || learning} aria-label={t('chat.placeholder2')} className="w-full bg-transparent px-3 md:px-4 py-2 md:py-2.5 focus:outline-none text-base text-white placeholder-slate-500 font-medium disabled:opacity-50 resize-none overflow-y-auto" style={{ minHeight: 44, maxHeight: 132 }} />
-        <div className="flex items-center gap-2 px-1 pb-0.5">
-          <span className="hidden md:block text-[11px] text-slate-600 font-medium select-none">{t('chat.shiftHint')}</span>
-          <motion.button whileTap={{ scale: 0.9 }} transition={MOTION.tap} onClick={() => attachInputRef.current?.click()} disabled={busy || learning} aria-label={t('chat.attachImage')} title={t('chat.attachImage')} className="ms-auto shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white/35 hover:text-white hover:bg-white/[0.06] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><ImagePlus className="w-5 h-5" /></motion.button>
-          <input ref={attachInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onAttach} />
-          {busy ? <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onStop} aria-label={t('chat.stop')} title={t('chat.stop')} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] text-[#ff7a66] active:scale-90 transition-all cursor-pointer"><Square className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" /></motion.button>
-            : <motion.button whileTap={{ scale: 0.88 }} transition={MOTION.tap} onClick={onSend} disabled={busy || learning || (!input.trim() && !attachments.length)} aria-label={t('chat.send')} className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-[#0a84ff] hover:bg-[#2f95ff] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(10,132,255,0.45)] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><ArrowUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.6} /></motion.button>}
-        </div>
+      <AnimatePresence>
+        {attachments.length > 0 && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={MOTION.morph} className="overflow-hidden">
+            <div className="flex gap-2 px-2 pb-2"><AnimatePresence>{attachments.map(item => (
+              <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }} transition={MOTION.control} className="relative w-16 h-16 shrink-0">
+                <img src={item.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/30 shadow-[0_4px_14px_rgba(2,14,44,0.5)]" />
+                <button onClick={() => removeAttachment(item.url)} aria-label="הסר תמונה" className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[#0A2A60] border border-white/30 text-white/80 hover:text-white flex items-center justify-center cursor-pointer"><X className="w-3 h-3" /></button>
+              </motion.div>
+            ))}</AnimatePresence></div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="v12-cmp">
+        {busy ? (
+          <button type="button" className="v12-send is-stop" onClick={onStop} aria-label={t('chat.stop')} title={t('chat.stop')}>
+            <span className="btn"><Square className="w-4 h-4 text-white" fill="currentColor" /></span>
+          </button>
+        ) : (
+          <button type="button" className="v12-send" onClick={onSend} disabled={!canSend} aria-label={t('chat.send')} title={quotaText || t('chat.send')}>
+            <svg className="r" viewBox="0 0 54 54" aria-hidden="true">
+              <circle cx="27" cy="27" r={R} fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="2.5" />
+              {quota && <circle className="arc" cx="27" cy="27" r={R} fill="none" stroke="#F2F5FA" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={C.toFixed(1)} strokeDashoffset={(C * used).toFixed(1)} />}
+            </svg>
+            <span className="btn"><SendGlyph /></span>
+          </button>
+        )}
+        <textarea
+          ref={composerRef}
+          rows={1}
+          value={input}
+          onChange={event => { setInput(event.target.value); resize(); }}
+          onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !(event.nativeEvent as any).isComposing) { event.preventDefault(); onSend(); } }}
+          placeholder={learning ? t('chat.researching') : t('v12.placeholder')}
+          disabled={busy || learning}
+          aria-label={t('chat.placeholder2')}
+        />
+        <button type="button" className="v12-cam" onClick={() => attachInputRef.current?.click()} disabled={busy || learning} aria-label={t('chat.attachImage')} title={t('chat.attachImage')}>
+          <CameraGlyph />{t('v12.camera')}
+        </button>
+        <input ref={attachInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onAttach} />
       </div>
-      {quotaText && <div className="mt-1.5 text-center text-[11px] font-semibold text-white/55 [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]" aria-live="polite">{quotaText}</div>}
-      <div className="flex items-center justify-center gap-1.5 mt-2 lg:mt-1"><span className="inline-flex items-center rounded-md bg-black/25 backdrop-blur-sm px-1.5 py-0.5 ring-1 ring-white/10"><img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-3 w-auto object-contain opacity-95" /></span><p className="text-[11px] text-white/65 font-medium [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">{t('common.creditBuiltBy')} · {t('intro.notOfficial')}</p></div>
+      <div className="v12-foot">
+        {quota ? <span className="v12-num" aria-live="polite">{t('v12.quota').split('{remaining}')[0]}<b key={quota.remaining}>{quota.remaining}</b>{t('v12.quota').split('{remaining}')[1]?.replace('{limit}', String(quota.limit))}</span> : <span />}
+        <span>{t('v12.community')}</span>
+      </div>
     </div>
   );
 }
