@@ -10,6 +10,15 @@ import App from './App.tsx';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+// Test switch for the faster Gemini path (rule book pages by link + live
+// thought events): open the site with ?fast=1 to turn it on in this
+// browser, ?fast=0 to turn it off. Off by default until verified.
+try {
+  const fast = new URLSearchParams(window.location.search).get('fast');
+  if (fast === '1') localStorage.setItem('referee_page_urls', '1');
+  if (fast === '0') localStorage.removeItem('referee_page_urls');
+} catch { /* storage blocked: stays off */ }
+
 // Production: only critical errors reach the console.
 // console.log and console.warn are silenced so internal details
 // (filenames, timings, rotation state) are not exposed to visitors.
