@@ -75,7 +75,7 @@
 @keyframes v12-chr_hnR{0%{transform:translate(70.0px,97.0px) rotate(-15deg) scale(1.3)} 35%{transform:translate(8.0px,42.0px) rotate(198deg) scale(1.3)} 65%{transform:translate(8.0px,42.0px) rotate(198deg) scale(1.3)} 100%{transform:translate(70.0px,97.0px) rotate(-15deg) scale(1.3)}}
 
 /* ---- Landing: intro robot, logo, auth card ---- */
-.v12-land{position:fixed;inset:0;overflow:hidden;z-index:10001;background:#0A2A60}
+.v12-land{position:fixed;inset:0;overflow:hidden;overflow:clip;z-index:10001;background:#0A2A60}
 .v12-land.is-leaving{pointer-events:none}
 .v12-land.is-gone{opacity:0;transition:opacity .5s ease .25s}
 .v12-tracks{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:3}
