@@ -24,9 +24,10 @@ import {
   ArrowDownWideNarrow,
   RotateCcw,
 } from 'lucide-react';
-import { onValue, remove, ref, update } from 'firebase/database';
+import { onValue, remove, ref, set, serverTimestamp, update } from 'firebase/database';
 import { collection, getDocs } from 'firebase/firestore';
 import { rtdb } from '../lib/firebase/rtdb';
+import { auth } from '../lib/firebase/auth';
 import { db } from '../lib/firebase/firestore';
 import { logsQuery } from '../lib/analytics';
 import { isCurrentUserOwner } from '../lib/owner';
@@ -39,8 +40,11 @@ import { useModalA11y } from '../lib/modalA11y';
 // Configuration constants (no magic numbers in logic or JSX below)
 // ---------------------------------------------------------------------------
 
-/** Head-referee gate code (case-sensitive). */
-const SECRET_CODE = 'fLl';
+/** Server-checked access record: written when the code is entered, removed
+ *  when the journal closes. The rules accept it only if the code matches the
+ *  hidden secret, and honor it for 10 minutes at most. The code itself is
+ *  never in the client. */
+const accessRef = (uid: string) => ref(rtdb, `referee/journalAccess/${uid}`);
 
 /** Newest entries kept live in the viewer. */
 const LOG_LIMIT = 200;
@@ -124,6 +128,8 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   // Reset the whole viewer whenever it closes, so it always opens fresh.
   useEffect(() => {
     if (!isOpen) {
+      const uid = auth.currentUser?.uid;
+      if (uid) void remove(accessRef(uid)).catch(() => {});
       setCode('');
       setError(false);
       setUnlocked(false);
@@ -181,14 +187,29 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   }, [unlocked, canDelete]);
 
   /** Code gate: exact match opens the journal, anything else shakes the box. */
-  const handleUnlock = () => {
-    if (code.trim() === SECRET_CODE) {
+  const [checking, setChecking] = useState(false);
+  const handleUnlock = async () => {
+    const uid = auth.currentUser?.uid;
+    const entered = code.trim();
+    if (!uid || !entered || checking) { setError(true); return; }
+    setChecking(true);
+    try {
+      await set(accessRef(uid), { code: entered, at: serverTimestamp() });
       setUnlocked(true);
       setError(false);
-    } else {
+    } catch {
       setError(true);
+    } finally {
+      setChecking(false);
     }
   };
+  // Leaving the page with the journal open also drops the access record.
+  useEffect(() => {
+    if (!unlocked) return;
+    const drop = () => { const uid = auth.currentUser?.uid; if (uid) void remove(accessRef(uid)).catch(() => {}); };
+    window.addEventListener('pagehide', drop);
+    return () => { window.removeEventListener('pagehide', drop); drop(); };
+  }, [unlocked]);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {

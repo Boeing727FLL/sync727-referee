@@ -34,7 +34,7 @@
         }
       },
       "logs": {
-        ".read": "auth != null",
+        ".read": "auth != null && ((auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true) || (root.child('referee/secrets/journalCode').exists() && root.child('referee/journalAccess/' + auth.uid + '/code').val() === root.child('referee/secrets/journalCode').val() && root.child('referee/journalAccess/' + auth.uid + '/at').val() > now - 600000))",
         ".indexOn": [
           "createdAt"
         ],
@@ -65,6 +65,32 @@
         "$uid": {
           ".read": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
           ".write": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))"
+        }
+      },
+      "secrets": {
+        ".read": false,
+        ".write": "auth != null && auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true",
+        "journalCode": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 64"
+        },
+        "$other": {
+          ".validate": false
+        }
+      },
+      "journalAccess": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || (auth.token.email.toLowerCase() === 'boeing727.il@gmail.com' && auth.token.email_verified === true))",
+          ".write": "auth != null && auth.uid === $uid && (!newData.exists() || (root.child('referee/secrets/journalCode').exists() && newData.child('code').val() === root.child('referee/secrets/journalCode').val() && newData.child('at').val() === now))",
+          ".validate": "!newData.exists() || newData.hasChildren(['code', 'at'])",
+          "code": {
+            ".validate": "newData.isString()"
+          },
+          "at": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     }

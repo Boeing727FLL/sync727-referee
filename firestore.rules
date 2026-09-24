@@ -80,11 +80,11 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
-    // Q&A journal: any signed-in user may append one entry per question.
-    // Signed-in users (head referees with the code) may read the journal.
-    // Only the owner may delete entries.
+    // Legacy Q&A journal collection (the live journal is in the Realtime
+    // Database). Any signed-in user may append; only the owner may read or
+    // delete - questions are private.
     match /referee_logs/{logId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if isOwner();
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly(
           ['question', 'answer', 'season', 'language', 'uid', 'model', 'ok', 'createdAt'])

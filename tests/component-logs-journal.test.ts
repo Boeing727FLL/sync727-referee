@@ -21,6 +21,7 @@ let ownerSession = true;
 let onValueCalls = 0;
 let onValueHandler: ((snap: { val: () => unknown }) => void) | null = null;
 const getDocsQueries: unknown[] = [];
+const accessWrites: unknown[] = [];
 const PROFILES = [{ id: 'doc1', data: { uid: 'old_uid', name: 'יהונתן בן־עמי' } }];
 
 mock.module('firebase/database', {
@@ -33,6 +34,12 @@ mock.module('firebase/database', {
     remove: async () => {},
     ref: (...args: unknown[]) => ({ args }),
     update: async () => {},
+    serverTimestamp: () => ({ '.sv': 'timestamp' }),
+    // Server rule double: only the real code is accepted.
+    set: async (_ref: unknown, value: { code?: string }) => {
+      accessWrites.push(value);
+      if (value?.code !== 'fLl') throw new Error('PERMISSION_DENIED');
+    },
   },
 });
 
@@ -50,6 +57,7 @@ mock.module('firebase/firestore', {
 });
 
 mock.module('../src/lib/firebase/rtdb.ts', { namedExports: { rtdb: {} } });
+mock.module('../src/lib/firebase/auth.ts', { namedExports: { auth: { currentUser: { uid: 'u_test' } } } });
 mock.module('../src/lib/firebase/firestore.ts', { namedExports: { db: {} } });
 mock.module('../src/lib/analytics.ts', {
   namedExports: { logsQuery: (limit = 200) => ({ logsQuery: limit }) },
@@ -85,12 +93,12 @@ function unlockJournal(utils: ReturnType<typeof renderModal>, code = 'fLl') {
   fireEvent.click(utils.getByText('כניסה ליומן'));
 }
 
-test('wrong code keeps the journal locked and never touches the data path', () => {
+test('wrong code keeps the journal locked and never touches the data path', async () => {
   resetDoubles();
   ownerSession = true;
   const utils = renderModal();
   unlockJournal(utils, 'wrong-code');
-  utils.getByText('קוד שגוי, נסו שוב');
+  await waitFor(() => utils.getByText('קוד שגוי, נסו שוב'));
   assert.equal(onValueCalls, 0, 'no subscription before unlock');
   assert.equal(getDocsQueries.length, 0, 'no users listing before unlock');
   utils.unmount();
@@ -104,8 +112,9 @@ test('owner unlock loads entries and resolves asker names without crashing', asy
 
   unlockJournal(utils);
 
-  // Data-loading path: the live RTDB subscription opens on unlock.
-  assert.equal(onValueCalls, 1);
+  // Data-loading path: the live RTDB subscription opens once the server
+  // accepted the access record.
+  await waitFor(() => assert.equal(onValueCalls, 1));
   assert.ok(onValueHandler, 'onValue handler captured');
 
   act(() => {
@@ -133,7 +142,7 @@ test('non-owner unlock keeps read-only access and never lists user profiles', as
   const utils = renderModal();
 
   unlockJournal(utils);
-  assert.equal(onValueCalls, 1);
+  await waitFor(() => assert.equal(onValueCalls, 1));
 
   act(() => {
     onValueHandler!({ val: () => LOGS });
