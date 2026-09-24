@@ -15,6 +15,7 @@
  */
 import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { LogOut, Trash2, Shield, ChevronLeft, Globe, ScrollText, Wrench, Check, Settings, MailCheck } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -215,6 +216,11 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
   const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
+  // The menu panel is portaled out of the header (into the chat stage) so the
+  // header's glass (backdrop filter) can't make it see-through on iOS; it
+  // needs its own ref for outside-click checks.
+  const userMenuPanelRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 76, left: 12 });
   const langBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -222,6 +228,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     const handleClickOutside = (e: MouseEvent) => {
       // While the language dropdown is open, keep the user menu alive underneath it
       if (showLangMenu) return;
+      if (userMenuPanelRef.current?.contains(e.target as Node)) return;
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
       }
@@ -1399,7 +1406,11 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             {sessionAlive && displayUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setShowUserMenu((v) => !v)}
+                  onClick={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setMenuPos({ top: r.bottom + 10, left: Math.max(12, Math.min(r.left, window.innerWidth - 276)) });
+                    setShowUserMenu((v) => !v);
+                  }}
                   className="flex items-center gap-1.5 min-h-[44px] rounded-full cursor-pointer" aria-label={displayUser.name}
                 >
                   <span className="v12-av">
@@ -1408,18 +1419,23 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       : initialsOf(displayUser.name || 'U')}
                   </span>
                 </button>
-                <AnimatePresence>
+                {createPortal(<AnimatePresence>
+                  {showUserMenu && <motion.div key="scrim" className="v12-menu-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} />}
                   {showUserMenu && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      key="menu"
+                      ref={userMenuPanelRef}
+                      initial={{ opacity: 0, y: -6, scale: 0.94 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.96 }}
                       transition={MOTION.overlay}
-                      className="absolute top-full mt-2 left-0 sm:right-0 sm:left-auto w-64 bg-[#0c1322]/95 backdrop-blur-2xl backdrop-saturate-150 rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_50px_rgba(0,0,0,0.55)] border border-white/[0.12] overflow-hidden z-50"
+                      className="v12-menu"
+                      style={{ top: menuPos.top, left: menuPos.left }}
+                      dir="rtl"
                     >
                       <div className="p-3 bg-white/[0.03] border-b border-white/[0.08] flex items-center gap-3">
                         {displayUser.picture || gravatarPic ? (
-                          <img src={displayUser.picture || gravatarPic} alt="" className="w-10 h-10 rounded-full border-2 border-slate-950 object-cover" />
+                          <img src={displayUser.picture || gravatarPic} alt="" className="w-10 h-10 rounded-full border-2 border-white/30 object-cover" />
                         ) : (
                           <div className="w-10 h-10 rounded-full border border-white/15 bg-white/10 flex items-center justify-center">
                             <span className="text-sm font-black text-white/80">{(displayUser.name || 'U').trim().charAt(0)}</span>
@@ -1522,7 +1538,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                </AnimatePresence>, (userMenuRef.current?.closest('.chat-stage') as HTMLElement | null) ?? document.body)}
               </div>
             ) : (
               <button
@@ -1785,24 +1801,22 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={MOTION.overlay}
               style={{ top: langPos.top, right: langPos.right }}
-              className="fixed z-[70] w-52 max-w-[70vw] bg-[#0a121e]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.5)] overflow-hidden"
+              className="fixed z-[70] w-52 max-w-[70vw] v12-lang"
               dir={isRTL ? 'rtl' : 'ltr'}
               role="dialog"
               aria-label={t('common.language')}
             >
-              <div className="py-1 divide-y divide-white/[0.07] max-h-[50vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent]">
+              <div className="p-1.5 max-h-[50vh] overflow-y-auto [scrollbar-width:none]">
                 {languages.map((lang) => {
                   const active = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       onClick={() => { setLanguage(lang.code); setShowLangMenu(false); setShowUserMenu(false); }}
-                      className="relative w-full px-4 py-3 text-white/70 hover:text-white font-bold text-sm text-center hover:bg-white/[0.05] transition-colors cursor-pointer"
+                      className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-[14px] font-bold text-sm text-start transition-colors cursor-pointer ${active ? 'bg-white/[0.16] text-white' : 'text-white/80 hover:bg-white/[0.08] hover:text-white'}`}
                     >
-                      {lang.native}
-                      {active && (
-                        <span className="absolute bottom-2 right-4 left-4 h-[2px] rounded-full bg-yellow-400/70" aria-hidden />
-                      )}
+                      <span>{lang.native}</span>
+                      {active && <Check className="w-4 h-4 text-white" aria-hidden />}
                     </button>
                   );
                 })}

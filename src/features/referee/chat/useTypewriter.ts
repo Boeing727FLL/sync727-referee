@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TYPEWRITER_TICK_MS } from '../config';
 
+/** ~3.2s at 35ms per tick. */
+const REVEAL_TICKS = 90;
+
 /** Owns only the visible-response clock; request streaming stays in the coordinator. */
 export function useTypewriter(options: {
   ready: boolean;
@@ -15,7 +18,9 @@ export function useTypewriter(options: {
   useEffect(() => {
     const interval = setInterval(() => {
       if (!options.ready) return;
-      setCount(previous => previous >= targetRef.current ? previous : previous + 1);
+      // Words fade in as they are written (rehypeWordFade). Long answers
+      // advance a few tokens per tick so any answer finishes in ~3s.
+      setCount(previous => previous >= targetRef.current ? previous : Math.min(targetRef.current, previous + Math.max(1, Math.ceil(targetRef.current / REVEAL_TICKS))));
     }, TYPEWRITER_TICK_MS);
     return () => clearInterval(interval);
   }, [options.ready]);

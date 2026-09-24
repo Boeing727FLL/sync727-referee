@@ -6,6 +6,9 @@ import Referee from '../../v12/Referee';
 import { MarkdownMessage } from '../ui/lazyComponents';
 import type { MessageView } from './messageView';
 import { MOTION } from '../ui/motion';
+import { rehypeWordFade } from './rehypeWordFade';
+
+const WORD_FADE = [rehypeWordFade];
 
 type Props = {
   view: MessageView;
@@ -100,7 +103,7 @@ function ChatMessageRow({ view, userPicture: _userPicture, userName: _userName, 
         <div className="v12-ai-tx">
           {files}
           <div className="prose prose-invert max-w-none break-words prose-p:leading-relaxed prose-p:my-2 prose-p:text-[rgba(238,243,250,0.92)] prose-headings:font-bold prose-headings:text-white prose-headings:mt-3 prose-headings:mb-1.5 prose-a:text-[#9FD0FF] prose-strong:text-white prose-strong:font-extrabold prose-ul:list-disc prose-ol:list-decimal prose-li:my-1 prose-li:text-[rgba(238,243,250,0.9)] rtl:text-right text-[16px] md:text-[17px]">
-            <Suspense fallback={<span>{text}</span>}><MarkdownMessage components={{ em: ({ children, ...props }) => { const value = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null; return value === '▍' ? <span className="typewriter-cursor" aria-hidden>▍</span> : <em {...props}>{children}</em>; } }}>{typewriting ? text + '\u200B*\u258D*' : text}</MarkdownMessage></Suspense>
+            <Suspense fallback={<span>{text}</span>}><MarkdownMessage rehypePlugins={typewriting ? WORD_FADE : undefined} components={{ em: ({ children, ...props }) => { const value = typeof children === 'string' ? children : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0] : null; return value === '▍' ? <span className="typewriter-cursor" aria-hidden>▍</span> : <em {...props}>{children}</em>; } }}>{text}</MarkdownMessage></Suspense>
           </div>
         </div>
         {index > 0 && !typewriting && (
