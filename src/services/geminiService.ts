@@ -127,13 +127,26 @@ async function mapPool<T, R>(items: T[], size: number, fn: (item: T, index: numb
 // --- API key pool ---
 let GEMINI_KEYS: string[] = [];
 
-// Cooldowns persist across refreshes, stored by pool position - never the
-// key value. Built after the pool loads so positions can be mapped back.
-const HEALTH_STORAGE = 'gemini_key_health_v1';
+// Cooldowns persist across refreshes, stored under a short fingerprint of
+// each key (never the key value). Fingerprints stay correct when keys are
+// added to or removed from the pool; positions would not.
+const HEALTH_STORAGE = 'gemini_key_health_v2';
 let keyHealthInstance: KeyHealth | null = null;
+export function keyFingerprint(key: string): string {
+  // FNV-1a 32-bit: enough to tell ~100 keys apart, reveals nothing usable.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
 function keyHealthFor(keys: string[]): KeyHealth {
   if (keyHealthInstance) return keyHealthInstance;
   const storage = typeof localStorage !== 'undefined' ? localStorage : undefined;
+  // v1 stored pool positions, which shift when keys are removed.
+  try { storage?.removeItem('gemini_key_health_v1'); } catch { /* ignore */ }
+  const byFingerprint = new Map(keys.map(key => [keyFingerprint(key), key]));
   const splitId = (id: string): [string, string | null] => {
     const at = id.indexOf('\u0000');
     return at < 0 ? [id, null] : [id.slice(0, at), id.slice(at + 1)];
@@ -143,12 +156,12 @@ function keyHealthFor(keys: string[]): KeyHealth {
     name: HEALTH_STORAGE,
     idOf: id => {
       const [head, model] = splitId(id);
-      const ref = head === '*' ? '*' : `#${keys.indexOf(head)}`;
+      const ref = head === '*' ? '*' : `#${keyFingerprint(head)}`;
       return model === null ? ref : `${ref}\u0000${model}`;
     },
     fromId: stored => {
       const [head, model] = splitId(stored);
-      const key = head === '*' ? '*' : keys[Number(head.slice(1))];
+      const key = head === '*' ? '*' : byFingerprint.get(head.slice(1));
       if (!key) return null;
       return model === null ? key : `${key}\u0000${model}`;
     },
