@@ -256,14 +256,16 @@ test('429s walk at most MAX_KEYS_PER_MODEL keys per model, then fall back', asyn
   assert.equal(attempts[0], 'k7@m1');
 });
 
-test('a network failure (no HTTP answer) moves to the next key instead of ending the ask', async () => {
+test('a network failure (no HTTP answer) moves to the next model and rests the failed one', async () => {
   const attempts: string[] = [];
+  const health = new KeyHealth();
   const outcome = await runModelChain({
-    models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
-    attempt: async key => { attempts.push(key); if (key === 'k1') throw new TypeError('Failed to fetch'); return true; },
+    models: MODELS, keys: KEYS, health, rotationIndex: 0,
+    attempt: async (key, model) => { attempts.push(`${key}@${model}`); if (model === 'm1') throw new TypeError('Failed to fetch'); return true; },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1', 'k2']);
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
+  assert.deepEqual(health.available(KEYS, Date.now(), 'm1'), []);
 });
 
 test('any quota answer makes an exhausted ask report quota (busy), even if a later model failed differently', async () => {

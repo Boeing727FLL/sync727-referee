@@ -29,6 +29,9 @@ export const MODEL_TIME_BUDGET_MS = 25_000;
  *  always gets the same answer, so the first one moves to the next model. */
 export const SERVER_FAILURES_BEFORE_FALLBACK = 1;
 
+/** Rest after a dropped connection on a model (shorter than overload). */
+export const NETWORK_MODEL_COOLDOWN_MS = 60_000;
+
 export type AttemptReport = { model: string; ok: boolean; kind?: FailureKind; ms: number };
 
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -107,7 +110,13 @@ export async function runModelChain<M>(options: {
           }
           if (decision.kind === 'quota') sawQuota = true;
           if (decision.kind === 'aborted') return { status: 'aborted' };
-          if (decision.kind === 'network') break;
+          if (decision.kind === 'network') {
+            // Measured live 2026-09-24: a dropped connection costs ~13s (the
+            // rule book upload) and the next key on the same model dropped
+            // the same way. Move to the next model and rest this one briefly.
+            health.coolDownModel(modelId, NETWORK_MODEL_COOLDOWN_MS);
+            continue modelLoop;
+          }
           if (decision.kind === 'server') {
             // 503 "overloaded" is model-wide and usually momentary: back
             // off, try once more on a different key, and only then rest the
