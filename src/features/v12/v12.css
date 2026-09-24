@@ -117,23 +117,7 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 
 /* ---- Chat ---- */
 @property --v12ga{syntax:'<angle>';inherits:false;initial-value:0deg}
-.v12-chatbg{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#0A2A60;contain:strict}
-/* Chat background: deep FIRST-blue base, three slow drifting pools of light
-   (blue, sky, a warm red ember at the bottom), a top sheen and fine grain.
-   Only transform/opacity animate, on composited layers: cheap on weak phones. */
-.v12-cb-base{position:absolute;inset:0;background:linear-gradient(176deg,#0B4094 0%,#0A2F72 36%,#07214F 72%,#0A1E4C 100%)}
-.v12-cb-l{position:absolute;display:block;border-radius:50%;will-change:transform,opacity;transform:translateZ(0)}
-.v12-cb-l.a{width:150vmax;height:110vmax;left:-55vmax;top:-60vmax;background:radial-gradient(closest-side,rgba(70,160,255,.72),rgba(47,139,230,.22) 55%,transparent);animation:v12-cbA 17s ease-in-out infinite alternate}
-.v12-cb-l.b{width:120vmax;height:95vmax;right:-60vmax;top:18%;background:radial-gradient(closest-side,rgba(20,120,215,.55),rgba(0,102,179,.14) 55%,transparent);animation:v12-cbB 21s ease-in-out infinite alternate}
-.v12-cb-l.c{width:130vmax;height:70vmax;left:-15vmax;bottom:-34vmax;background:radial-gradient(closest-side,rgba(237,28,36,.46),rgba(170,40,120,.18) 55%,transparent);animation:v12-cbC 15s ease-in-out infinite alternate}
-@keyframes v12-cbA{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(18vw,10vh,0) scale(1.12)}}
-@keyframes v12-cbB{0%{transform:translate3d(0,0,0) scale(1.05);opacity:.85}100%{transform:translate3d(-22vw,-12vh,0) scale(.95);opacity:1}}
-@keyframes v12-cbC{0%{transform:translate3d(-6vw,0,0) scale(1);opacity:.75}100%{transform:translate3d(10vw,-5vh,0) scale(1.1);opacity:1}}
-.v12-cb-ray{position:absolute;left:-30%;top:-10%;width:160%;height:60%;background:linear-gradient(115deg,transparent 38%,rgba(160,210,255,.10) 48%,rgba(200,230,255,.16) 50%,rgba(160,210,255,.10) 52%,transparent 62%);will-change:transform;animation:v12-cbR 14s ease-in-out infinite alternate}
-@keyframes v12-cbR{0%{transform:translate3d(-12%,0,0) rotate(-4deg)}100%{transform:translate3d(12%,4%,0) rotate(3deg)}}
-.v12-cb-sheen{position:absolute;inset:0;background:radial-gradient(90% 38% at 50% -6%,rgba(190,225,255,.20),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.035),transparent 30%)}
-.v12-cb-grain{position:absolute;inset:0;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:160px 160px}
-@media (prefers-reduced-motion:reduce){.v12-cb-l,.v12-cb-ray{animation:none!important}}
+.v12-chatbg{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#0A2A60}
 .v12-hdr{position:relative;z-index:30;margin:max(10px,env(safe-area-inset-top)) 14px 0;height:60px;border-radius:30px;display:flex;align-items:center;gap:11px;padding:0 10px;
  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.07));backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);
  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -1px 0 rgba(255,255,255,.06),inset 0 0 0 .5px rgba(255,255,255,.2),0 18px 40px -18px rgba(2,14,44,.7);flex:none}

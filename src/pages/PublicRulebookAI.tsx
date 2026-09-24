@@ -1384,7 +1384,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       className="v12-root h-screen-fix w-full flex flex-col bg-[#0A2A60] overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <div aria-hidden className="v12-chatbg"><div className="v12-cb-base" /><i className="v12-cb-l a" /><i className="v12-cb-l b" /><i className="v12-cb-l c" /><div className="v12-cb-ray" /><div className="v12-cb-sheen" /><div className="v12-vig" /><div className="v12-cb-grain" /></div>
+      <div aria-hidden className="v12-chatbg"><div className="v12-bg" /><div className="v12-vig" /></div>
 
       {/* Header - v12 glass pill */}
       <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="v12-hdr">
