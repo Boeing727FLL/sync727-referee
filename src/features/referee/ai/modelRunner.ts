@@ -11,10 +11,11 @@ type Client = {
   };
 };
 
-async function collectInteractionStream(stream: AsyncIterable<unknown>, signal?: AbortSignal, onText?: (text: string) => void): Promise<string> {
+async function collectInteractionStream(stream: AsyncIterable<unknown>, signal?: AbortSignal, onText?: (text: string) => void, onActivity?: () => void): Promise<string> {
   let text = '';
   for await (const value of stream) {
     if (signal?.aborted) break;
+    onActivity?.();
     if (!value || typeof value !== 'object') continue;
     const event = value as StreamEvent;
     if (event.event_type === 'error' && event.error) {
@@ -46,12 +47,14 @@ export async function runModel(options: {
   stream: boolean;
   signal?: AbortSignal;
   onText?: (text: string) => void;
+  /** Called on every stream event (thinking included), for stall detection. */
+  onActivity?: () => void;
 }): Promise<string> {
-  const { client, model, input, systemInstruction, stream, signal, onText } = options;
+  const { client, model, input, systemInstruction, stream, signal, onText, onActivity } = options;
   if (model.kind === 'interactions') {
     const params = { model: model.name.startsWith('models/') ? model.name : `models/${model.name}`, input, generation_config: model.config, system_instruction: systemInstruction, stream };
     const requestOptions = signal ? { signal } : undefined;
-    if (stream) return collectInteractionStream(await client.interactions.create(params, requestOptions) as AsyncIterable<unknown>, signal, onText);
+    if (stream) return collectInteractionStream(await client.interactions.create(params, requestOptions) as AsyncIterable<unknown>, signal, onText, onActivity);
     return interactionText(await client.interactions.create(params, requestOptions));
   }
   const config: Record<string, unknown> = { thinkingConfig: { thinkingLevel: 'HIGH' } };
@@ -62,6 +65,7 @@ export async function runModel(options: {
     let text = '';
     for await (const chunk of await client.models.generateContentStream(params)) {
       if (signal?.aborted) break;
+      onActivity?.();
       if (chunk?.text) { text += chunk.text; onText?.(chunk.text); }
     }
     return text;

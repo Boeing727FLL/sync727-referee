@@ -12,7 +12,7 @@
  */
 import { classifyFailure, MODEL_OVERLOADED_COOLDOWN_MS, rotateCandidates, type FailureKind, type KeyHealth } from './retryPolicy';
 
-/** Backoff before the single retry of an overloaded (5xx) model, per Google's guidance. */
+/** Backoff before a same-model retry after a 5xx (only used when SERVER_FAILURES_BEFORE_FALLBACK > 1). */
 const SERVER_RETRY_BASE_MS = 1_500;
 /**
  * Key budget per model: up to MAX_KEYS_PER_MODEL different keys (starting
@@ -20,10 +20,16 @@ const SERVER_RETRY_BASE_MS = 1_500;
  * after 429s turned one question into a flood of full rule-book requests.
  * The key walk on one model also stops after MODEL_TIME_BUDGET_MS.
  */
-export const MAX_KEYS_PER_MODEL = 5;
-export const MODEL_TIME_BUDGET_MS = 40_000;
-/** 503s (on different keys) that mark a model as overloaded for everyone. */
-export const SERVER_FAILURES_BEFORE_FALLBACK = 2;
+// Every attempt re-uploads the whole rule book (20+ page images), so one
+// failed attempt costs ~10-13s on a phone. 5 keys x 40s per model let one
+// question burn ~2.5 minutes before the next model was even tried.
+export const MAX_KEYS_PER_MODEL = 3;
+export const MODEL_TIME_BUDGET_MS = 25_000;
+/** 503 / "high demand" is model-wide: another key on the same model almost
+ *  always gets the same answer, so the first one moves to the next model. */
+export const SERVER_FAILURES_BEFORE_FALLBACK = 1;
+
+export type AttemptReport = { model: string; ok: boolean; kind?: FailureKind; ms: number };
 
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise(resolve => {
@@ -56,6 +62,8 @@ export async function runModelChain<M>(options: {
   now?: () => number;
   /** Test seam for the 5xx backoff. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Diagnostics: one report per attempt (never includes the key). */
+  onAttempt?: (report: AttemptReport) => void;
 }): Promise<ChainOutcome> {
   const { models, keys, health, rotationIndex, onRotation, signal, attempt } = options;
   const idOf = options.modelId ?? ((model: M) => String(model));
@@ -85,12 +93,14 @@ export async function runModelChain<M>(options: {
       if (now() - modelStarted >= MODEL_TIME_BUDGET_MS) continue modelLoop;
       for (;;) {
         if (signal?.aborted) return { status: 'aborted' };
+        const attemptStarted = now();
         try {
-          if (await attempt(key, model)) return { status: 'answered' };
+          if (await attempt(key, model)) { options.onAttempt?.({ model: modelId, ok: true, ms: now() - attemptStarted }); return { status: 'answered' }; }
           break;
         } catch (error: unknown) {
           const decision = classifyFailure(error, signal?.aborted);
           lastFailureKind = decision.kind;
+          options.onAttempt?.({ model: modelId, ok: false, kind: decision.kind, ms: now() - attemptStarted });
           if (decision.kind !== 'aborted') {
             // Every failed attempt is visible in the console (key never logged).
             console.warn(`[referee] ${modelId} attempt failed (${decision.kind}):`, errorMessage(error).slice(0, 300));

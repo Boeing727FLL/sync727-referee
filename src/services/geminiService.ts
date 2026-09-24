@@ -3,7 +3,7 @@ import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
 import { errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
-import { runModelChain } from '../features/referee/ai/modelChain';
+import { runModelChain, type AttemptReport } from '../features/referee/ai/modelChain';
 import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText } from '../features/referee/ai/requestPlan';
 import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
@@ -166,6 +166,21 @@ function keyHealthFor(keys: string[]): KeyHealth {
     },
   } : undefined);
   return keyHealthInstance;
+}
+
+/** Stall watchdog for one attempt: no stream event at all within this long. */
+const STALL_FIRST_EVENT_MS = 75_000;
+const STALL_BETWEEN_EVENTS_MS = 45_000;
+
+/** Last attempts (model, outcome, duration - never a key), readable from the
+ *  console as window.__refereeAttempts to diagnose slow answers on a device. */
+function recordAttempt(report: AttemptReport): void {
+  try {
+    const host = globalThis as unknown as { __refereeAttempts?: Array<AttemptReport & { at: string }> };
+    const list = host.__refereeAttempts ?? (host.__refereeAttempts = []);
+    list.push({ ...report, at: new Date().toISOString() });
+    if (list.length > 40) list.splice(0, list.length - 40);
+  } catch { /* diagnostics only */ }
 }
 
 /** A random starting key spreads every user's questions over the whole pool. */
@@ -443,8 +458,8 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
       const interactionInput = toInteractionInput(contents);
       const effectiveChain = MODEL_CHAIN;
 
-      const callModel = (client: any, model: ModelChainEntry, input: Parameters<typeof runModel>[0]['input'], stream: boolean, onText?: (text: string) => void) =>
-        runModel({ client, model, input, systemInstruction: activeSystemPrompt, stream, signal, onText });
+      const callModel = (client: any, model: ModelChainEntry, input: Parameters<typeof runModel>[0]['input'], stream: boolean, onText: ((text: string) => void) | undefined, attemptSignal: AbortSignal, onActivity: () => void) =>
+        runModel({ client, model, input, systemInstruction: activeSystemPrompt, stream, signal: attemptSignal, onText, onActivity });
 
 
       let responseText = '';
@@ -462,6 +477,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         modelId: entry => entry.name,
         rotationIndex: randomStart(allKeys.length),
         signal,
+        onAttempt: recordAttempt,
         attempt: async (key, modelEntry) => {
           const client = new GoogleGenAI({ apiKey: key });
           // A retried attempt restarts the answer from zero: the caller
@@ -469,14 +485,38 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           // stale half-finished think block is never concatenated into
           // the fresh answer.
           let attemptStreamed = false;
-          const answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
-            if (!attemptStreamed) {
-              attemptStreamed = true;
-              if (streamedBubbleLive) onStreamReset?.();
-            }
-            streamedBubbleLive = true;
-            onChunk?.(chunk);
-          });
+          // Stall watchdog: a request that sends nothing at all (not even
+          // thinking events) for too long is dropped and the chain moves
+          // on, instead of hanging the question. The user's Stop still
+          // aborts through the parent signal.
+          const attemptController = new AbortController();
+          const onParentAbort = () => attemptController.abort();
+          signal?.addEventListener('abort', onParentAbort, { once: true });
+          let stalled = false;
+          let watchdog: ReturnType<typeof setTimeout> | undefined;
+          const arm = (ms: number) => {
+            clearTimeout(watchdog);
+            watchdog = setTimeout(() => { stalled = true; attemptController.abort(); }, ms);
+          };
+          arm(STALL_FIRST_EVENT_MS);
+          let answer: string;
+          try {
+            answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
+              if (!attemptStreamed) {
+                attemptStreamed = true;
+                if (streamedBubbleLive) onStreamReset?.();
+              }
+              streamedBubbleLive = true;
+              onChunk?.(chunk);
+            }, attemptController.signal, () => arm(STALL_BETWEEN_EVENTS_MS));
+          } catch (error) {
+            if (stalled && !signal?.aborted) throw new Error('504 stream stalled');
+            throw error;
+          } finally {
+            clearTimeout(watchdog);
+            signal?.removeEventListener('abort', onParentAbort);
+          }
+          if (stalled && !signal?.aborted) throw new Error('504 stream stalled');
           if (!answer.trim()) throw new Error('503 empty model answer');
           responseText = answer;
           return true;

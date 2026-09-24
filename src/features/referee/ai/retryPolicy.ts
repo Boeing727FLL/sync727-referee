@@ -7,8 +7,10 @@ const INVALID_KEY_COOLDOWN_MS = 24 * 60 * 60_000;
 const QUOTA_COOLDOWN_MS = 60_000;
 /** A model the key's tier cannot use at all (free tier "limit: 0"). */
 export const MODEL_UNAVAILABLE_COOLDOWN_MS = 6 * 60 * 60_000;
-/** A model that answered 503 twice is overloaded for everyone: rest it briefly. */
-export const MODEL_OVERLOADED_COOLDOWN_MS = 30_000;
+/** A model that answered 503 / "high demand" is overloaded for everyone:
+ *  rest it for a couple of minutes so the next questions start on a model
+ *  that is answering instead of paying a failed attempt first. */
+export const MODEL_OVERLOADED_COOLDOWN_MS = 120_000;
 
 export function errorText(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error && error.message) return String(error.message);
@@ -60,7 +62,7 @@ export function classifyFailure(error: unknown, aborted = false): RetryDecision 
   // HTTP status in the text ("... is currently experiencing high demand ...
   // Please try again later."). That used to fall through to 'transient' and
   // end the whole ask on the first try.
-  if (['500', '502', '503', '504', 'internal server error', 'service unavailable', 'unavailable', 'high demand', 'overloaded', 'try again later', 'internal error', 'deadline exceeded', 'interaction stream error'].some(value => lower.includes(value))) {
+  if (['500', '502', '503', '504', 'internal server error', 'service unavailable', 'unavailable', 'high demand', 'overloaded', 'try again later', 'internal error', 'deadline exceeded', 'interaction stream error', 'stream stalled'].some(value => lower.includes(value))) {
     return { kind: 'server', tryNextKey: false, tryNextModel: true, cooldownMs: 0 };
   }
   // The request never got an HTTP answer (dropped connection, CORS-less

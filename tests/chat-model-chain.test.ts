@@ -76,7 +76,7 @@ test('request-class failure skips to the next model without cooling the key', as
   assert.deepEqual(health.available(KEYS), KEYS);
 });
 
-test('server-class failure retries the model once on another key after a backoff, then skips it', async () => {
+test('server-class failure moves straight to the next model (no same-model retry)', async () => {
   const attempts: string[] = [];
   const sleeps: number[] = [];
   const health = new KeyHealth();
@@ -90,15 +90,14 @@ test('server-class failure retries the model once on another key after a backoff
     },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k1@m2']);
-  assert.equal(sleeps.length, 1);
-  assert.ok(sleeps[0] >= 1500);
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
+  assert.equal(sleeps.length, 0);
   // the overloaded model rests briefly for every key; others unaffected
   assert.deepEqual(health.available(KEYS, Date.now(), 'm1'), []);
   assert.deepEqual(health.available(KEYS, Date.now(), 'm2'), KEYS);
 });
 
-test('a 503 that clears on retry answers from the same model (next key)', async () => {
+test('a 503 on the first model is answered by the next model on the first try', async () => {
   const attempts: string[] = [];
   let failures = 0;
   const outcome = await runModelChain({
@@ -111,7 +110,7 @@ test('a 503 that clears on retry answers from the same model (next key)', async 
     },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1@m1', 'k2@m1']);
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
 });
 
 test('no-free-tier model (429 limit: 0) is skipped at once, not tried on every key', async () => {
@@ -158,7 +157,7 @@ test('unknown failure moves to the next model instead of ending the ask', async 
   assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
 });
 
-test('in-stream "high demand" error (no HTTP code) retries another key, then falls back to the next model', async () => {
+test('in-stream "high demand" error (no HTTP code) falls back to the next model at once', async () => {
   const attempts: string[] = [];
   const outcome = await runModelChain({
     models: MODELS, keys: KEYS, health: new KeyHealth(), rotationIndex: 0,
@@ -170,7 +169,7 @@ test('in-stream "high demand" error (no HTTP code) retries another key, then fal
     },
   });
   assert.equal(outcome.status, 'answered');
-  assert.deepEqual(attempts, ['k1@m1', 'k2@m1', 'k1@m2']);
+  assert.deepEqual(attempts, ['k1@m1', 'k1@m2']);
 });
 
 test('abort mid-attempt ends the chain as aborted and cools nothing', async () => {
@@ -305,4 +304,22 @@ test('cooldowns survive a reload through storage, stored without key values', ()
 
 test('in-stream quota error ("quota_exceeded Resource has been exhausted") is quota, not transient', () => {
   assert.equal(classifyFailure(new Error('quota_exceeded Resource has been exhausted (e.g. check quota).')).kind, 'quota');
+});
+
+test('worst case before the answering model stays short: 503 on the first three models = 3 attempts, not ~12', async () => {
+  const attempts: string[] = [];
+  const reports: string[] = [];
+  const outcome = await runModelChain({
+    models: ['a', 'b', 'c', 'd'], keys: ['k1', 'k2', 'k3', 'k4', 'k5', 'k6'], health: new KeyHealth(), rotationIndex: 0, sleep: async () => {},
+    onAttempt: r => reports.push(`${r.model}:${r.ok ? 'ok' : r.kind}`),
+    attempt: async (key, model) => { attempts.push(`${key}@${model}`); if (model !== 'd') throw new Error('503 UNAVAILABLE: high demand'); return true; },
+  });
+  assert.equal(outcome.status, 'answered');
+  assert.equal(attempts.length, 4);
+  assert.deepEqual(reports, ['a:server', 'b:server', 'c:server', 'd:ok']);
+});
+
+test('a stalled stream is classified as a server failure (next model), not an abort', async () => {
+  const { classifyFailure } = await import('../src/features/referee/ai/retryPolicy.ts');
+  assert.equal(classifyFailure(new Error('504 stream stalled')).kind, 'server');
 });
