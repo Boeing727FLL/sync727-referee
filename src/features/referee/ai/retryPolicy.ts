@@ -1,7 +1,9 @@
 export type FailureKind = 'aborted' | 'invalid-key' | 'quota' | 'model-unavailable' | 'request' | 'server' | 'network' | 'transient';
 export type RetryDecision = { kind: FailureKind; tryNextKey: boolean; tryNextModel: boolean; cooldownMs: number };
 
-const INVALID_KEY_COOLDOWN_MS = 15 * 60_000;
+// A key Google rejects as invalid stays out for a day (12 of the 120 pool
+// keys did on 2026-09-24); the cooldown is persisted across refreshes.
+const INVALID_KEY_COOLDOWN_MS = 24 * 60 * 60_000;
 const QUOTA_COOLDOWN_MS = 60_000;
 /** A model the key's tier cannot use at all (free tier "limit: 0"). */
 export const MODEL_UNAVAILABLE_COOLDOWN_MS = 6 * 60 * 60_000;

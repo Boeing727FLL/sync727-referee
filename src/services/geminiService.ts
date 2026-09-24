@@ -27,7 +27,12 @@ type FetchedBlob = { data: Blob; mimeType: string };
 
 
 const INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'high' };
+// The owner's primary models run with medium thinking (his AI Studio
+// config). The Interactions API only accepts the snake_case field name.
+const PRIMARY_INTERACTION_CONFIG = { max_output_tokens: MODEL_MAX_OUTPUT_TOKENS, thinking_level: 'medium' };
 const MODEL_CHAIN: ModelChainEntry[] = [
+  { name: 'gemini-3.8-flash', kind: 'interactions', config: PRIMARY_INTERACTION_CONFIG },
+  { name: 'gemini-3.7-flash', kind: 'interactions', config: PRIMARY_INTERACTION_CONFIG },
   { name: 'gemini-3.6-flash', kind: 'interactions', config: INTERACTION_CONFIG },
   { name: 'gemini-3.5-flash', kind: 'interactions', config: INTERACTION_CONFIG },
   // gemini-3.1-pro-preview removed: it has no free tier (every free key

@@ -44,7 +44,7 @@ test('quota failure cools the key and the next key answers', async () => {
   assert.deepEqual(health.available(KEYS, Date.now(), 'm2'), KEYS);
 });
 
-test('invalid-key failure cools the key for 15 minutes', async () => {
+test('invalid-key failure cools the key for a day', async () => {
   const health = new KeyHealth();
   const now = Date.now();
   await runModelChain({
@@ -55,7 +55,8 @@ test('invalid-key failure cools the key for 15 minutes', async () => {
     },
   });
   assert.deepEqual(health.available(KEYS, now + 60_000), ['k2', 'k3']);
-  assert.deepEqual(health.available(KEYS, now + 16 * 60_000), KEYS);
+  assert.deepEqual(health.available(KEYS, now + 23 * 3600_000), ['k2', 'k3']);
+  assert.deepEqual(health.available(KEYS, now + 25 * 3600_000), KEYS);
 });
 
 test('request-class failure skips to the next model without cooling the key', async () => {
