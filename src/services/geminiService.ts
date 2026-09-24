@@ -2,7 +2,7 @@ import { db } from '../lib/firebase/firestore';
 import { R2_PUBLIC_URL } from '../lib/r2Config';
 import { listRulebookImagePages } from '../lib/r2';
 import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
-import { errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
+import { classifyFailure, errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
 import { runModelChain, type AttemptReport } from '../features/referee/ai/modelChain';
 import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
 import { activeSeason, buildQuestionText } from '../features/referee/ai/requestPlan';
@@ -21,7 +21,7 @@ const MODEL_MAX_OUTPUT_TOKENS = 65536;
 type RulebookFile = { name: string; url: string };
 type UserFile = { url: string; key: string; base64?: string; actualFile?: File };
 type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent'; config: Record<string, unknown> };
-type PageImage = { pageIndex: number; data: string };
+type PageImage = { pageIndex: number; data: string; url: string };
 type RequestFile = UserFile & { isRulebook: boolean };
 type FetchedBlob = { data: Blob; mimeType: string };
 
@@ -82,9 +82,11 @@ async function appendImagePart(
   });
 }
 
-function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: string, mimeType = 'image/jpeg'): void {
+function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: string, mimeType = 'image/jpeg', url?: string): void {
   parts.push({ text: prefixText });
-  parts.push({ inlineData: { data, mimeType } });
+  // The public URL rides along: requests send the page by link (Gemini
+  // fetches it) and keep the bytes only for the inline fallback.
+  parts.push({ inlineData: { data, mimeType }, ...(url ? { fileData: { fileUri: url, mimeType } } : {}) });
 }
 
 async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<{ pages: PageImage[]; listedPages: number[] }> {
@@ -104,7 +106,7 @@ async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<
     const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
       new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
     if (!imageData.byteLength || isHtmlError) throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page ${pageIndex} is empty or corrupt.` });
-    return { pageIndex, data: await fileToBase64(new Blob([imageData], { type: 'image/jpeg' })) };
+    return { pageIndex, url: imageUrl, data: await fileToBase64(new Blob([imageData], { type: 'image/jpeg' })) };
   });
   return { pages: results.filter((page): page is PageImage => page !== null), listedPages: pageNumbers };
 }
@@ -166,6 +168,16 @@ function keyHealthFor(keys: string[]): KeyHealth {
     },
   } : undefined);
   return keyHealthInstance;
+}
+
+/** Session flag: false once Google failed to fetch the rule book page URLs.
+ *  Until verified on the live site, URL mode is opt-in per browser:
+ *  localStorage.referee_page_urls = '1'. */
+let pageUrlsWork = (() => { try { return localStorage.getItem('referee_page_urls') === '1'; } catch { return false; } })();
+/** Errors that mean Google could not fetch a URL part (not overload/quota). */
+export function isUrlFetchError(error: unknown): boolean {
+  const lower = errorText(error).toLowerCase();
+  return /url_retrieval|retriev|fetch the (file|url|content)|unsupported (uri|url)|invalid (uri|url)|file_uri|cannot access|could not access/.test(lower);
 }
 
 /** Stall watchdog for one attempt: no stream event at all within this long. */
@@ -376,7 +388,7 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
               }
 
               for (const image of uploadedImages) {
-                appendBase64ImagePart(currentParts, pagePrefixText(fileName, isUserPhoto, image.pageIndex), image.data);
+                appendBase64ImagePart(currentParts, pagePrefixText(fileName, isUserPhoto, image.pageIndex), image.data, 'image/jpeg', image.url);
                 attachedRulebookImages++;
               }
             } else {
@@ -455,7 +467,12 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
         });
       }
 
-      const interactionInput = toInteractionInput(contents);
+      // Rule book pages go by public URL (Google fetches them; the phone
+      // uploads a few KB instead of ~20 page images). The inline copy is the
+      // fallback if Google can't fetch the links.
+      const inlineInput = toInteractionInput(contents);
+      const urlInput = toInteractionInput(contents, { preferUri: true });
+      const hasUrlParts = JSON.stringify(urlInput) !== JSON.stringify(inlineInput);
       const effectiveChain = MODEL_CHAIN;
 
       const callModel = (client: any, model: ModelChainEntry, input: Parameters<typeof runModel>[0]['input'], stream: boolean, onText: ((text: string) => void) | undefined, attemptSignal: AbortSignal, onActivity: () => void) =>
@@ -500,15 +517,31 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           };
           arm(STALL_FIRST_EVENT_MS);
           let answer: string;
+          const onText = (chunk: string) => {
+            if (!attemptStreamed) {
+              attemptStreamed = true;
+              if (streamedBubbleLive) onStreamReset?.();
+            }
+            streamedBubbleLive = true;
+            onChunk?.(chunk);
+          };
+          const onActivity = () => arm(STALL_BETWEEN_EVENTS_MS);
           try {
-            answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
-              if (!attemptStreamed) {
-                attemptStreamed = true;
-                if (streamedBubbleLive) onStreamReset?.();
+            if (hasUrlParts && pageUrlsWork) {
+              try {
+                answer = await callModel(client, modelEntry, urlInput, true, onText, attemptController.signal, onActivity);
+              } catch (error) {
+                if (!(isUrlFetchError(error) || classifyFailure(error).kind === 'request') || signal?.aborted || stalled) throw error;
+                // Google couldn't fetch the page links: send the bytes for
+                // the rest of this session.
+                console.warn('[referee] page URLs rejected, falling back to inline pages:', errorText(error).slice(0, 200));
+                pageUrlsWork = false;
+                arm(STALL_FIRST_EVENT_MS);
+                answer = await callModel(client, modelEntry, inlineInput, true, onText, attemptController.signal, onActivity);
               }
-              streamedBubbleLive = true;
-              onChunk?.(chunk);
-            }, attemptController.signal, () => arm(STALL_BETWEEN_EVENTS_MS));
+            } else {
+              answer = await callModel(client, modelEntry, inlineInput, true, onText, attemptController.signal, onActivity);
+            }
           } catch (error) {
             if (stalled && !signal?.aborted) throw new Error('504 stream stalled');
             throw error;

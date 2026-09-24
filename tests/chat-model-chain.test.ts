@@ -325,3 +325,16 @@ test('a stalled stream is classified as a server failure (next model), not an ab
   const { classifyFailure } = await import('../src/features/referee/ai/retryPolicy.ts');
   assert.equal(classifyFailure(new Error('504 stream stalled')).kind, 'server');
 });
+
+test('rule book pages with a public URL are sent by link in URL mode, by bytes otherwise', async () => {
+  const { toInteractionInput, stepsToContents } = await import('../src/features/referee/ai/conversation.ts');
+  const contents = [{ role: 'user' as const, parts: [{ text: 'p1' }, { inlineData: { data: 'AAAA', mimeType: 'image/jpeg' }, fileData: { fileUri: 'https://pub.example/page_1.jpg', mimeType: 'image/jpeg' } }, { inlineData: { data: 'BBBB', mimeType: 'image/png' } }] }];
+  const byUrl = toInteractionInput(contents, { preferUri: true });
+  assert.deepEqual(byUrl[0].content[1], { type: 'image', uri: 'https://pub.example/page_1.jpg', mime_type: 'image/jpeg', resolution: 'ultra_high' });
+  // a user photo without a URL still goes inline
+  assert.equal((byUrl[0].content[2] as { data?: string }).data, 'BBBB');
+  const inline = toInteractionInput(contents);
+  assert.equal((inline[0].content[1] as { data?: string }).data, 'AAAA');
+  // generateContent path keeps the link as fileData
+  assert.deepEqual(stepsToContents(byUrl)[0].parts[1], { fileData: { fileUri: 'https://pub.example/page_1.jpg', mimeType: 'image/jpeg' } });
+});

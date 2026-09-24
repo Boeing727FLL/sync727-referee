@@ -19,15 +19,22 @@ export function buildHistory(history: HistoryMessage[]): LegacyMessage[] {
   return contents;
 }
 
-export function toInteractionParts(part: LegacyPart): InteractionPart[] {
+export type InteractionInputOptions = {
+  /** Send parts that carry both bytes and a public URL by URL: Gemini fetches
+   *  the file itself, so the phone doesn't upload the rule book pages. */
+  preferUri?: boolean;
+};
+
+export function toInteractionParts(part: LegacyPart, options: InteractionInputOptions = {}): InteractionPart[] {
+  if (options.preferUri && part.fileData) return [{ type: 'image', uri: part.fileData.fileUri, mime_type: part.fileData.mimeType || 'image/jpeg', resolution: 'ultra_high' }];
   if (part.inlineData) return [{ type: 'image', data: part.inlineData.data, mime_type: part.inlineData.mimeType || 'image/jpeg', resolution: 'ultra_high' }];
   if (part.fileData) return [{ type: 'image', uri: part.fileData.fileUri, mime_type: part.fileData.mimeType || 'image/jpeg', resolution: 'ultra_high' }];
   const text = (part.text ?? '').trim();
   return text ? [{ type: 'text', text: part.text ?? '' }] : [];
 }
 
-export function toInteractionInput(messages: LegacyMessage[]): InteractionStep[] {
-  return messages.map(message => ({ type: message.role === 'model' ? 'model_output' : 'user_input', content: message.parts.flatMap(toInteractionParts) }));
+export function toInteractionInput(messages: LegacyMessage[], options: InteractionInputOptions = {}): InteractionStep[] {
+  return messages.map(message => ({ type: message.role === 'model' ? 'model_output' : 'user_input', content: message.parts.flatMap(part => toInteractionParts(part, options)) }));
 }
 
 export function toInteractionTextOnly(messages: LegacyMessage[]): InteractionStep[] {
@@ -38,7 +45,7 @@ export function toInteractionTextOnly(messages: LegacyMessage[]): InteractionSte
 }
 
 export function stepsToContents(steps: InteractionStep[]): LegacyMessage[] {
-  return steps.map(step => ({ role: step.type === 'model_output' ? 'model' : 'user', parts: step.content.map(part => part.type === 'image' ? { inlineData: { data: part.data || '', mimeType: part.mime_type || 'image/jpeg' } } : { text: part.text }) }));
+  return steps.map(step => ({ role: step.type === 'model_output' ? 'model' : 'user', parts: step.content.map(part => part.type === 'image' ? (part.uri && !part.data ? { fileData: { fileUri: part.uri, mimeType: part.mime_type || 'image/jpeg' } } : { inlineData: { data: part.data || '', mimeType: part.mime_type || 'image/jpeg' } }) : { text: part.text }) }));
 }
 
 export function textStep(type: InteractionStep['type'], text: string): InteractionStep { return { type, content: [{ type: 'text', text }] }; }
