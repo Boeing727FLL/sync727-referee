@@ -29,6 +29,7 @@ export default function RouterApp() {
           <Route path="/app" element={<RefereeApp />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<PrivacyPage />} />
           <Route path="*" element={<LandingEscape />} />
         </Routes>
       </Suspense>

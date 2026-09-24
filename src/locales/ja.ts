@@ -88,6 +88,7 @@ const ja: TranslationMap = {
     'disclaimerPopup.body': 'バーチャル審判はルールを理解するのを手伝おうとする賢いAIですが、時々間違えることがあります — 私たちも混乱するように。\n\nそれは競技で何が正しいかを決定しません。本当の競技では、現場の人間の審判だけが決定し、彼らの言葉が常に最終決定です。\n\n疑問がある場合は、必ず本物の現場審判に聞いてください。',
     'disclaimerPopup.confirm': '読んで理解しました — 審判に入る',
     'common.close': "閉じる",
+    'common.back': "戻る",
     'common.cancel': "キャンセル",
     'common.confirm': "確認",
     'common.language': "言語",

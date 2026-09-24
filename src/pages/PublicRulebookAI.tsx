@@ -17,7 +17,7 @@ import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { LogOut, Trash2, Shield, ChevronLeft, Globe, ScrollText, Wrench, Check, Settings, MailCheck } from 'lucide-react';
+import { LogOut, Trash2, Shield, ChevronLeft, ChevronRight, Globe, ScrollText, Wrench, Check, Settings, MailCheck, FileText } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/firestore';
 import { rtdb } from '../lib/firebase/rtdb';
@@ -31,6 +31,9 @@ import { useLanguage } from '../hooks/useLanguage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import IntroScreen from '../components/IntroScreen';
 import MandatoryDisclaimerModal from '../components/MandatoryDisclaimerModal';
+import TermsGateModal from '../components/TermsGate';
+import { acceptedLocally, acceptedOnServer, recordAcceptance } from '../legal/termsAcceptance';
+import { legalFor } from '../legal/copy';
 import ParticleBurst from '../components/ParticleBurst';
 import { isCurrentUserOwner } from '../lib/owner';
 import { ChatQuotaExhaustedError, consumeChatQuota, subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
@@ -203,8 +206,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // Force reload when a new version is deployed so cached outdated clients get App Check
   // ===== 2. Overlays, menus & toast: open/close state only, no data.
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
-  const [showLangMenu, setShowLangMenu] = useState<boolean>(false);
+  // The user menu drills into sub-pages in place (iOS-style), e.g. language.
+  const [menuPage, setMenuPage] = useState<'main' | 'lang'>('main');
+  useEffect(() => { if (!showUserMenu) setMenuPage('main'); }, [showUserMenu]);
   const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
+  const [showTerms, setShowTerms] = useState<boolean>(false);
+  const [termsOk, setTermsOk] = useState<boolean>(() => acceptedLocally());
+  useEffect(() => { if (!termsOk) void acceptedOnServer().then(ok => { if (ok) setTermsOk(true); }); }, [termsOk]);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
   const [maintenance, setMaintenanceState] = useState<boolean>(false);
@@ -214,7 +222,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // In-site toast (replaces blocking alert popups).
   const { toast, showToast } = useTransientToast();
 
-  const [langPos, setLangPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const userMenuRef = useRef<HTMLDivElement>(null);
   // The menu panel is portaled out of the header (into the chat stage) so the
   // header's glass (backdrop filter) can't make it see-through on iOS; it
@@ -226,8 +233,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   useEffect(() => {
     if (!showUserMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
-      // While the language dropdown is open, keep the user menu alive underneath it
-      if (showLangMenu) return;
       if (userMenuPanelRef.current?.contains(e.target as Node)) return;
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
@@ -235,27 +240,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showUserMenu, showLangMenu]);
+  }, [showUserMenu]);
 
-  const openLangMenu = () => {
-    const rect = langBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      // Panel opens to the LEFT of the language button. Falls back to the
-      // left viewport edge when there is no room (small screens).
-      // Top is clamped so the panel always ends with a bottom margin.
-      const panelW = 208;
-      const panelH = window.innerHeight * 0.5;
-      const right = Math.min(
-        Math.max(12, window.innerWidth - rect.left + 8),
-        Math.max(12, window.innerWidth - panelW - 12)
-      );
-      setLangPos({
-        top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - panelH - 16)),
-        right,
-      });
-    }
-    setShowLangMenu(true);
-  };
+  const openLangMenu = () => setMenuPage('lang');
 
   // ===== 3. Entry flow: intro -> mandatory disclaimer -> chat.
   // First paint: if we arrived via ?enter=chat with saved auth in localStorage,
@@ -1433,6 +1420,9 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                       style={{ top: menuPos.top, left: menuPos.left }}
                       dir="rtl"
                     >
+                      <AnimatePresence mode="popLayout" initial={false}>
+                      {menuPage === 'main' ? (
+                      <motion.div key="main" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} transition={MOTION.overlay}>
                       <div className="p-3 bg-white/[0.03] border-b border-white/[0.08] flex items-center gap-3">
                         {displayUser.picture || gravatarPic ? (
                           <img src={displayUser.picture || gravatarPic} alt="" className="w-10 h-10 rounded-full border-2 border-white/30 object-cover" />
@@ -1479,6 +1469,16 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                         >
                           <Shield className="w-4 h-4 text-white/40" />
                           {t('common.privacy')}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowTerms(true);
+                          }}
+                          className={MENU_ROW_CLASS}
+                        >
+                          <FileText className="w-4 h-4 text-white/40" />
+                          {legalFor(language).gate.menu}
                         </button>
                         {isCurrentUserOwner() && (
                           <button
@@ -1536,6 +1536,36 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
                           typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : null
                         )}</span>
                       </div>
+                      </motion.div>
+                      ) : (
+                      <motion.div key="lang" initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={MOTION.overlay} dir={isRTL ? 'rtl' : 'ltr'} role="group" aria-label={t('common.language')}>
+                        <div className="v12-menu-sub">
+                          <button onClick={() => setMenuPage('main')} className="v12-menu-back" aria-label={t('common.back')}>
+                            {isRTL ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                          </button>
+                          <Globe className="w-4 h-4 text-white/55" aria-hidden />
+                          <span>{t('common.language')}</span>
+                        </div>
+                        <div className="v12-lang-grid">
+                          {languages.map((lang) => {
+                            const active = language === lang.code;
+                            return (
+                              <button
+                                key={lang.code}
+                                onClick={() => { setLanguage(lang.code); setShowUserMenu(false); }}
+                                className={`v12-lang-opt ${active ? 'is-on' : ''}`}
+                                aria-pressed={active}
+                                lang={lang.code}
+                              >
+                                <span>{lang.native}</span>
+                                {active && <Check className="w-4 h-4" aria-hidden />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                      )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                 </AnimatePresence>, (userMenuRef.current?.closest('.chat-stage') as HTMLElement | null) ?? document.body)}
@@ -1678,10 +1708,12 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         )}
       </AnimatePresence>
 
-      <MandatoryDisclaimerModal isOpen={showDisclaimer} onConfirm={handleDisclaimerConfirm} t={t} />
+      <TermsGateModal isOpen={showDisclaimer && !termsOk} onAccept={() => { void recordAcceptance(); setTermsOk(true); }} />
+      <MandatoryDisclaimerModal isOpen={showDisclaimer && termsOk} onConfirm={handleDisclaimerConfirm} t={t} />
       {entryBurst && <ParticleBurst onDone={() => setEntryBurst(false)} />}
       <Suspense fallback={null}>
       {showPrivacy && <PrivacyModal isOpen onClose={() => setShowPrivacy(false)} />}
+      {showTerms && <PrivacyModal isOpen kind="terms" onClose={() => setShowTerms(false)} />}
       {showSettings && <SettingsModal
         isOpen
         onClose={() => setShowSettings(false)}
@@ -1787,44 +1819,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       />
 
       {/* Language floating dropdown - BizPortal style, anchored right */}
-      <AnimatePresence>
-        {showLangMenu && (
-          <>
-            <div
-              onClick={() => setShowLangMenu(false)}
-              className="fixed inset-0 z-[60]"
-              aria-hidden
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              transition={MOTION.overlay}
-              style={{ top: langPos.top, right: langPos.right }}
-              className="fixed z-[70] w-52 max-w-[70vw] v12-lang"
-              dir={isRTL ? 'rtl' : 'ltr'}
-              role="dialog"
-              aria-label={t('common.language')}
-            >
-              <div className="p-1.5 max-h-[50vh] overflow-y-auto [scrollbar-width:none]">
-                {languages.map((lang) => {
-                  const active = language === lang.code;
-                  return (
-                    <button
-                      key={lang.code}
-                      onClick={() => { setLanguage(lang.code); setShowLangMenu(false); setShowUserMenu(false); }}
-                      className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-[14px] font-bold text-sm text-start transition-colors cursor-pointer ${active ? 'bg-white/[0.16] text-white' : 'text-white/80 hover:bg-white/[0.08] hover:text-white'}`}
-                    >
-                      <span>{lang.native}</span>
-                      {active && <Check className="w-4 h-4 text-white" aria-hidden />}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
       </MotionConfig>
     </motion.div>
   );

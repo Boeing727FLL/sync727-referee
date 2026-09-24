@@ -88,6 +88,7 @@ const de: TranslationMap = {
     'disclaimerPopup.body': 'Der Virtuelle Schiedsrichter ist eine schlaue KI, die helfen will, kann aber Fehler machen — wie wir alle.\n\nEr entscheidet nicht, was im Wettbewerb richtig ist. Im echten Wettbewerb entscheiden nur die menschlichen Feldschiedsrichter, und was sie sagen, ist immer endgültig.\n\nIm Zweifel immer einen echten Feldschiedsrichter fragen.',
     'disclaimerPopup.confirm': 'Gelesen und verstanden — Zum Schiedsrichter',
     'common.close': "Schließen",
+    'common.back': "Zurück",
     'common.cancel': "Abbrechen",
     'common.confirm': "Bestätigen",
     'common.language': "Sprache",

@@ -88,6 +88,7 @@ const es: TranslationMap = {
     'disclaimerPopup.body': 'El Árbitro Virtual es una IA inteligente que intenta ayudar, pero puede cometer errores — como todos nos confundimos a veces.\n\nNo decide qué es correcto en una competición. En la competición real solo los árbitros humanos de la zona deciden, y lo que dicen es siempre definitivo.\n\nSi tienes dudas, pregunta siempre a un árbitro real de la zona.',
     'disclaimerPopup.confirm': 'He leído y entendido — Entrar al Árbitro',
     'common.close': "Cerrar",
+    'common.back': "Atrás",
     'common.cancel': "Cancelar",
     'common.confirm': "Confirmar",
     'common.language': "Idioma",

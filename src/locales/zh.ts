@@ -88,6 +88,7 @@ const zh: TranslationMap = {
     'disclaimerPopup.body': '虚拟裁判是一个试图帮助你的智能AI，但它也会犯错——就像我们有时也会困惑一样。\n\n它不能决定比赛中什么是正确的。在真正的比赛中，只有现场的人类裁判才能决定，他们说的永远是最终结果。\n\n如有疑问，请务必询问真正的现场裁判。',
     'disclaimerPopup.confirm': '我已阅读并理解 — 进入裁判',
     'common.close': "关闭",
+    'common.back': "返回",
     'common.cancel': "取消",
     'common.confirm': "确认",
     'common.language': "语言",

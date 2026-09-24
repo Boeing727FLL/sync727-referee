@@ -8,6 +8,8 @@
  *
  * No Firebase here: the auth form is a lazy chunk (warmed during the intro).
  */
+import { TermsGateBody } from '../../components/TermsGate';
+import { acceptedLocally, acceptedOnServer, recordAcceptance } from '../../legal/termsAcceptance';
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Referee, { type RefereePose } from './Referee';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -88,7 +90,15 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
   const reduce = useRef(reduceMotion() || !canAnimate()).current;
   const skipIntro = reduce || start === 'login';
   const [phase, setPhase] = useState<'intro' | 'card' | 'leaving'>(skipIntro ? 'card' : 'intro');
-  const [view, setView] = useState<'auth' | 'disclaimer'>(signedIn ? 'disclaimer' : 'auth');
+  const [view, setView] = useState<'auth' | 'terms' | 'disclaimer'>(signedIn ? (acceptedLocally() ? 'disclaimer' : 'terms') : 'auth');
+  // New device: the profile may already hold an acceptance - skip the gate if so.
+  useEffect(() => {
+    if (view !== 'terms') return;
+    let live = true;
+    void acceptedOnServer().then(ok => { if (ok && live) sweep('top', () => { setView('disclaimer'); setBcls('is-read'); }); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view === 'terms']);
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   const logoRef = useRef<HTMLDivElement>(null);
   const slotRef = useRef<HTMLDivElement>(null);
@@ -254,6 +264,10 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
     onAuthed();
     buddy.cover(false);
     setLook(null);
+    sweep('top', () => { if (acceptedLocally()) { setView('disclaimer'); setBcls('is-read'); } else setView('terms'); });
+  };
+  const acceptTerms = () => {
+    void recordAcceptance();
     sweep('top', () => { setView('disclaimer'); setBcls('is-read'); });
   };
   useEffect(() => { if (view === 'disclaimer' && phase === 'card' && signedIn) later(() => setBcls('is-read'), 900); }, [view, phase, signedIn]);
@@ -326,7 +340,9 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
             <div ref={cardRef} className="v12-card v12-glass">
               <div ref={pnlRef} className="v12-pnl" data-pos="top" />
               <div ref={cinRef} className="v12-cin">
-                {view === 'disclaimer' ? (
+                {view === 'terms' ? (
+                  <TermsGateBody onAccept={acceptTerms} />
+                ) : view === 'disclaimer' ? (
                   <>
                     <div className="v12-ph"><h2>{t('disclaimerPopup.title').replace(/\.?$/, '.')}</h2></div>
                     <p className="v12-dp">{hlAt > 0 ? <>{body.slice(0, hlAt)}<b>{body.slice(hlAt)}</b></> : body}</p>

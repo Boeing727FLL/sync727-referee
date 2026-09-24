@@ -88,6 +88,7 @@ const pt: TranslationMap = {
     'disclaimerPopup.body': 'O Juiz Virtual é uma IA inteligente que tenta ajudar, mas pode cometer erros — como todos nós.\n\nEle não decide o que é correto na competição. Na competição real apenas os juízes humanos da arena decidem, e o que eles dizem é sempre final.\n\nEm caso de dúvida, pergunte sempre a um juiz real da arena.',
     'disclaimerPopup.confirm': 'Li e entendi — Entrar no Juiz',
     'common.close': "Fechar",
+    'common.back': "Voltar",
     'common.cancel': "Cancelar",
     'common.confirm': "Confirmar",
     'common.language': "Idioma",

@@ -88,6 +88,7 @@ const ko: TranslationMap = {
     'disclaimerPopup.body': '가상 심판은 규칙을 이해하도록 돕는 똑똑한 AI이지만, 우리처럼 가끔 실수할 수 있습니다.\n\n그것은 대회에서 무엇이 옳은지 결정하지 않습니다. 실제 대회에서는 현장의 인간 심판만이 결정하며, 그들이 말하는 것이 항상 최종입니다.\n\n의심스러우면 항상 실제 현장 심판에게 물어보세요.',
     'disclaimerPopup.confirm': '읽고 이해했습니다 — 심판으로 입장',
     'common.close': "닫기",
+    'common.back': "뒤로",
     'common.cancel': "취소",
     'common.confirm': "확인",
     'common.language': "언어",

@@ -3,7 +3,7 @@
  * page, which must render OUTSIDE any router: its embedded referee carries
  * its own MemoryRouter, and a router inside a router crashes the app.
  */
-const ROUTER_PATHS = ['/app', '/login', '/privacy'];
+const ROUTER_PATHS = ['/app', '/login', '/privacy', '/terms'];
 
 export function isRouterPath(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';

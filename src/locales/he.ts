@@ -88,6 +88,7 @@ const he: TranslationMap = {
     'disclaimerPopup.body': 'שופט הזירה הווירטואלי הוא צ\'אט AI שנועד לעזור בהבנת חוקי המשחק, ולפעמים הוא יכול לטעות. לכן אם אתם לא בטוחים במשהו, תמיד כדאי לאמת מול שופט זירה אמיתי.',
     'disclaimerPopup.confirm': 'קראתי והבנתי, כניסה לשופט',
     'common.close': "סגור",
+    'common.back': "חזרה",
     'common.cancel': "ביטול",
     'common.confirm': "אישור",
     'common.language': "שפה",

@@ -5,6 +5,7 @@ import React from 'react';
 import { render, cleanup } from '@testing-library/react';
 import LandingPage, { hasSavedSession } from '../src/pages/LandingPage.tsx';
 
+import { TERMS_VERSION } from '../src/legal/termsAcceptance';
 test('hasSavedSession is false with empty storage, true with a saved auth marker', () => {
   localStorage.clear();
   assert.equal(hasSavedSession(), false);
@@ -29,12 +30,25 @@ test('LandingPage shows the auth card in-page for signed-out visitors and sends 
   first.unmount();
   cleanup();
 
-  // Signed-in: the disclaimer view opens on the same page, never a navigation.
+  // Signed-in, terms already accepted: the disclaimer view opens on the same page, never a navigation.
   localStorage.setItem('auth_user', '{"uid":"u1"}');
+  localStorage.setItem('terms_accepted:u1', TERMS_VERSION);
   const second = render(React.createElement(LandingPage));
   assert.equal(second.container.querySelector('[data-view]')?.getAttribute('data-view'), 'disclaimer');
   assert.ok(second.getByRole('button', { name: /./ }), 'confirm button present');
   second.unmount();
+  cleanup();
+  localStorage.clear();
+});
+
+test('LandingPage shows the one-time terms gate before the disclaimer for a user who has not accepted', () => {
+  localStorage.clear();
+  localStorage.setItem('auth_user', '{"uid":"u2"}');
+  const view = render(React.createElement(LandingPage));
+  assert.equal(view.container.querySelector('[data-view]')?.getAttribute('data-view'), 'terms');
+  const cta = view.container.querySelector('.v12-gate .v12-go') as HTMLButtonElement;
+  assert.ok(cta.disabled, 'continue stays disabled until the box is checked');
+  view.unmount();
   cleanup();
   localStorage.clear();
 });

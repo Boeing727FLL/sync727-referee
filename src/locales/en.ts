@@ -88,6 +88,7 @@ const en: TranslationMap = {
     'disclaimerPopup.body': 'The Virtual Field Referee is a chat AI designed to help understand the game rules, and sometimes it can make mistakes. Therefore if you are not sure about something, always verify with a real field referee.',
     'disclaimerPopup.confirm': 'I read and understood, enter referee',
     'common.close': "Close",
+    'common.back': "Back",
     'common.cancel': "Cancel",
     'common.confirm': "Confirm",
     'common.language': "Language",
