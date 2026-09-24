@@ -57,6 +57,8 @@ test('interactions stream: content.delta and step.delta text accumulate and forw
     { event_type: 'content.delta', delta: { type: 'thought', text: 'skip' } },
     { event_type: 'content.delta', delta: { type: 'text', text: '42' } },
     null,
+    { event_type: 'step.stop' },
+    { event_type: 'interaction.completed', interaction: { status: 'completed' } },
   ]));
   const text = await runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, onText: t => seen.push(t) });
   assert.equal(text, 'התשובה 42');
@@ -106,7 +108,7 @@ test('generateContent stream: chunks accumulate and forward', async () => {
   const seen: string[] = [];
   const client = {
     interactions: { create: async () => ({}) },
-    models: { generateContentStream: async () => iterate([{ text: 'א' }, { text: 'ב' }, {}]), generateContent: async () => ({}) },
+    models: { generateContentStream: async () => iterate([{ text: 'א' }, { text: 'ב' }, { candidates: [{ finishReason: 'STOP' }] }]), generateContent: async () => ({}) },
   };
   const text = await runModel({ client, model: GC_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, onText: t => seen.push(t) });
   assert.equal(text, 'אב');
@@ -126,4 +128,99 @@ test('generateContent: image parts raise media resolution, signal lands in confi
   await runModel({ client, model: GC_MODEL, input: [IMG_STEP], systemInstruction: 'sys', stream: false, signal: controller.signal });
   assert.equal(captured.config.mediaResolution, 'MEDIA_RESOLUTION_HIGH');
   assert.equal(captured.config.abortSignal, controller.signal);
+});
+
+// --- Stream completion and stall watchdog (answer froze mid-stream, 2026-09-24) ---
+
+const FAST = { firstTextMs: 200, idleMs: 100 };
+const text = (t: string) => ({ event_type: 'step.delta', delta: { type: 'text', text: t } });
+
+async function* thenHang<T>(items: T[]): AsyncIterable<T> {
+  for (const item of items) yield item;
+  await new Promise(() => {}); // the connection stays open, nothing more arrives
+}
+
+test('interactions stream: cut mid-answer (no step.stop, no completed) rejects so the chain retries', async () => {
+  const client = interactionsClient(iterate([text('לפי חוק 17 '), text('יש שתי אפשרויות')]));
+  await assert.rejects(
+    () => runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true }),
+    /ended before completion/,
+  );
+});
+
+test('interactions stream: a closed text step without interaction.completed is accepted', async () => {
+  const client = interactionsClient(iterate([text('תשובה'), { event_type: 'step.stop' }]));
+  assert.equal(await runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true }), 'תשובה');
+});
+
+test('interactions stream: completed with a non-completed status rejects', async () => {
+  const client = interactionsClient(iterate([text('חלק'), { event_type: 'step.stop' }, { event_type: 'interaction.completed', interaction: { status: 'incomplete' } }]));
+  await assert.rejects(
+    () => runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true }),
+    /status incomplete/,
+  );
+});
+
+test('interactions stream: a failed status_update mid-stream rejects', async () => {
+  const client = interactionsClient(iterate([text('חלק'), { event_type: 'interaction.status_update', status: 'failed' }]));
+  await assert.rejects(
+    () => runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true }),
+    /failed mid-stream/,
+  );
+});
+
+test('interactions stream: silence after text started trips the idle watchdog and aborts the request', async () => {
+  let requestSignal: AbortSignal | undefined;
+  const client = {
+    interactions: { create: async (_p: unknown, o?: { signal: AbortSignal }) => { requestSignal = o?.signal; return thenHang([text('לפי חוק 17 (סעיף ב), ')]); } },
+    models: { generateContentStream: async () => iterate([]), generateContent: async () => ({}) },
+  };
+  const seen: string[] = [];
+  const started = Date.now();
+  await assert.rejects(
+    () => runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, onText: t => seen.push(t), watchdog: FAST }),
+    /503 stream stalled.*mid-answer/,
+  );
+  assert.ok(Date.now() - started < 1000);
+  assert.deepEqual(seen, ['לפי חוק 17 (סעיף ב), ']);
+  assert.equal(requestSignal?.aborted, true);
+});
+
+test('interactions stream: a request that never answers trips the first-text watchdog', async () => {
+  const client = interactionsClient(new Promise(() => {}));
+  await assert.rejects(
+    () => runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, watchdog: FAST }),
+    /503 stream stalled.*before the answer/,
+  );
+});
+
+test('interactions stream: Stop during a stall resolves quietly with the partial text', async () => {
+  const controller = new AbortController();
+  const client = interactionsClient(thenHang([text('א')]));
+  const pending = runModel({ client, model: INTERACTIONS_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, signal: controller.signal, watchdog: { firstTextMs: 5000, idleMs: 5000 } });
+  setTimeout(() => controller.abort(), 30);
+  const result = await Promise.race([pending, new Promise(r => setTimeout(() => r('timeout'), 500))]);
+  assert.equal(result, 'א');
+});
+
+test('generateContent stream: no finish reason means the stream was cut', async () => {
+  const client = {
+    interactions: { create: async () => ({}) },
+    models: { generateContentStream: async () => iterate([{ text: 'א' }, { text: 'ב' }]), generateContent: async () => ({}) },
+  };
+  await assert.rejects(
+    () => runModel({ client, model: GC_MODEL, input: [STEP], systemInstruction: 'sys', stream: true }),
+    /ended before completion/,
+  );
+});
+
+test('generateContent stream: silence mid-answer trips the idle watchdog', async () => {
+  const client = {
+    interactions: { create: async () => ({}) },
+    models: { generateContentStream: async () => thenHang([{ text: 'א' }]), generateContent: async () => ({}) },
+  };
+  await assert.rejects(
+    () => runModel({ client, model: GC_MODEL, input: [STEP], systemInstruction: 'sys', stream: true, watchdog: FAST }),
+    /503 stream stalled/,
+  );
 });
