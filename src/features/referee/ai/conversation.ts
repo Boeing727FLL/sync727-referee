@@ -1,7 +1,7 @@
 export type HistoryMessage = { role: 'user' | 'model'; text: string; files?: unknown[] };
 export type LegacyPart = { text?: string; inlineData?: { data: string; mimeType?: string }; fileData?: { fileUri: string; mimeType?: string } };
 type LegacyMessage = { role: 'user' | 'model'; parts: LegacyPart[] };
-export type InteractionPart = { type: 'text'; text: string } | { type: 'image'; data?: string; uri?: string; mime_type?: string; resolution?: 'high' };
+export type InteractionPart = { type: 'text'; text: string } | { type: 'image'; data?: string; uri?: string; mime_type?: string; resolution?: 'high' | 'ultra_high' };
 export type InteractionStep = { type: 'user_input' | 'model_output'; content: InteractionPart[] };
 
 const HISTORICAL_IMAGE_NOTE = '\n[הערת מערכת: המשתמש צירף תמונה בהודעה זו. התמונה ההיא כבר לא מוצגת לך, ולכן אל תשליך מהתשובה שלך עליה לתמונות עתידיות שיועלו].';
@@ -20,8 +20,8 @@ export function buildHistory(history: HistoryMessage[]): LegacyMessage[] {
 }
 
 export function toInteractionParts(part: LegacyPart): InteractionPart[] {
-  if (part.inlineData) return [{ type: 'image', data: part.inlineData.data, mime_type: part.inlineData.mimeType || 'image/jpeg', resolution: 'high' }];
-  if (part.fileData) return [{ type: 'image', uri: part.fileData.fileUri, mime_type: part.fileData.mimeType || 'image/jpeg', resolution: 'high' }];
+  if (part.inlineData) return [{ type: 'image', data: part.inlineData.data, mime_type: part.inlineData.mimeType || 'image/jpeg', resolution: 'ultra_high' }];
+  if (part.fileData) return [{ type: 'image', uri: part.fileData.fileUri, mime_type: part.fileData.mimeType || 'image/jpeg', resolution: 'ultra_high' }];
   const text = (part.text ?? '').trim();
   return text ? [{ type: 'text', text: part.text ?? '' }] : [];
 }
