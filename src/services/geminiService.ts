@@ -469,27 +469,14 @@ VERY IMPORTANT INSTRUCTION FOR IDENTIFICATION:
           // stale half-finished think block is never concatenated into
           // the fresh answer.
           let attemptStreamed = false;
-          let answer: string;
-          try {
-            answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
-              if (!attemptStreamed) {
-                attemptStreamed = true;
-                if (streamedBubbleLive) onStreamReset?.();
-              }
-              streamedBubbleLive = true;
-              onChunk?.(chunk);
-            });
-          } catch (error) {
-            // A stream that died mid-answer (error event, cut connection or
-            // stall watchdog) must not leave a frozen half answer on screen
-            // while the next key/model thinks: drop it now, so the thinking
-            // indicator returns and the retry streams a fresh answer.
-            if (attemptStreamed && !signal?.aborted) {
-              onStreamReset?.();
-              streamedBubbleLive = false;
+          const answer = await callModel(client, modelEntry, interactionInput, true, (chunk: string) => {
+            if (!attemptStreamed) {
+              attemptStreamed = true;
+              if (streamedBubbleLive) onStreamReset?.();
             }
-            throw error;
-          }
+            streamedBubbleLive = true;
+            onChunk?.(chunk);
+          });
           if (!answer.trim()) throw new Error('503 empty model answer');
           responseText = answer;
           return true;

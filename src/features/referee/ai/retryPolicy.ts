@@ -60,7 +60,7 @@ export function classifyFailure(error: unknown, aborted = false): RetryDecision 
   // HTTP status in the text ("... is currently experiencing high demand ...
   // Please try again later."). That used to fall through to 'transient' and
   // end the whole ask on the first try.
-  if (['500', '502', '503', '504', 'internal server error', 'service unavailable', 'unavailable', 'high demand', 'overloaded', 'try again later', 'internal error', 'deadline exceeded', 'deadline expired', 'gateway_timeout', 'interaction stream error'].some(value => lower.includes(value))) {
+  if (['500', '502', '503', '504', 'internal server error', 'service unavailable', 'unavailable', 'high demand', 'overloaded', 'try again later', 'internal error', 'deadline exceeded', 'interaction stream error'].some(value => lower.includes(value))) {
     return { kind: 'server', tryNextKey: false, tryNextModel: true, cooldownMs: 0 };
   }
   // The request never got an HTTP answer (dropped connection, CORS-less
