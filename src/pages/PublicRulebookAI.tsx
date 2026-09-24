@@ -1384,7 +1384,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       className="v12-root h-screen-fix w-full flex flex-col bg-[#0A2A60] overflow-hidden relative font-sans app-shell-safe" dir={isRTL ? 'rtl' : 'ltr'}
     >
       <MotionConfig reducedMotion="user" transition={MOTION.content}>
-      <div aria-hidden className="v12-chatbg"><div className="v12-bg" /><div className="v12-vig" /></div>
+      <div aria-hidden className="v12-chatbg"><div className="v12-cb-base" /><i className="v12-cb-l a" /><i className="v12-cb-l b" /><i className="v12-cb-l c" /><div className="v12-cb-ray" /><div className="v12-cb-sheen" /><div className="v12-vig" /><div className="v12-cb-grain" /></div>
 
       {/* Header - v12 glass pill */}
       <motion.div initial={{ opacity: 0, y: -18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.08 }} className="v12-hdr">
@@ -1565,7 +1565,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       )}
 
       {/* Chat Area - premium AI console, full screen */}
-      <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10" ref={scrollRef} role="log" aria-live="polite">
+      <motion.div initial={{ opacity: 0, scale: 0.997 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...MOTION.filmReveal, delay: 0.18 }} className="flex-1 min-h-0 overflow-y-auto no-scrollbar scroll-smooth relative z-10" ref={scrollRef} role="log" aria-live="polite">
         <div className="w-full max-w-3xl lg:max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-5 lg:py-4 space-y-4 md:space-y-5">
         <AnimatePresence>{heroActive && <ChatHero
           greeting={heroGreeting}
