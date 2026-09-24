@@ -1385,8 +1385,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             <small>
               <i className={`v12-dot${isAiBusy || rulebookLoading ? ' is-busy' : ''}`} />
               <span className="truncate">{rulebookLoading ? t('chat.updating') : isAiBusy ? t('v12.thinking') : t('v12.ready')}</span>
-              <span className="v12-sep">·</span>
-              <span className="shrink-0">{t('v12.from')} <span className="v12-b7">Boeing <i>727</i></span></span>
+              <span className="v12-sep v12-hdr-cr">·</span>
+              <span className="shrink-0 v12-hdr-cr">{t('v12.from')} <span className="v12-b7">Boeing <i>727</i></span></span>
             </small>
           </div>
           <div className="shrink-0 flex items-center">

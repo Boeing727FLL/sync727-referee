@@ -171,7 +171,7 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-av img{width:100%;height:100%;object-fit:cover}
 
 .v12-hello{min-height:58vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 0}
-.v12-hello-ref{margin-bottom:34px}
+.v12-hello-ref{margin:22px 0 58px}
 .v12-hello h2{font-family:'Heebo',sans-serif;font-weight:800;font-size:38px;letter-spacing:-1.2px;line-height:1.05;background:linear-gradient(180deg,#FFFFFF 30%,#BFD9F7);-webkit-background-clip:text;background-clip:text;color:transparent;margin:0;animation:v12-rise .8s var(--v12-ease) .15s both}
 .v12-hello p{font-size:17.5px;font-weight:500;color:rgba(238,243,250,.62);margin-top:8px;letter-spacing:.1px;animation:v12-rise .8s var(--v12-ease) .3s both}
 .v12-starters{margin-top:28px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px}
@@ -238,3 +238,7 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-num{font-size:11.5px;font-weight:700;color:rgba(238,243,250,.62);white-space:nowrap}
 .v12-num b{font-family:'Heebo',sans-serif;font-weight:800;color:#F2F5FA;font-variant-numeric:tabular-nums;display:inline-block;animation:v12-roll .35s var(--v12-ease)}
 @keyframes v12-roll{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Narrow phones: the season tag takes the credit's room in the header; the credit moves to the foot line. */
+.v12-foot-cr{display:none}
+@media (max-width:440px){.v12-hdr-cr{display:none}.v12-foot-cr{display:inline}}

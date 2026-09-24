@@ -93,7 +93,7 @@ export default function ChatComposer(props: Props) {
       </div>
       <div className="v12-foot">
         {quota ? <span className="v12-num" aria-live="polite">{t('v12.quota').split('{remaining}')[0]}<b key={quota.remaining}>{quota.remaining}</b>{t('v12.quota').split('{remaining}')[1]?.replace('{limit}', String(quota.limit))}</span> : <span />}
-        <span>{t('v12.community')}</span>
+        <span>{t('v12.community')}<span className="v12-foot-cr"> · {t('v12.from')} <span className="v12-b7">Boeing <i>727</i></span></span></span>
       </div>
     </div>
   );
