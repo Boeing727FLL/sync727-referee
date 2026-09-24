@@ -5,19 +5,21 @@
  * produces: case/whitespace variants (`<THINK>`, `</ think >`), blocks whose
  * closing tag never arrived (truncated or errored streams), closing tags
  * whose opener was lost, and a stream that ended in the middle of the tag
- * itself.
+ * itself. Models also drop the closing bracket (`<think` / `</think` alone
+ * on a line - seen live on 2026-09-23), so the `>` is optional when the tag
+ * name is followed by whitespace or the end of the text.
  */
-export const THINK_OPEN_RE = /<\s*think\s*>/i;
-export const THINK_CLOSE_RE = /<\s*\/\s*think\s*>/i;
-
-const OPEN = '<\\s*think\\s*>';
-const CLOSE = '<\\s*\\/\\s*think\\s*>';
+const TAG_END = '(?:\\s*>|(?=\\s)|$)';
+const OPEN = `<\\s*think(?:ing)?${TAG_END}`;
+const CLOSE = `<\\s*\\/\\s*think(?:ing)?${TAG_END}`;
+export const THINK_OPEN_RE = new RegExp(OPEN, 'i');
+export const THINK_CLOSE_RE = new RegExp(CLOSE, 'i');
 const COMPLETE_BLOCK_RE = new RegExp(`${OPEN}[\\s\\S]*?${CLOSE}`, 'gi');
 const UNCLOSED_OPEN_RE = new RegExp(`${OPEN}[\\s\\S]*$`, 'gi');
 const ORPHAN_CLOSE_RE = new RegExp(`^[\\s\\S]*?${CLOSE}`, 'i');
 // A strict prefix of `<think>` / `</think>` at the very end of the text:
 // the stream died mid-tag, so the fragment is markup, never answer text.
-const TRAILING_FRAGMENT_RE = /<\s*\/?\s*(?:t|th|thi|thin|think)?\s*$/i;
+const TRAILING_FRAGMENT_RE = /<\s*\/?\s*(?:t|th|thi|thin|think|thinki|thinkin|thinking)?\s*$/i;
 
 /** Remove private model-reasoning blocks before display, logs or team history. */
 export const stripThinkBlocks = (text: string): string => {

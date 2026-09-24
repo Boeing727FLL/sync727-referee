@@ -34,7 +34,7 @@ export function buildMessageView(message: ChatMessage, index: number, options: {
   // (text.ts): variant tags, unclosed blocks and truncated fragments from a
   // live stream must never reach the visible answer.
   const hasThink = THINK_OPEN_RE.test(message.text);
-  const thinkContent = hasThink ? message.text.split(/<\s*think\s*>/i)[1]?.split(/<\s*\/\s*think\s*>/i)[0]?.trim() || '' : '';
+  const thinkContent = hasThink ? message.text.split(THINK_OPEN_RE)[1]?.split(THINK_CLOSE_RE)[0]?.trim() || '' : '';
   const thinking = isModel && hasThink && !THINK_CLOSE_RE.test(message.text) && options.loading && index === options.lastIndex;
   // No think-content fallback: a message whose visible text strips to empty
   // is private reasoning, never an answer to show.

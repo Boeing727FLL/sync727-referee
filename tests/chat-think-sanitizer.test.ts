@@ -101,3 +101,18 @@ test('error/stop cleanup drops a partial bubble with variant think tags', () => 
   const prev: ChatMessage[] = [question, { role: 'model', text: '<THINK>ניתוח חלקי' }];
   assert.deepEqual(dropInvisibleAnswer(prev), [question]);
 });
+
+test('tags missing their closing bracket (live leak 2026-09-23) are still stripped', () => {
+  const leaked = '<think\n1. **ניתוח השאלה וההנחיה**:\n   - לציין את מספרי הכללים\n</think\n\nאם אתם נוגעים ברובוט מחוץ לבית, לפי **חוק 15** מאבדים אסימון דיוק.';
+  assert.equal(stripThinkBlocks(leaked), 'אם אתם נוגעים ברובוט מחוץ לבית, לפי **חוק 15** מאבדים אסימון דיוק.');
+});
+
+test('a bracketless opener mid-stream hides everything after it', () => {
+  assert.equal(stripThinkBlocks('<think'), '');
+  assert.equal(stripThinkBlocks('<think\n1. ניתוח'), '');
+  assert.equal(stripThinkBlocks('<thinking>x</thinking> תשובה'), 'תשובה');
+});
+
+test('ordinary words starting with "think" are not treated as tags', () => {
+  assert.equal(stripThinkBlocks('I think <thinker> is fine'), 'I think <thinker> is fine');
+});
