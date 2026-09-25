@@ -48,6 +48,7 @@ const de: TranslationMap = {
     'chat.reply': 'Nachfrage',
     'chat.replyTo': 'Antwort auf:',
     'chat.attachImage': 'Bild anhängen',
+    'chat.removeImage': 'Bild entfernen',
     'chat.maxImages': 'Max. 3 Bilder',
     'chat.imagesOnly': 'Nur Bilder',
     'chat.unsupportedImageType': 'Nicht unterstütztes Format - nur PNG, JPEG, WEBP oder HEIC',

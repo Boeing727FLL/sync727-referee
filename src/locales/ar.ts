@@ -48,6 +48,7 @@ const ar: TranslationMap = {
     'chat.reply': 'سؤال متابعة',
     'chat.replyTo': 'ردًا على:',
     'chat.attachImage': 'إرفاق صورة',
+    'chat.removeImage': 'إزالة الصورة',
     'chat.maxImages': 'حتى 3 صور',
     'chat.imagesOnly': 'الصور فقط',
     'chat.unsupportedImageType': 'صيغة غير مدعومة - PNG أو JPEG أو WEBP أو HEIC فقط',

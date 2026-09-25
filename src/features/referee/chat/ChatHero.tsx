@@ -5,20 +5,21 @@ import { ReplyGlyph } from '../../v12/glyphs';
 
 type Props = {
   greeting: string;
+  compact?: boolean;
   questions: string[];
   disabled: boolean;
   onQuestion: (question: string) => void;
   t: (key: string) => string;
 };
 
-export default function ChatHero({ greeting, questions, disabled, onQuestion, t }: Props) {
+export default function ChatHero({ greeting, compact, questions, disabled, onQuestion, t }: Props) {
   return (
-    <div className="v12-hello select-none">
-      <div className="v12-hello-ref" data-v12-hero-ref style={{ width: 96, height: 96 }}>
-        <Referee size={96} glow float />
+    <div className={`v12-hello select-none${compact ? ' is-compact' : ''}`}>
+      <div className="v12-hello-ref" data-v12-hero-ref style={{ width: compact ? 82 : 96, height: compact ? 122 : 96 }}>
+        <Referee size={compact ? 82 : 96} glow float />
       </div>
-      {greeting && <h2 style={{ textWrap: 'balance' } as React.CSSProperties}>{greeting}</h2>}
-      <p>{t('v12.heroSub')}</p>
+      {greeting && <h2 style={{ textWrap: 'balance', margin: 0 } as React.CSSProperties}>{greeting}</h2>}
+      <p style={compact ? { margin: '2px 0 0' } : undefined}>{t('v12.heroSub')}</p>
       <div className="v12-starters">
         {questions.map((question, index) => (
           <button

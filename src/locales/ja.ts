@@ -48,6 +48,7 @@ const ja: TranslationMap = {
     'chat.reply': '続けて質問',
     'chat.replyTo': '返信先：',
     'chat.attachImage': '画像を添付',
+    'chat.removeImage': '画像を削除',
     'chat.maxImages': '最大3枚まで',
     'chat.imagesOnly': '画像のみ',
     'chat.unsupportedImageType': '非対応の形式です - PNG、JPEG、WEBP、HEICのみ',

@@ -89,6 +89,7 @@ import { SeasonStatus } from '../features/referee/ui/RefereeBackdrop';
 import { MOTION } from '../features/referee/ui/motion';
 import { DeleteAccountDialog, SessionKickedDialog } from '../features/referee/ui/AccountDialogs';
 import ChatComposer from '../features/referee/chat/ChatComposer';
+import ChatAttachmentTray from '../features/referee/chat/ChatAttachmentTray';
 import { ReplyGlyph } from '../features/v12/glyphs';
 import { extractFollowUps } from '../features/referee/chat/text';
 import ChatHero from '../features/referee/chat/ChatHero';
@@ -1379,10 +1380,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
           <div className="v12-hdr-lg" role="img" aria-label={t('app.title')} />
           <div className="v12-hdr-t">
             <b>{t('app.title')}</b>
-            <small>
-              <i className={`v12-dot${isAiBusy || rulebookLoading ? ' is-busy' : ''}`} />
-              <span className="truncate">{rulebookLoading ? t('chat.updating') : isAiBusy ? t('v12.thinking') : t('v12.ready')}</span>
-              <span className="v12-sep v12-hdr-cr">·</span>
+            <small className={isAiBusy || rulebookLoading ? 'v12-hdr-secondary-idle' : undefined}>
+              {!isAiBusy && !rulebookLoading && <><i className="v12-dot" /><span>{t('v12.ready')}</span></>}
               <span className="shrink-0 v12-hdr-cr">{t('v12.from')} <span className="v12-b7">Boeing <i>727</i></span></span>
             </small>
           </div>
@@ -1599,6 +1598,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         <div className="w-full max-w-3xl lg:max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-5 lg:py-4 space-y-4 md:space-y-5">
         <AnimatePresence>{heroActive && <ChatHero
           greeting={heroGreeting}
+          compact={attachedImages.length > 0}
           questions={quickQuestions}
           disabled={isAiBusy || rulebookLoading}
           onQuestion={question => handleSend(question)}
@@ -1657,11 +1657,11 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
         </div>
       </motion.div>
 
+      <ChatAttachmentTray attachments={attachedImages} removeAttachment={removeAttachedImage} t={t} />
       <ChatComposer
         replyTo={replyTo}
         clearReply={() => setReplyTo(null)}
-        attachments={attachedImages}
-        removeAttachment={removeAttachedImage}
+        attachmentCount={attachedImages.length}
         attachInputRef={attachInputRef}
         onAttach={handleAttachImages}
         composerRef={composerRef}

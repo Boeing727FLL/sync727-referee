@@ -48,6 +48,7 @@ const he: TranslationMap = {
     'chat.reply': 'המשך שאלה',
     'chat.replyTo': 'מגיב ל:',
     'chat.attachImage': 'צרף תמונה',
+    'chat.removeImage': 'הסר תמונה',
     'chat.maxImages': 'אפשר לצרף עד 3 תמונות',
     'chat.imagesOnly': 'אפשר לצרף תמונות בלבד',
     'chat.unsupportedImageType': 'פורמט לא נתמך - אפשר PNG, JPEG, WEBP או HEIC',

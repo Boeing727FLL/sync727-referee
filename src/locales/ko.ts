@@ -48,6 +48,7 @@ const ko: TranslationMap = {
     'chat.reply': '추가 질문',
     'chat.replyTo': '답장:',
     'chat.attachImage': '이미지 첨부',
+    'chat.removeImage': '이미지 제거',
     'chat.maxImages': '최대 3장',
     'chat.imagesOnly': '이미지만 가능',
     'chat.unsupportedImageType': '지원하지 않는 형식 - PNG, JPEG, WEBP, HEIC만 가능',

@@ -4,12 +4,10 @@ import { Reply, Square, X } from 'lucide-react';
 import { CameraGlyph, SendGlyph } from '../../v12/glyphs';
 import { MOTION } from '../ui/motion';
 
-type Attachment = { file: File; url: string };
 type Props = {
   replyTo: { text: string } | null;
   clearReply: () => void;
-  attachments: Attachment[];
-  removeAttachment: (url: string) => void;
+  attachmentCount: number;
   attachInputRef: React.RefObject<HTMLInputElement | null>;
   onAttach: (event: React.ChangeEvent<HTMLInputElement>) => void;
   composerRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -26,11 +24,11 @@ type Props = {
 };
 
 export default function ChatComposer(props: Props) {
-  const { replyTo, clearReply, attachments, removeAttachment, attachInputRef, onAttach,
+  const { replyTo, clearReply, attachmentCount, attachInputRef, onAttach,
     composerRef, input, setInput, resize, busy, learning, onSend, onStop, t, quotaText, quota } = props;
   const R = 24, C = 2 * Math.PI * R;
   const used = quota && quota.limit > 0 ? Math.min(1, Math.max(0, (quota.limit - quota.remaining) / quota.limit)) : 0;
-  const canSend = !busy && !learning && (!!input.trim() || attachments.length > 0);
+  const canSend = !busy && !learning && (!!input.trim() || attachmentCount > 0);
   return (
     <div className="v12-cmpw">
       <AnimatePresence>
@@ -47,18 +45,6 @@ export default function ChatComposer(props: Props) {
             <Reply className="shrink-0 w-4 h-4 text-[#9FD0FF]" />
             <div className="flex-1 min-w-0 text-start"><div className="text-[10px] font-black text-[#9FD0FF]">{t('chat.replyTo')}</div><div className="truncate text-xs text-white/85">{replyTo.text}</div></div>
             <button onClick={clearReply} aria-label="בטל תגובה" className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {attachments.length > 0 && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={MOTION.morph} className="overflow-hidden">
-            <div className="flex gap-2 px-2 pb-2"><AnimatePresence>{attachments.map(item => (
-              <motion.div key={item.url} layout initial={{ opacity: 0, scale: 0.75 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }} transition={MOTION.control} className="relative w-16 h-16 shrink-0">
-                <img src={item.url} alt="" className="w-full h-full object-cover rounded-xl border border-white/30 shadow-[0_4px_14px_rgba(2,14,44,0.5)]" />
-                <button onClick={() => removeAttachment(item.url)} aria-label="הסר תמונה" className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[#0A2A60] border border-white/30 text-white/80 hover:text-white flex items-center justify-center cursor-pointer"><X className="w-3 h-3" /></button>
-              </motion.div>
-            ))}</AnimatePresence></div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -48,6 +48,7 @@ const zh: TranslationMap = {
     'chat.reply': '追问',
     'chat.replyTo': '回复：',
     'chat.attachImage': '添加图片',
+    'chat.removeImage': '移除图片',
     'chat.maxImages': '最多3张图片',
     'chat.imagesOnly': '仅限图片',
     'chat.unsupportedImageType': '不支持的格式 - 仅限 PNG、JPEG、WEBP 或 HEIC',

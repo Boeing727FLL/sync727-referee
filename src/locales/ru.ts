@@ -48,6 +48,7 @@ const ru: TranslationMap = {
     'chat.reply': 'Уточнить',
     'chat.replyTo': 'Ответ на:',
     'chat.attachImage': 'Прикрепить фото',
+    'chat.removeImage': 'Удалить изображение',
     'chat.maxImages': 'До 3 фото',
     'chat.imagesOnly': 'Только фото',
     'chat.unsupportedImageType': 'Неподдерживаемый формат - только PNG, JPEG, WEBP или HEIC',

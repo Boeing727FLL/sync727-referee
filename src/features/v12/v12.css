@@ -125,6 +125,7 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-hdr-lg{width:42px;height:42px;border-radius:13px;flex:none;background:#F2F5FA url(/referee-logo.webp) center/80% no-repeat;box-shadow:0 4px 10px -4px rgba(0,0,0,.45),inset 0 0 0 .5px rgba(0,0,0,.08)}
 .v12-hdr-t{min-width:0;flex:1}
 .v12-hdr-t b{font-family:'Heebo',sans-serif;font-weight:800;font-size:17px;line-height:1;letter-spacing:-.4px;display:block;color:#fff}
+.v12-hdr-secondary-idle{display:none!important}
 .v12-hdr-t small{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:rgba(238,243,250,.68);margin-top:5px;white-space:nowrap;overflow:hidden}
 .v12-dot{width:7px;height:7px;border-radius:50%;flex:none;background:#3DDC84;box-shadow:0 0 0 3px rgba(61,220,132,.18),0 0 8px rgba(61,220,132,.8)}
 .v12-dot.is-busy{background:#FFD21F;box-shadow:0 0 0 3px rgba(255,210,31,.18),0 0 8px rgba(255,210,31,.8)}
@@ -137,6 +138,14 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-hello h2{font-family:'Heebo',sans-serif;font-weight:800;font-size:38px;letter-spacing:-1.2px;line-height:1.05;background:linear-gradient(180deg,#FFFFFF 30%,#BFD9F7);-webkit-background-clip:text;background-clip:text;color:transparent;margin:0;animation:v12-rise .8s var(--v12-ease) .15s both}
 .v12-hello p{font-size:17.5px;font-weight:500;color:rgba(238,243,250,.62);margin-top:8px;letter-spacing:.1px;animation:v12-rise .8s var(--v12-ease) .3s both}
 .v12-starters{margin-top:28px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px}
+/* Adding a photo yields room to all starter questions above the separate draft row. */
+.v12-hello.is-compact{min-height:0;justify-content:flex-start;padding:3px 0 8px}
+.v12-hello.is-compact .v12-hello-ref{margin:0 0 5px;flex:none}
+.v12-hello.is-compact h2{font-size:22px;line-height:1.1;margin:0}
+.v12-hello.is-compact p{font-size:13px;margin:2px 0 0}
+.v12-hello.is-compact .v12-starters{margin-top:7px;gap:5px;flex-direction:column;width:100%}
+.v12-hello.is-compact .v12-chip{min-height:31px;padding:5px 12px;font-size:12px;border-radius:16px;max-width:100%;justify-content:center}
+
 
 .v12-chip{min-height:40px;padding:8px 15px 8px 14px;border-radius:20px;font-size:14.5px;font-weight:650;letter-spacing:-.1px;display:inline-flex;gap:7px;align-items:center;color:#fff;border:0;cursor:pointer;font-family:inherit;text-align:start;line-height:1.3;
  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.06));backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 0 .5px rgba(255,255,255,.18),0 10px 22px -14px rgba(2,14,44,.8);
@@ -308,3 +317,16 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 
 /* Nested owner tools sit above the Settings sheet; keep the lower layer quiet. */
 .v12-admin-scrim{background:rgba(4,18,48,.96)}
+
+.v12-attach-row{position:relative;z-index:15;flex:none;width:min(100%,860px);margin:0 auto;padding:5px 14px 0;overflow:hidden}
+/* Quiet photo tile: broad white mat and soft glass shelf, no loud color border. */
+.v12-attachments{display:flex;gap:12px;align-items:center;width:max-content;max-width:100%;margin:0 0 11px 2px;padding:8px;border-radius:25px;
+ background:rgba(14,54,117,.90);border:1px solid rgba(255,255,255,.26);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.27),0 15px 34px -15px rgba(2,14,44,.75);overflow-x:auto}
+.v12-attachment{position:relative;width:94px;height:94px;flex:none;padding:5px;border-radius:21px;
+ background:linear-gradient(155deg,#FFFFFF,#DCEBFB);box-shadow:0 12px 24px -8px rgba(0,15,47,.7),inset 0 1px 0 rgba(255,255,255,.96)}
+.v12-attachment-frame{width:100%;height:100%;overflow:hidden;border-radius:16px;background:#174B91;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+.v12-attachment-frame img{width:100%;height:100%;display:block;object-fit:cover}
+.v12-attachment-remove{position:absolute;top:-8px;inset-inline-end:-8px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+ color:#122D59;background:#F2F5FA;border:1px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(2,14,44,.4);cursor:pointer}
+.v12-attachment-remove:focus-visible{outline:3px solid #FFD21F;outline-offset:2px}
