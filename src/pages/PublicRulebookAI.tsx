@@ -1293,16 +1293,18 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
           if (!isCurrentUserOwner() && outcome.answered) {
             trackQuestion(resolveRefereeUid() || 'anon');
           }
-          logRefereeQA({
-            question: userMessage,
-            answer: outcome.logAnswer,
-            season: seasonName,
-            language,
-            uid: resolveRefereeUid(),
-            askerName: (displayUser as any)?.name || null,
-            model: 'gemini-3.6-flash',
-            ok: outcome.answered,
-          });
+          if (!isCurrentUserOwner()) {
+            logRefereeQA({
+              question: userMessage,
+              answer: outcome.logAnswer,
+              season: seasonName,
+              language,
+              uid: resolveRefereeUid(),
+              askerName: (displayUser as any)?.name || null,
+              model: 'gemini-3.6-flash',
+              ok: outcome.answered,
+            });
+          }
           requestRef.current = completeStream(requestRef.current);
           setRenderingResponse(true);
           setMessages(prev => finalizeModelResponse(prev, response, t('chat.commError')));
@@ -1313,16 +1315,19 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
           if (requestRef.current.requestId === sendRequestId) handleStop();
         } else {
           const errMsg = safeUserFacingError(error, t('chat.connectionLost'));
-          logRefereeQA({
-            question: userMessage,
-            answer: errMsg,
-            season: seasonName,
-            language,
-            uid: resolveRefereeUid(),
-            askerName: (displayUser as any)?.name || null,
-            model: 'gemini-3.6-flash',
-            ok: false,
-          });
+          // Service errors are journal entries too, so exclude owner requests here as well.
+          if (!isCurrentUserOwner()) {
+            logRefereeQA({
+              question: userMessage,
+              answer: errMsg,
+              season: seasonName,
+              language,
+              uid: resolveRefereeUid(),
+              askerName: (displayUser as any)?.name || null,
+              model: 'gemini-3.6-flash',
+              ok: false,
+            });
+          }
           // A partial bubble that never reached a visible answer (still
           // inside private thinking) is dropped, never shown as raw markup.
           setMessages(prev => [...dropInvisibleAnswer(prev), { role: 'model', text: errMsg }]);
