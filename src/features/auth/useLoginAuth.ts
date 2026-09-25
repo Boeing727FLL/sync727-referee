@@ -6,6 +6,7 @@
  * navigation target via onSuccess.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useLanguage } from '../../hooks/useLanguage';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -27,25 +28,19 @@ const NAVIGATE_AFTER_LEAVE_MS = 520;
 const INLINE_VERIFY_DELAY_MS = 250;
 const INLINE_SUCCESS_HOLD_MS = 150;
 
-/** Firebase Auth error code -> Hebrew message (single source of truth). */
-const FIREBASE_AUTH_MESSAGES: Record<string, string> = {
-  'auth/email-already-in-use': 'כבר קיים חשבון עם האימייל הזה. נסה להתחבר.',
-  'auth/user-not-found': 'אימייל או סיסמה שגויים.',
-  'auth/invalid-credential': 'אימייל או סיסמה שגויים.',
-  'auth/wrong-password': 'אימייל או סיסמה שגויים.',
-  'auth/weak-password': 'הסיסמה חלשה מדי. נדרשים לפחות 6 תווים.',
-  'auth/invalid-email': 'כתובת אימייל לא תקינה.',
-  'auth/too-many-requests': 'יותר מדי ניסיונות. נסה שוב מאוחר יותר.',
-  'auth/missing-email': 'כתובת אימייל לא תקינה.',
-  'auth/invalid-recipient-email': 'כתובת אימייל לא תקינה.',
-  'auth/network-request-failed': 'שגיאת רשת. בדוק חיבור לאינטרנט ונסה שוב.',
+/** Firebase errors are mapped to safe, translated user messages. */
+const FIREBASE_AUTH_KEYS: Record<string, string> = {
+  'auth/email-already-in-use': 'login.emailInUse',
+  'auth/user-not-found': 'login.invalidCredential',
+  'auth/invalid-credential': 'login.invalidCredential',
+  'auth/wrong-password': 'login.invalidCredential',
+  'auth/weak-password': 'login.weakPassword',
+  'auth/invalid-email': 'login.invalidEmail',
+  'auth/missing-email': 'login.invalidEmail',
+  'auth/invalid-recipient-email': 'login.invalidEmail',
+  'auth/too-many-requests': 'login.tooMany',
+  'auth/network-request-failed': 'login.network',
 };
-
-/** Look up the Hebrew message, falling back to the raw Firebase text. */
-function authErrorMessage(code: string | undefined, fallback: string): string {
-  if (code && FIREBASE_AUTH_MESSAGES[code]) return FIREBASE_AUTH_MESSAGES[code];
-  return fallback;
-}
 
 /** Credentials captured at submit time (the overlay flow is async). */
 type PendingAuth = {
@@ -56,6 +51,8 @@ type PendingAuth = {
 };
 
 export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: () => void; handoff?: 'overlay' | 'inline' }) {
+  const { t, language } = useLanguage();
+  const authErrorMessage = (code: string | undefined, fallbackKey: string) => t(code && FIREBASE_AUTH_KEYS[code] || fallbackKey);
   // -- form state ------------------------------------------------------------
   // One view machine instead of the old isSignUp/showReset boolean pair
   // (which allowed the illegal sign-up+reset combination).
@@ -168,7 +165,7 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
           try { await auth.signOut(); } catch {}
           try { localStorage.removeItem('auth_user'); } catch {}
           setLoading(false);
-          setError('חשבון הבעלים חייב אימות אימייל. נשלח אליך מייל אימות — אמת את האימייל ואז התחבר שוב.');
+          setError(t('login.ownerVerify'));
           return false;
         }
       }
@@ -186,7 +183,7 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
       return true;
     } catch (err: any) {
       setLoading(false);
-      setError(authErrorMessage(err?.code, 'שגיאת התחברות. בדוק את הפרטים ונסה שוב.'));
+      setError(authErrorMessage(err?.code, 'login.authFailed'));
       return false;
     }
   };
@@ -254,12 +251,12 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
     setResetSent(false);
     const emailTrim = resetEmail.trim();
     if (!emailTrim) {
-      setError('נא להזין כתובת אימייל.');
+      setError(t('login.emailRequired'));
       return;
     }
     setLoading(true);
-    // Ensure email is sent in Hebrew
-    auth.languageCode = 'he';
+    // Keep Firebase's password reset email in the selected language.
+    auth.languageCode = language;
 
     const tryWithActionCode = async () => {
       await sendPasswordResetEmail(auth, emailTrim, {
@@ -290,7 +287,7 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
         setResetSent(true);
       } else {
         console.error('sendPasswordResetEmail failed:', err);
-        setError(authErrorMessage(code, err?.message || 'שגיאה בשליחת אימייל. נסה שוב.'));
+        setError(authErrorMessage(code, 'login.resetFailed'));
       }
     } finally {
       setLoading(false);
@@ -300,9 +297,9 @@ export function useLoginAuth({ onSuccess, handoff = 'overlay' }: { onSuccess: ()
   useEffect(() => {
     if (!authOverlay) return;
     const prev = document.title;
-    document.title = 'מתחבר... | Boeing727';
+    document.title = `${t('login.signingIn')} | Virtual Referee`;
     return () => { document.title = prev; };
-  }, [authOverlay]);
+  }, [authOverlay, t]);
 
   return {
     view, setView, isSignUp, showReset,

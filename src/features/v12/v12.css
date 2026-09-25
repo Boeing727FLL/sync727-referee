@@ -294,3 +294,17 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-gate-doc-title{margin:12px 0 8px;font-family:'Heebo',sans-serif;font-weight:900;font-size:22px;color:#fff}
 .v12-gate-scroll{max-height:min(52dvh,440px);overflow-y:auto;font-size:14.5px;line-height:1.6;color:rgba(238,243,250,.88);padding-bottom:8px}
 @media (prefers-reduced-motion:reduce){.v12-gate-links button,.v12-gate-check .box{transition:none}}
+
+/* Longer translated headings and links grow instead of clipping in the split panel. */
+.v12-ph,.v12-pf{height:auto;min-height:133px}
+.v12-pf{min-height:113px}
+.v12-card [dir="ltr"] .v12-f input[dir="ltr"]{text-align:left}
+.v12-card [dir="rtl"] .v12-f input[dir="ltr"]{text-align:left}
+
+/* The referee sits outside the card, at the start edge in RTL and the end
+   edge in LTR. Keep a dedicated shoulder above the card for either direction. */
+.v12-root[dir="ltr"] .v12-buddy{left:auto;right:6px}
+.v12-root[dir="ltr"] .v12-buddy .v12-ref-bd{transform:scaleX(-1)}
+
+/* Nested owner tools sit above the Settings sheet; keep the lower layer quiet. */
+.v12-admin-scrim{background:rgba(4,18,48,.96)}

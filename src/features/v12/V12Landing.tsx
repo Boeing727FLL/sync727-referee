@@ -85,7 +85,7 @@ function RobotSvg() {
 }
 
 export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed, onConfirm, onDone }: Props) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   // No WAAPI / SVG geometry (old browsers, test DOMs): same static path as reduced motion.
   const reduce = useRef(reduceMotion() || !canAnimate()).current;
   const skipIntro = reduce || start === 'login';
@@ -239,15 +239,9 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Card height follows its content (the panel geometry is pixel-anchored).
-  useLayoutEffect(() => {
-    const cin = cinRef.current, card = cardRef.current;
-    if (!cin || !card || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => { card.style.height = `${cin.offsetHeight}px`; });
-    ro.observe(cin);
-    card.style.height = `${cin.offsetHeight}px`;
-    return () => ro.disconnect();
-  }, [phase]);
+  // Keep the card's height intrinsic. The auth form is lazy and can mount
+  // after this shell; a one-shot measured height clips its fields in WebKit.
+  // Natural flow also accommodates longer translated labels and reset text.
 
   const fadeIn = () => { cinRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease' }); };
   const sweep: SweepFn = useCallback((to, midpoint) => {
@@ -306,7 +300,7 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
   const body = t('disclaimerPopup.body');
   const hlAt = body.indexOf('תמיד');
   return (
-    <div className={`v12-root v12-land ${phase === 'leaving' ? 'is-leaving' : ''}`} dir="rtl" data-phase={phase} data-view={view}>
+    <div className={`v12-root v12-land ${phase === 'leaving' ? 'is-leaving' : ''}`} dir={isRTL ? 'rtl' : 'ltr'} data-phase={phase} data-view={view}>
       <div className="v12-bg" />
       <div className="v12-vig" />
       {phase === 'intro' && (
@@ -323,7 +317,7 @@ export default function V12Landing({ signedIn, start = 'intro', onWarm, onAuthed
             <h1>{t('app.title')}</h1>
             <p>מבית <span className="v12-b7">Boeing <i>727</i></span> · FIRST LEGO League</p>
           </div>
-          <button type="button" className="v12-skip" aria-label="דלג" onClick={skip} />
+          <button type="button" className="v12-skip" aria-label={t('common.skip')} onClick={skip} />
         </>
       )}
       <div ref={logoRef} className="v12-logo" style={skipIntro ? undefined : { transform: introTransform() }}>

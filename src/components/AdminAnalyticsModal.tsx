@@ -1,3 +1,4 @@
+import { useLanguage } from '../hooks/useLanguage';
 /**
  * AdminAnalyticsModal — owner-only floating dashboard (floating window).
  *
@@ -53,9 +54,9 @@ function StatTile({ icon, tint, label, value, sub }: {
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] text-slate-400 font-semibold mb-1">{label}</div>
+        <div className="text-[11px] text-white/65 font-semibold mb-1">{label}</div>
         <div className="text-xl md:text-2xl font-black text-white tabular-nums leading-none">{value}</div>
-        {sub && <div className="text-[11px] text-slate-500 mt-1">{sub}</div>}
+        {sub && <div className="text-[11px] text-white/55 mt-1">{sub}</div>}
       </div>
     </div>
   );
@@ -84,23 +85,24 @@ function ActionButton({ onClick, disabled, tone, children }: {
 
 /** Owner lock screen for non-owner accounts. */
 function LockGate({ onClose }: { onClose: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <div className="text-center py-6">
         <div className="relative w-16 h-16 mx-auto mb-4">
           <div className="absolute -inset-2 bg-white/10 blur-xl rounded-full" aria-hidden />
           <div className="relative w-full h-full rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center">
-            <Lock className="w-6 h-6 text-slate-300" />
+            <Lock className="w-6 h-6 text-white/80" />
           </div>
         </div>
-        <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-        <p className="text-slate-400 text-sm">האנליטיקס פתוח לחשבון הבעלים בלבד.</p>
+        <h4 className="text-white font-black mb-1">{t('owner.protected')}</h4>
+        <p className="text-white/65 text-sm">{t('owner.analyticsOwner')}</p>
       </div>
       <button
         onClick={onClose}
         className="w-full py-3 rounded-2xl bg-white/[0.07] hover:bg-white/10 text-white font-bold text-sm transition-all active:scale-[0.98] cursor-pointer"
       >
-        סגור
+        {t('common.close')}
       </button>
     </div>
   );
@@ -111,6 +113,7 @@ function LockGate({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------------
 
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
+  const { t, isRTL } = useLanguage();
   const a11yRef = useModalA11y(onClose);
   const [unlocked, setUnlocked] = useState(false);
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
@@ -163,8 +166,8 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center modal-safe-4"
-          dir="rtl"
+          className="fixed inset-0 z-[9999] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-4"
+          dir={isRTL ? 'rtl' : 'ltr'}
           onClick={onClose}
         >
           <motion.div
@@ -172,7 +175,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 20 }}
             onClick={e => e.stopPropagation()}
-            className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden"
+            className="v12-sheet w-full max-w-lg max-h-[90dvh] flex flex-col"
             ref={a11yRef}
             role="dialog"
             aria-modal="true"
@@ -183,12 +186,12 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
                 <div className="w-9 h-9 rounded-xl bg-yellow-400/12 border border-yellow-400/25 flex items-center justify-center">
                   <BarChart3 className="w-[18px] h-[18px] text-yellow-300" />
                 </div>
-                <h3 className="text-lg font-black text-white tracking-tight">אנליטיקס</h3>
+                <h3 className="text-lg font-black text-white tracking-tight">{t('owner.analytics')}</h3>
               </div>
               <button
                 onClick={onClose}
-                aria-label="סגור"
-                className="p-2 rounded-full bg-white/[0.05] text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer"
+                aria-label={t('common.close')}
+                className="p-2 rounded-full bg-white/[0.12] text-white hover:bg-white/20 transition-all active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -200,25 +203,25 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-2.5">
-                    <StatTile icon={<MessageSquareText className="w-5 h-5" />} tint="gold" label="שאלות שנשאלו" value={stats?.totalQuestions ?? '—'} />
-                    <StatTile icon={<Users className="w-5 h-5" />} tint="blue" label="משתמשים רשומים" value={stats?.registeredUsers ?? '—'} />
-                    <StatTile icon={<Activity className="w-5 h-5" />} tint="green" label="מחוברים עכשיו" value={onlineUsers} />
+                    <StatTile icon={<MessageSquareText className="w-5 h-5" />} tint="gold" label={t('owner.questions')} value={stats?.totalQuestions ?? '—'} />
+                    <StatTile icon={<Users className="w-5 h-5" />} tint="blue" label={t('owner.registered')} value={stats?.registeredUsers ?? '—'} />
+                    <StatTile icon={<Activity className="w-5 h-5" />} tint="green" label={t('owner.online')} value={onlineUsers} />
                     <StatTile
                       icon={<UserCheck className="w-5 h-5" />}
                       tint="violet"
-                      label="ממוצע למשתמש"
+                      label={t('owner.average')}
                       value={stats ? stats.avgPerUser.toFixed(1) : '—'}
-                      sub={stats ? `מתוך ${stats.activeUsers} פעילים` : undefined}
+                      sub={stats ? t('owner.perUser').replace('{count}', String(stats.activeUsers)) : undefined}
                     />
                   </div>
                   <div className="flex gap-2.5">
                     <ActionButton tone="red" onClick={handleReset} disabled={resetting}>
                       <RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />
-                      {confirmReset ? 'לחצו שוב לאישור' : 'איפוס ספירה'}
+                      {confirmReset ? t('owner.confirm') : t('owner.resetCount')}
                     </ActionButton>
                   </div>
                   {resetFailed && (
-                    <p className="text-[11px] font-bold text-red-300">איפוס הספירה נכשל. בדוק חיבור ונסה שוב.</p>
+                    <p className="text-[11px] font-bold text-red-300">{t('owner.analyticsFail')}</p>
                   )}
                 </div>
               )}

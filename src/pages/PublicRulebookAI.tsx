@@ -1041,7 +1041,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
       console.error('Upload error:', error);
       // The dialog stays open with a clean inline error - no blocking
       // alert, no raw technical message.
-      setUploadError('העלאת הקובץ נכשלה. בדוק חיבור ונסו שוב.');
+      setUploadError(t('owner.uploadFail'));
       setUploading(false);
       uploadingRef.current = false;
       setUploadProgress(0);

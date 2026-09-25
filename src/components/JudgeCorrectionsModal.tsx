@@ -1,3 +1,4 @@
+import { useLanguage } from '../hooks/useLanguage';
 /**
  * JudgeCorrectionsModal — owner-only editor for referee overrides.
  *
@@ -56,6 +57,7 @@ const correctionsDocRef = () => doc(db, 'app_config', 'corrections');
 
 /** Owner lock screen for non-owner accounts. */
 function LockGate() {
+  const { t } = useLanguage();
   return (
     <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
       <div className="relative w-16 h-16 mx-auto mb-4">
@@ -64,28 +66,30 @@ function LockGate() {
           <Lock className="w-6 h-6 text-blue-400" />
         </div>
       </div>
-      <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-      <p className="text-slate-400 text-sm">עריכת תיקונים פתוחה לחשבון הבעלים בלבד. התחברו עם החשבון המתאים כדי להמשיך.</p>
+      <h4 className="text-white font-black mb-1">{t('owner.protected')}</h4>
+      <p className="text-white/65 text-sm">{t('owner.correctionsOwner')}</p>
     </div>
   );
 }
 
 /** Spinner placeholder while the document loads. */
 function LoadingView() {
+  const { t } = useLanguage();
   return (
     <div className="m-auto px-6 py-10 text-center">
       <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-3" />
-      <p className="text-slate-400 text-sm font-bold">טוען תיקונים</p>
+      <p className="text-white/65 text-sm font-bold">{t('owner.loadingCorrections')}</p>
     </div>
   );
 }
 
 /** Empty state when no correction lines exist (or match the search). */
 function EmptyCorrections() {
+  const { t } = useLanguage();
   return (
     <div className="text-center py-10">
-      <p className="text-slate-300 font-bold text-sm">אין תיקונים עדיין</p>
-      <p className="text-slate-500 text-xs mt-1">הוסיפו תיקון ראשון למעלה</p>
+      <p className="text-white/80 font-bold text-sm">{t('owner.emptyCorrections')}</p>
+      <p className="text-white/55 text-xs mt-1">{t('owner.emptyCorrectionsSub')}</p>
     </div>
   );
 }
@@ -105,8 +109,8 @@ function ToolbarButton({ onClick, disabled, title, dangerHover, children }: {
       title={title}
       className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold transition-colors cursor-pointer disabled:opacity-40 ${
         dangerHover
-          ? 'text-slate-300 hover:text-red-300 hover:bg-red-500/10'
-          : 'text-slate-300 hover:text-white hover:bg-white/10'
+          ? 'text-white/80 hover:text-red-300 hover:bg-red-500/10'
+          : 'text-white/80 hover:text-white hover:bg-white/10'
       }`}
     >
       {children}
@@ -121,8 +125,9 @@ function CorrectionRow({ num, value, onChange, onDelete }: {
   onChange: (value: string) => void;
   onDelete: () => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/8 bg-slate-800/40 hover:border-white/15 px-3 py-2.5 transition-colors">
+    <div className="flex items-start gap-3 rounded-xl border border-white/8 bg-[#092C65]/40 hover:border-white/15 px-3 py-2.5 transition-colors">
       <span className="shrink-0 w-6 h-6 mt-1 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-200 text-[11px] font-black flex items-center justify-center">
         {num}
       </span>
@@ -130,14 +135,14 @@ function CorrectionRow({ num, value, onChange, onDelete }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={2}
-        placeholder="כתבו תיקון"
-        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-slate-950/50 border border-white/10 text-base md:text-sm text-slate-100 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
+        placeholder={t('owner.writeCorrection')}
+        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-[#092C65]/70 border border-white/10 text-base md:text-sm text-white leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 resize-y transition-all"
         dir="auto"
       />
       <button
         onClick={onDelete}
-        className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
-        title="מחק שורה"
+        className="shrink-0 p-1.5 rounded-lg text-white/55 hover:text-red-300 hover:bg-red-500/15 transition-colors cursor-pointer"
+        title={t('owner.deleteLine')}
       >
         <Trash2 className="w-4 h-4" />
       </button>
@@ -150,6 +155,7 @@ function CorrectionRow({ num, value, onChange, onDelete }: {
 // ---------------------------------------------------------------------------
 
 export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrectionsModalProps) {
+  const { t, isRTL, language } = useLanguage();
   const a11yRef = useModalA11y(onClose);
   // -- gate + document state ----------------------------------------------------
   const [unlocked, setUnlocked] = useState(false);
@@ -203,7 +209,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
       setActionError(null);
     } catch (e) {
       console.warn('corrections load failed:', e);
-      setActionError('טעינת התיקונים נכשלה. בדוק חיבור ונסה שוב.');
+      setActionError(t('owner.loadFail'));
     } finally {
       setLoading(false);
     }
@@ -234,7 +240,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
     } catch (e) {
       console.warn('corrections save failed:', e);
       // The draft stays on screen; say the save did not land.
-      setActionError('שמירת התיקונים נכשלה. בדוק חיבור והתחברות כבעלים ונסה שוב.');
+      setActionError(t('owner.saveFail'));
     } finally {
       setSaving(false);
     }
@@ -264,8 +270,8 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center modal-safe-3"
-          dir="rtl"
+          className="fixed inset-0 z-[9999] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-3"
+          dir={isRTL ? 'rtl' : 'ltr'}
           onClick={onClose}
         >
           <motion.div
@@ -274,7 +280,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
             exit={{ scale: 0.92, opacity: 0, y: 24 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6)]"
+            className="v12-sheet w-full max-w-2xl max-h-[90dvh] flex flex-col"
             ref={a11yRef}
             role="dialog"
             aria-modal="true"
@@ -282,7 +288,7 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
           >
             <div className="flex w-full h-1 shrink-0" aria-hidden>
               <div className="flex-1 bg-blue-600" />
-              <div className="flex-1 bg-white" />
+              <div className="flex-1 bg-[#EEF3FA]" />
               <div className="flex-1 bg-red-600" />
             </div>
 
@@ -295,22 +301,22 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                       <div className="absolute inset-0 bg-red-500/15 blur-xl rounded-full" />
                     </div>
                     <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-red-600 p-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
-                      <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center">
+                      <div className="w-full h-full rounded-2xl bg-[#0B2F6E] flex items-center justify-center">
                         <Gavel className="w-5 h-5 text-white" />
                       </div>
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">תיקון שופט</h3>
-                    <p className="text-[11px] md:text-xs text-slate-400 font-medium">
-                      {unlocked ? `סך הכל ${nonEmptyCount} תיקונים` : 'גישה לשופטים ראשיים בלבד'}
+                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">{t('owner.correctionTitle')}</h3>
+                    <p className="text-[11px] md:text-xs text-white/65 font-medium">
+                      {unlocked ? t('owner.correctionCount').replace('{count}', String(nonEmptyCount)) : t('owner.correctionsRestricted')}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="shrink-0 w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer"
-                  aria-label="סגור"
+                  className="shrink-0 w-9 h-9 rounded-xl bg-white/[0.12] border border-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+                  aria-label={t('common.close')}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -325,8 +331,8 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
               ) : (
                 <div className="flex flex-col flex-1 min-h-0">
                   <div className="px-4 md:px-5 pt-4 pb-3 border-b border-white/5 shrink-0 space-y-3">
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      לחצו על תיקון כדי לערוך אותו ישירות. כל שורה נשמרת כתיקון אחד שהשופט יקח בחשבון.
+                    <p className="text-xs text-white/65 leading-relaxed">
+                      {t('owner.correctionInfo')}
                     </p>
                     {actionError && (
                       <p className="text-[11px] font-bold text-red-300">{actionError}</p>
@@ -348,19 +354,19 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         ) : (
                           <Save className="w-4 h-4" />
                         )}
-                        {saved ? 'נשמר' : 'שמור תיקונים'}
+                        {saved ? t('owner.saved') : t('owner.save')}
                       </button>
                       <ToolbarButton onClick={load} disabled={loading}>
                         <RotateCcw className="w-4 h-4" />
-                        טען מחדש
+                        {t('owner.reload')}
                       </ToolbarButton>
                       <ToolbarButton onClick={() => setLines([])} disabled={lines.length === 0} dangerHover>
                         <Trash2 className="w-4 h-4" />
-                        נקה הכל
+                        {t('owner.clearAll')}
                       </ToolbarButton>
-                      <span className="mr-auto text-[11px] text-slate-500 font-medium">
-                        {nonEmptyCount} שורות{updatedAt ? `, עודכן ${new Date(updatedAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
-                        {dirty ? ', יש שינויים שלא נשמרו' : ''}
+                      <span className="ms-auto text-[11px] text-white/55 font-medium">
+                        {t('owner.rows').replace('{count}', String(nonEmptyCount))}{updatedAt ? `, ${t('owner.updated').replace('{date}', new Date(updatedAt).toLocaleString(language, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}` : ''}
+                        {dirty ? `, ${t('owner.unsaved')}` : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -369,40 +375,40 @@ export default function JudgeCorrectionsModal({ isOpen, onClose }: JudgeCorrecti
                         value={newLine}
                         onChange={(e) => setNewLine(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && addLine()}
-                        placeholder="הוספת תיקון חדש"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
+                        placeholder={t('owner.addCorrection')}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#092C65]/70 border border-white/10 text-white text-base md:text-sm placeholder-white/45 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                         dir="auto"
                       />
                       <ToolbarButton onClick={addLine} disabled={!newLine.trim()}>
                         <Plus className="w-4 h-4" />
-                        הוסף
+                        {t('owner.add')}
                       </ToolbarButton>
                     </div>
                   </div>
 
                   <div className="px-4 md:px-5 pt-3 shrink-0">
                     <div className="relative">
-                      <Search className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Search className="w-4 h-4 text-white/55 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="חיפוש בתיקונים"
-                        className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-slate-800/70 border border-white/10 text-white text-base md:text-sm placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
+                        placeholder={t('owner.search')}
+                        className="w-full pr-9 pl-9 py-2.5 rounded-xl bg-[#092C65]/70 border border-white/10 text-white text-base md:text-sm placeholder-white/45 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
                       />
                       {search && (
                         <button
                           onClick={() => setSearch('')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-white/5 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
-                          aria-label="נקה חיפוש"
+                          className="absolute end-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-white/5 text-white/65 hover:text-white flex items-center justify-center cursor-pointer"
+                          aria-label={t('owner.clearSearch')}
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
-                    <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold mt-2 mb-1 px-1">
+                    <p className="flex items-center gap-1.5 text-[11px] text-white/55 font-bold mt-2 mb-1 px-1">
                       <ListOrdered className="w-3.5 h-3.5" />
-                      מציג {visibleLines.length} מתוך {nonEmptyCount}
+                      {t('owner.showing').replace('{shown}', String(visibleLines.length)).replace('{total}', String(nonEmptyCount))}
                     </p>
                   </div>
 

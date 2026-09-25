@@ -9,11 +9,13 @@
  * in as the next beat of the same motion.
  */
 import { AnimatePresence, motion } from 'framer-motion';
+import { useLanguage } from '../../hooks/useLanguage';
 import SpatialBackdrop from '../../components/SpatialBackdrop';
 
 type Props = { stage: 'verifying' | 'success' | null; leaving: boolean; welcomeName: string };
 
 export default function AuthProgressOverlay({ stage: authOverlay, leaving: authLeaving, welcomeName }: Props) {
+  const { t, isRTL } = useLanguage();
   return (
       <AnimatePresence>
         {authOverlay && (
@@ -24,7 +26,7 @@ export default function AuthProgressOverlay({ stage: authOverlay, leaving: authL
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden"
-            dir="rtl"
+            dir={isRTL ? 'rtl' : 'ltr'}
           >
             <SpatialBackdrop />
             <div className="absolute inset-0 bg-[#020408]/80 pointer-events-none" aria-hidden />
@@ -53,7 +55,7 @@ export default function AuthProgressOverlay({ stage: authOverlay, leaving: authL
                   aria-hidden
                 />
                 <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-[0_18px_50px_rgba(0,0,0,0.55)] relative overflow-hidden">
-                  <img src="/logoref.webp" alt="שופט וירטואלי" className="w-16 h-16 object-contain" />
+                  <img src="/logoref.webp" alt={t('app.title')} className="w-16 h-16 object-contain" />
                 </div>
                 <AnimatePresence>
                   {authOverlay === 'success' && (
@@ -73,7 +75,7 @@ export default function AuthProgressOverlay({ stage: authOverlay, leaving: authL
               <div className="mt-7 min-h-[3.5rem] flex flex-col items-center text-center">
                 {authOverlay === 'verifying' ? (
                   <>
-                    <p className="text-white font-black text-lg">מתחבר...</p>
+                    <p className="text-white font-black text-lg">{t('login.signingIn')}</p>
                     <div className="flex gap-1.5 mt-3" aria-hidden>
                       {[0, 1, 2].map((i) => (
                         <motion.span
@@ -93,8 +95,8 @@ export default function AuthProgressOverlay({ stage: authOverlay, leaving: authL
                     transition={{ delay: 0.22, duration: 0.35 }}
                     className="flex flex-col items-center"
                   >
-                    <p className="text-xl font-black text-white">ברוך הבא{welcomeName ? `, ${welcomeName}` : ''}!</p>
-                    <p className="text-slate-400 text-sm font-bold mt-1.5">נכנסים לשופט הווירטואלי...</p>
+                    <p className="text-xl font-black text-white">{t('login.welcome')}{welcomeName ? ` ${welcomeName}` : ''}</p>
+                    <p className="text-slate-400 text-sm font-bold mt-1.5">{t('login.signingIn')}</p>
                   </motion.div>
                 )}
               </div>

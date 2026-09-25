@@ -1,3 +1,4 @@
+import { useLanguage } from '../hooks/useLanguage';
 /**
  * SettingsModal — the owner-only control room (floating window).
  *
@@ -65,7 +66,7 @@ const TINT_CHIP: Record<RowTint, string> = {
 /** Section header: small icon + gradient label + fading rule. */
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="px-1 pt-2 flex items-center gap-2 text-right">
+    <div className="px-1 pt-2 flex items-center gap-2 text-start">
       <span className="shrink-0 w-6 h-6 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-white/60">
         {icon}
       </span>
@@ -88,7 +89,7 @@ function RowButton({ icon, tint = 'slate', label, sub, onClick, danger, nav }: {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all text-right cursor-pointer group ${
+      className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl font-bold text-sm transition-all text-start cursor-pointer group ${
         danger
           ? 'hover:bg-red-500/10 text-white/90 hover:text-red-300'
           : 'hover:bg-white/[0.07] text-white/90 hover:text-white'
@@ -98,11 +99,11 @@ function RowButton({ icon, tint = 'slate', label, sub, onClick, danger, nav }: {
         {icon}
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block truncate leading-tight">{label}</span>
-        {sub && <span className="block text-[11px] font-medium text-white/50 truncate mt-0.5">{sub}</span>}
+        <span className="block leading-tight break-words">{label}</span>
+        {sub && <span className="block text-[11px] font-medium text-white/60 leading-snug mt-0.5">{sub}</span>}
       </span>
       {nav && (
-        <ChevronLeft className="w-4 h-4 shrink-0 text-white/40 group-hover:text-white/80 group-hover:-translate-x-0.5 transition-all" aria-hidden />
+        <ChevronLeft className="w-4 h-4 shrink-0 text-white/40 group-hover:text-white/80 transition-all rtl:group-hover:-translate-x-0.5 ltr:rotate-180 ltr:group-hover:translate-x-0.5" aria-hidden />
       )}
     </button>
   );
@@ -110,6 +111,7 @@ function RowButton({ icon, tint = 'slate', label, sub, onClick, danger, nav }: {
 
 /** Owner lock screen for non-owner accounts. */
 function LockGate() {
+  const { t } = useLanguage();
   return (
     <div className="m-auto w-full max-w-sm px-6 py-10 text-center">
       <div className="relative w-16 h-16 mx-auto mb-4">
@@ -118,8 +120,8 @@ function LockGate() {
           <Lock className="w-6 h-6 text-yellow-300" />
         </div>
       </div>
-      <h4 className="text-white font-black mb-1">אזור מוגן</h4>
-      <p className="text-white/60 text-sm">ההגדרות פתוחות לחשבון הבעלים בלבד.</p>
+      <h4 className="text-white font-black mb-1">{t('owner.protected')}</h4>
+      <p className="text-white/60 text-sm">{t('owner.settingsOwner')}</p>
     </div>
   );
 }
@@ -136,6 +138,7 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
   errorMsg: string | null;
   onToggle: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className={`relative rounded-3xl border overflow-hidden transition-all duration-500 ${
       active
@@ -161,25 +164,25 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
             <span className="absolute -top-1 -left-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#0B2F6E] animate-pulse" aria-hidden />
           )}
         </div>
-        <div className="flex-1 min-w-0 text-right">
+        <div className="flex-1 min-w-0 text-start">
           <p className="text-[15px] font-black text-white leading-tight flex items-center gap-2">
-            מצב עבודה
+            {t('owner.workMode')}
             <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
               active ? 'bg-amber-400 text-slate-950' : 'bg-white/[0.07] text-white/60 border border-white/10'
             }`}>
-              {active ? 'פעיל' : 'כבוי'}
+              {active ? t('owner.active') : t('owner.off')}
             </span>
           </p>
           <p className="text-[11px] font-medium text-white/60 leading-snug mt-1">
             {active
-              ? 'רק אתה רואה את האפליקציה. כולם מקבלים מסך עבודות.'
-              : 'האפליקציה פתוחה לכולם כרגיל.'}
+              ? t('owner.workActive')
+              : t('owner.workOff')}
           </p>
         </div>
         <button
           role="switch"
           aria-checked={active}
-          aria-label="מצב עבודה"
+          aria-label={t('owner.workMode')}
           onClick={onToggle}
           disabled={toggling}
           className={`shrink-0 w-14 h-8 rounded-full p-1 flex items-center transition-all duration-300 cursor-pointer disabled:opacity-50 ${
@@ -202,7 +205,7 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
           onClick={onToggle}
           className="relative w-full px-3 py-2.5 text-[13px] font-black text-amber-200 bg-amber-400/10 border-t border-amber-400/30 hover:bg-amber-400/20 transition-colors cursor-pointer"
         >
-          הפעלה מנתקת את כל המשתמשים. לחצו שוב לאישור.
+          {t('owner.workConfirm')}
         </motion.button>
       )}
       {errorMsg && (
@@ -221,6 +224,7 @@ function WorkModeCard({ active, toggling, confirming, errorMsg, onToggle }: {
 export default function SettingsModal({
   isOpen, onClose, onOpenUpload, onOpenAnalytics, onOpenCorrections, onOpenFeedback, onOpenPrivacy,
 }: SettingsModalProps) {
+  const { t, isRTL } = useLanguage();
   const a11yRef = useModalA11y(onClose);
   const [owner] = useState(() => isCurrentUserOwner());
   const [maintenance, setMaintenanceState] = useState(false);
@@ -272,7 +276,7 @@ export default function SettingsModal({
       await setMaintenance(!maintenance);
     } catch (e: any) {
       console.warn('setMaintenance failed:', e);
-      setToggleError('שמירת מצב העבודה נכשלה. בדוק חיבור והתחברות כבעלים ונסה שוב.');
+      setToggleError(t('owner.workFail'));
     }
     setToggling(false);
   };
@@ -290,7 +294,7 @@ export default function SettingsModal({
     setResetMsg(null);
     const ok = await resetQuestions();
     setResetting(false);
-    setResetMsg(ok ? 'ספירת השאלות אופסה.' : 'האיפוס נכשל. בדוק חיבור ונסה שוב.');
+    setResetMsg(ok ? t('owner.resetDone') : t('owner.resetFail'));
     later(() => setResetMsg(null), FB_MSG_MS);
   };
 
@@ -300,10 +304,10 @@ export default function SettingsModal({
     setFbWorking(true);
     try {
       await resetFeedbackForAll();
-      setFbMsg('טיימר הפידבק אופס לכולם.');
+      setFbMsg(t('owner.feedbackTimerDone'));
     } catch (e) {
       console.warn('resetFeedbackForAll failed:', e);
-      setFbMsg('האיפוס נכשל. בדוק חיבור ונסה שוב.');
+      setFbMsg(t('owner.resetFail'));
     }
     setFbWorking(false);
     later(() => setFbMsg(null), FB_MSG_MS);
@@ -319,8 +323,8 @@ export default function SettingsModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9600] v12-scrim flex items-center justify-center modal-safe-3"
-          dir="rtl"
+          className="fixed inset-0 z-[9600] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-3"
+          dir={isRTL ? 'rtl' : 'ltr'}
           onClick={onClose}
         >
           <motion.div
@@ -333,23 +337,23 @@ export default function SettingsModal({
             className="v12-sheet w-full max-w-md max-h-[90dvh] flex flex-col"
             role="dialog"
             aria-modal="true"
-            aria-label="הגדרות"
+            aria-label={t('owner.settings')}
             tabIndex={-1}
           >
             {/* Header: glowing gear + title + close */}
             <div className="px-5 pt-5 pb-4 border-b border-white/10 shrink-0 relative">
               <div className="relative flex items-center gap-3">
                 <div className="v12-emblem is-warn"><Settings className="w-6 h-6" /></div>
-                <div className="flex-1 min-w-0 text-right">
-                  <h3 className="v12-sheet-title leading-tight">הגדרות</h3>
+                <div className="flex-1 min-w-0 text-start">
+                  <h3 className="v12-sheet-title leading-tight">{t('owner.settings')}</h3>
                   <p className="text-[11px] text-white/60 font-medium flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" aria-hidden />
-                    מרכז הבקרה, לבעלים בלבד
+                    {t('owner.settingsSub')}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  aria-label="סגור"
+                  aria-label={t('common.close')}
                   className="v12-sheet-x !static shrink-0"
                 >
                   <X className="w-4 h-4" />
@@ -372,28 +376,28 @@ export default function SettingsModal({
                   />
 
                   <div className="space-y-1">
-                    <SectionTitle icon={<Database className="w-3.5 h-3.5" />}>חוברת ותוכן</SectionTitle>
+                    <SectionTitle icon={<Database className="w-3.5 h-3.5" />}>{t('owner.content')}</SectionTitle>
                     <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-1.5">
-                      <RowButton icon={<Upload className="w-4 h-4" />} tint="blue" label="העלאת חוברת חוקים" sub="קובץ חדש מחליף את החוברת הפעילה" onClick={onOpenUpload} nav />
-                      <RowButton icon={<Wrench className="w-4 h-4" />} tint="amber" label="תיקוני שופט" sub="הנחיות שדורסות את החוברת" onClick={onOpenCorrections} nav />
+                      <RowButton icon={<Upload className="w-4 h-4" />} tint="blue" label={t('owner.upload')} sub={t('owner.uploadSub')} onClick={onOpenUpload} nav />
+                      <RowButton icon={<Wrench className="w-4 h-4" />} tint="amber" label={t('owner.corrections')} sub={t('owner.correctionsSub')} onClick={onOpenCorrections} nav />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <SectionTitle icon={<BarChart3 className="w-3.5 h-3.5" />}>נתונים</SectionTitle>
+                    <SectionTitle icon={<BarChart3 className="w-3.5 h-3.5" />}>{t('owner.data')}</SectionTitle>
                     <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-1.5">
-                      <RowButton icon={<BarChart3 className="w-4 h-4" />} tint="violet" label="אנליטיקס" sub="שאלות, משתמשים, מחוברים" onClick={onOpenAnalytics} nav />
-                      <RowButton icon={<MessageSquareHeart className="w-4 h-4" />} tint="green" label="צפייה בפידבקים" sub="דירוגים והצעות שיפור" onClick={onOpenFeedback} nav />
+                      <RowButton icon={<BarChart3 className="w-4 h-4" />} tint="violet" label={t('owner.analytics')} sub={t('owner.analyticsSub')} onClick={onOpenAnalytics} nav />
+                      <RowButton icon={<MessageSquareHeart className="w-4 h-4" />} tint="green" label={t('owner.feedback')} sub={t('owner.feedbackSub')} onClick={onOpenFeedback} nav />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <SectionTitle icon={<RotateCcw className="w-3.5 h-3.5" />}>איפוסים</SectionTitle>
+                    <SectionTitle icon={<RotateCcw className="w-3.5 h-3.5" />}>{t('owner.resets')}</SectionTitle>
                     <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-1.5">
                       <RowButton
                         icon={<RotateCcw className={`w-4 h-4 ${resetting ? 'animate-spin' : ''}`} />}
                         tint="red"
-                        label={confirmReset ? 'לחצו שוב לאישור האיפוס' : resetting ? 'מאפס...' : 'איפוס ספירת השאלות'}
+                        label={confirmReset ? t('owner.confirmReset') : resetting ? t('owner.resetting') : t('owner.resetQuestions')}
                         sub={resetMsg || undefined}
                         onClick={handleResetQuestions}
                         danger
@@ -401,22 +405,22 @@ export default function SettingsModal({
                       <RowButton
                         icon={fbMsg ? <Check className="w-4 h-4" /> : <MessageSquareHeart className="w-4 h-4" />}
                         tint={fbMsg ? 'green' : 'slate'}
-                        label={fbWorking ? 'מאפס...' : 'איפוס טיימר פידבק לכולם'}
-                        sub={fbMsg || 'הטופס יקפוץ שוב אצל כולם'}
+                        label={fbWorking ? t('owner.resetting') : t('owner.resetFeedback')}
+                        sub={fbMsg || t('owner.resetFeedbackSub')}
                         onClick={handleResetFeedbackTimer}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <SectionTitle icon={<Shield className="w-3.5 h-3.5" />}>כללי</SectionTitle>
+                    <SectionTitle icon={<Shield className="w-3.5 h-3.5" />}>{t('owner.general')}</SectionTitle>
                     <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-1.5">
-                      <RowButton icon={<Shield className="w-4 h-4" />} tint="slate" label="מדיניות פרטיות" onClick={onOpenPrivacy} nav />
+                      <RowButton icon={<Shield className="w-4 h-4" />} tint="slate" label={t('owner.privacy')} onClick={onOpenPrivacy} nav />
                     </div>
                   </div>
 
                   <div className="px-3 py-2 text-center">
-                    <span className="text-[10px] font-bold text-white/50">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+                    <span className="text-[10px] font-bold text-white/50">{t('common.creditBuiltBy')}</span>
                   </div>
                 </>
               )}

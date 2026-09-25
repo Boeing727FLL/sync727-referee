@@ -4,12 +4,8 @@ import { rtdb } from './firebase/rtdb';
 
 const META_PATH = 'referee/meta';
 
-async function silentWrite(label: string, operation: () => PromiseLike<unknown>): Promise<void> {
-  try { await operation(); } catch (error) { console.warn(`${label} failed:`, error); }
-}
-
 export async function resetFeedbackForAll(): Promise<void> {
-  await silentWrite('resetFeedbackForAll', () => set(ref(rtdb, `${META_PATH}/feedbackResetAt`), serverTimestamp()));
+  await set(ref(rtdb, `${META_PATH}/feedbackResetAt`), serverTimestamp());
 }
 
 export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): () => void {
@@ -20,7 +16,7 @@ export function subscribeFeedbackReset(callback: (resetAtMs: number) => void): (
 }
 
 export async function setMaintenance(on: boolean): Promise<void> {
-  await silentWrite('setMaintenance', () => set(ref(rtdb, `${META_PATH}/maintenance`), on));
+  await set(ref(rtdb, `${META_PATH}/maintenance`), on);
 }
 
 export function subscribeMaintenance(callback: (on: boolean) => void): () => void {

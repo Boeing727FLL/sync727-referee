@@ -1,3 +1,4 @@
+import { useLanguage } from '../hooks/useLanguage';
 /**
  * FeedbackAdminModal — owner-only floating viewer for user feedback.
  *
@@ -50,6 +51,7 @@ interface FeedbackAdminModalProps {
 // ---------------------------------------------------------------------------
 
 export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminModalProps) {
+  const { t, isRTL } = useLanguage();
   const a11yRef = useModalA11y(onClose);
   // -- gate + data --------------------------------------------------------------
   const [unlocked, setUnlocked] = useState(false);
@@ -128,7 +130,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
     } catch (e) {
       console.warn("delete feedback failed:", e);
       // The entry stays visible, so say so instead of failing silently.
-      setActionError('מחיקת הפידבק נכשלה. בדוק חיבור ונסה שוב.');
+      setActionError(t('owner.deleteFailed'));
     }
     setConfirmDeleteId(null);
   };
@@ -142,7 +144,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
       setActionError(null);
     } catch (e) {
       console.warn("clear all feedback failed:", e);
-      setActionError('מחיקת כל הפידבקים נכשלה. בדוק חיבור ונסה שוב.');
+      setActionError(t('owner.deleteAllFailed'));
     }
     setConfirmClearAll(false);
   };
@@ -158,6 +160,9 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
       await resetFeedbackForAll();
     } catch (e) {
       console.warn('global feedback reset failed:', e);
+      setActionError(t('owner.resetFail'));
+      setResettingTimer(false);
+      return;
     }
     try {
       const prefixes = ['referee_feedback_last_prompt', 'referee_feedback_submitted_at'];
@@ -169,6 +174,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
       toRemove.forEach(k => localStorage.removeItem(k));
     } catch { /* storage unavailable */ }
     setResettingTimer(false);
+    setActionError(null);
     setTimerReset(true);
     later(() => setTimerReset(false), TIMER_CONFIRM_MS);
   };
@@ -185,8 +191,8 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[10000] bg-slate-950/85 backdrop-blur-md flex items-center justify-center modal-safe-3"
-          dir="rtl"
+          className="fixed inset-0 z-[10000] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-3"
+          dir={isRTL ? 'rtl' : 'ltr'}
           onClick={onClose}
         >
           <motion.div
@@ -195,7 +201,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
             exit={{ scale: 0.92, opacity: 0, y: 24 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-[28px] border border-emerald-400/25 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(52,211,153,0.08)]"
+            className="v12-sheet w-full max-w-3xl max-h-[90dvh] flex flex-col"
             ref={a11yRef}
             role="dialog"
             aria-modal="true"
@@ -213,17 +219,17 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">פידבק על השופט הווירטואלי</h3>
-                    <p className="text-[11px] md:text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                    <h3 className="text-lg md:text-xl font-black text-white leading-tight">{t('owner.feedbackTitle')}</h3>
+                    <p className="text-[11px] md:text-xs text-white/65 font-medium flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden />
-                      מתעדכן בזמן אמת מ-Realtime Database
+                      {t('owner.realtime')}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="shrink-0 w-9 h-9 rounded-full bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                  aria-label="סגור"
+                  className="shrink-0 w-9 h-9 rounded-full bg-white/[0.12] border border-white/10 text-white hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                  aria-label={t('common.close')}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -241,7 +247,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
               {timerReset && (
                 <div className="mb-4 px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 text-sm font-bold flex items-center gap-2">
                   <Check className="w-4 h-4 shrink-0" aria-hidden />
-                  טיימר הפידבק אופס לכולם, הטופס יקפוץ שוב אחרי התשובה הבאה
+                  {t('owner.feedbackTimerConfirm')}
                 </div>
               )}
 
@@ -250,33 +256,33 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-2.5 md:gap-3">
-                    <StatTile value={String(total)} label='סה"כ פידבקים' glow="white" />
-                    <StatTile value={total > 0 ? avg.toFixed(1) : '—'} label="ממוצע ציון" glow="gold" />
-                    <StatTile value={String(highCount)} label="ציון 4-5" glow="green" />
+                    <StatTile value={String(total)} label={t('owner.feedbackTotal')} glow="white" />
+                    <StatTile value={total > 0 ? avg.toFixed(1) : '—'} label={t('owner.averageRating')} glow="gold" />
+                    <StatTile value={String(highCount)} label={t('owner.highRating')} glow="green" />
                   </div>
 
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="text-sm text-slate-400 font-bold">
-                      {total} {total === 1 ? 'פידבק' : 'פידבקים'}
-                      {lowCount > 0 && <span className="text-red-300/90"> • {lowCount} בציון נמוך (1-2)</span>}
+                    <div className="text-sm text-white/65 font-bold">
+                      {total} {total === 1 ? t('owner.feedbackSingle') : t('owner.feedbackPlural')}
+                      {lowCount > 0 && <span className="text-red-300/90"> • {t('owner.lowRating').replace('{count}', String(lowCount))}</span>}
                     </div>
                     <div className="flex items-center gap-2">
                       <GhostButton
                         onClick={resetPopupTimer}
                         disabled={resettingTimer}
-                        title="מאפס את טיימר הטופס הקופץ של הפידבק לכל המשתמשים בכל המכשירים"
+                        title={t('owner.feedbackTimerTip')}
                       >
-                        {resettingTimer ? 'מאפס...' : 'אפס טיימר פידבק לכולם'}
+                        {resettingTimer ? t('owner.resetting') : t('owner.resetFeedback')}
                       </GhostButton>
                       <GhostButton onClick={refreshFromServer} disabled={refreshing}>
                         <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                        רענון
+                        {t('owner.refresh')}
                       </GhostButton>
                       {total > 0 && (
                         confirmClearAll ? (
                           <div className="flex items-center gap-1.5">
-                            <DangerButton onClick={handleClearAll}>מחק הכול</DangerButton>
-                            <GhostButton onClick={() => setConfirmClearAll(false)}>ביטול</GhostButton>
+                            <DangerButton onClick={handleClearAll}>{t('owner.deleteAll')}</DangerButton>
+                            <GhostButton onClick={() => setConfirmClearAll(false)}>{t('owner.cancel')}</GhostButton>
                           </div>
                         ) : (
                           <button
@@ -284,7 +290,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-bold hover:bg-red-500/25 transition-all cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            מחק הכול
+                            {t('owner.deleteAll')}
                           </button>
                         )
                       )}

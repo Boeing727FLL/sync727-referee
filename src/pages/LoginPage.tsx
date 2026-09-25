@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, KeyRound, CheckCircle2, Sparkles } from 'lucide-react';
 import { exitResetView, showResetView, toggleSignMode } from '../features/auth/loginFlow';
+import { useLanguage, LanguageProvider } from '../hooks/useLanguage';
 import { useLoginAuth } from '../features/auth/useLoginAuth';
 import MaintenanceScreen from '../components/MaintenanceScreen';
 import AuthProgressOverlay from '../features/auth/AuthProgressOverlay';
@@ -27,7 +28,7 @@ import AuthProgressOverlay from '../features/auth/AuthProgressOverlay';
 // ---------------------------------------------------------------------------
 
 /** One form label, right-aligned Hebrew. */
-const LABEL_CLASS = 'block text-xs font-bold text-slate-400 mb-1.5 text-right';
+const LABEL_CLASS = 'block text-xs font-bold text-slate-400 mb-1.5 text-start';
 
 /** One text input: 16px on phones (stops iOS auto-zoom), compact on desktop. */
 const INPUT_CLASS = 'w-full bg-slate-800/80 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all';
@@ -36,10 +37,11 @@ const INPUT_CLASS = 'w-full bg-slate-800/80 border border-slate-700 rounded-2xl 
 const INPUT_ICON_CLASS = 'w-full bg-slate-800/80 border border-slate-700 rounded-2xl pl-11 pr-4 py-3.5 text-white text-base md:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400/60 focus:shadow-[0_0_0_4px_rgba(250,204,21,0.12)] focus:bg-slate-800 transition-all';
 
 /** Red inline error box shared by all three forms. */
-const FORM_ERROR_CLASS = 'p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-right';
+const FORM_ERROR_CLASS = 'p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-medium leading-relaxed text-start';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const navigate = useNavigate();
+  const { t, isRTL } = useLanguage();
 
   const {
     view, setView, isSignUp, showReset,
@@ -52,7 +54,7 @@ export default function LoginPage() {
   } = useLoginAuth({ onSuccess: () => navigate('/app?enter=chat') });
 
   return (
-    <div className="min-h-screen-fix h-full bg-slate-950 flex flex-col relative overflow-hidden">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen-fix h-full bg-slate-950 flex flex-col relative overflow-hidden">
       {/* Backdrop: FLL field + grid + FIRST glows, plus a Gemini violet aura */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <img
@@ -100,14 +102,14 @@ export default function LoginPage() {
 
           <button
             onClick={() => navigate('/')}
-            className="absolute top-4 right-4 text-slate-300 hover:text-white px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all text-xs font-bold cursor-pointer flex items-center gap-1 z-10"
+            className="absolute top-4 end-4 text-slate-300 hover:text-white px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all text-xs font-bold cursor-pointer flex items-center gap-1 z-10"
           >
-            <ArrowRight className="w-3 h-3" />
-            <span>חזרה</span>
+            <ArrowRight className={`w-3 h-3 ${isRTL ? "" : "rotate-180"}`} />
+            <span>{t('login.back')}</span>
           </button>
 
           {/* Gemini sparkle mark */}
-          <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-violet-500/15 border border-violet-400/30 flex items-center justify-center z-10" aria-hidden>
+          <div className="absolute top-4 start-4 w-8 h-8 rounded-full bg-violet-500/15 border border-violet-400/30 flex items-center justify-center z-10" aria-hidden>
             <Sparkles className="w-4 h-4 text-violet-300" />
           </div>
 
@@ -115,7 +117,7 @@ export default function LoginPage() {
             <div className="relative w-16 h-16 mx-auto mb-5">
               <div className="absolute -inset-3 bg-yellow-400/20 blur-2xl rounded-full pointer-events-none" aria-hidden />
               <div className="relative w-16 h-16 bg-white rounded-full flex items-center justify-center ring-2 ring-yellow-400/70 shadow-[0_0_36px_rgba(250,204,21,0.35)] overflow-hidden">
-                {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.webp" alt="שופט וירטואלי" className="w-11 h-11 object-contain" />}
+                {showReset ? <KeyRound className="w-7 h-7 text-slate-900" /> : <img src="/logoref.webp" alt={t('app.title')} className="w-11 h-11 object-contain" />}
               </div>
             </div>
 
@@ -128,9 +130,9 @@ export default function LoginPage() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <h1 className="text-2xl font-black text-white text-center mb-1">איפוס סיסמה</h1>
+                  <h1 className="text-2xl font-black text-white text-center mb-1">{t('login.resetTitle')}</h1>
                   <p className="text-slate-400 text-sm text-center mb-6">
-                    הזן את האימייל שלך ונשלח לך קישור לאיפוס הסיסמה
+                    {t('login.resetDesc')}
                   </p>
 
                   {resetSent ? (
@@ -141,10 +143,10 @@ export default function LoginPage() {
                     >
                       <CheckCircle2 className="w-12 h-12 text-emerald-400" />
                       <p className="text-emerald-400 font-bold text-sm text-center">
-                        נשלח אימייל איפוס לכתובת {resetEmail}
+                        {t('login.resetSent').replace('{email}', resetEmail)}
                       </p>
                       <p className="text-slate-400 text-xs text-center">
-                        בדוק את תיבת הדואר שלך (כולל ספאם) ולחץ על הקישור לאיפוס הסיסמה
+                        {t('login.resetHint')}
                       </p>
                       <button
                         onClick={() => {
@@ -155,15 +157,15 @@ export default function LoginPage() {
                         }}
                         className="mt-2 text-yellow-400 hover:text-yellow-300 text-sm font-bold cursor-pointer transition-colors"
                       >
-                        חזרה להתחברות
+                        {t('login.backSignIn')}
                       </button>
                     </motion.div>
                   ) : (
                     <form onSubmit={handleResetPassword} className="space-y-4">
                       <div>
-                        <label className={LABEL_CLASS}>אימייל</label>
+                        <label className={LABEL_CLASS}>{t('login.email')}</label>
                         <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input
                             type="email"
                             name="email"
@@ -196,7 +198,7 @@ export default function LoginPage() {
                         {loading ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
-                          <span>שלח קישור לאיפוס</span>
+                          <span>{t('login.sendReset')}</span>
                         )}
                       </button>
 
@@ -209,7 +211,7 @@ export default function LoginPage() {
                           }}
                           className="text-slate-400 hover:text-white text-sm font-bold cursor-pointer transition-colors"
                         >
-                          חזרה להתחברות
+                          {t('login.backSignIn')}
                         </button>
                       </div>
                     </form>
@@ -224,12 +226,12 @@ export default function LoginPage() {
                   transition={{ duration: 0.2 }}
                 >
                   <h1 className="text-2xl font-black text-center mb-1 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
-                    {isSignUp ? 'יצירת חשבון' : 'התחברות'}
+                    {isSignUp ? t('login.signUp') : t('login.signIn')}
                   </h1>
                   <p className="text-slate-400 text-sm text-center mb-4">
                     {isSignUp
-                      ? 'צור חשבון כדי להשתמש בשופט הווירטואלי'
-                      : 'התחבר עם אימייל וסיסמה'}
+                      ? t('login.signUpDesc')
+                      : t('login.signInDesc')}
                   </p>
                   <div className="flex items-center gap-2 mb-6" aria-hidden>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-violet-400/40" />
@@ -247,13 +249,13 @@ export default function LoginPage() {
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <label className={LABEL_CLASS}>שם מלא</label>
+                          <label className={LABEL_CLASS}>{t('login.fullName')}</label>
                           <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="השם שלך"
-                            className={`${INPUT_CLASS} text-right`}
+                            placeholder={t('login.namePlaceholder')}
+                            className={`${INPUT_CLASS} text-start`}
                             dir="auto"
                           />
                         </motion.div>
@@ -261,9 +263,9 @@ export default function LoginPage() {
                     </AnimatePresence>
 
                     <div>
-                        <label className={LABEL_CLASS}>אימייל</label>
+                        <label className={LABEL_CLASS}>{t('login.email')}</label>
                         <div className="relative group">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
+                          <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
                           <input
                             type="email"
                             name="email"
@@ -279,9 +281,9 @@ export default function LoginPage() {
                     </div>
 
                     <div>
-                        <label className={LABEL_CLASS}>סיסמה</label>
+                        <label className={LABEL_CLASS}>{t('login.password')}</label>
                         <div className="relative group">
-                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
+                          <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-yellow-400 transition-colors" />
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
@@ -295,7 +297,7 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                          className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -320,7 +322,7 @@ export default function LoginPage() {
                       {loading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
-                        <span>{isSignUp ? 'צור חשבון' : 'היכנס'}</span>
+                        <span>{isSignUp ? t('login.createAccount') : t('login.enter')}</span>
                       )}
                     </button>
 
@@ -334,7 +336,7 @@ export default function LoginPage() {
                           }}
                           className="text-yellow-400/70 hover:text-yellow-300 text-xs font-bold cursor-pointer transition-colors"
                         >
-                          שכחתי סיסמה
+                          {t('login.forgot')}
                         </button>
                       </div>
                     )}
@@ -348,7 +350,7 @@ export default function LoginPage() {
                       }}
                       className="text-sm font-bold cursor-pointer transition-colors bg-gradient-to-l from-blue-300 via-violet-300 to-yellow-300 bg-clip-text text-transparent hover:opacity-80"
                     >
-                      {isSignUp ? 'כבר יש לך חשבון? התחבר' : 'אין לך חשבון? הירשם'}
+                      {isSignUp ? t('login.switchToSignIn') : t('login.switchToSignUp')}
                     </button>
                   </div>
                 </motion.div>
@@ -363,9 +365,11 @@ export default function LoginPage() {
       {/* Boeing 727 credit */}
       <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 pointer-events-none" aria-hidden>
         <img src="/boeing_727_logo_transparent_pure_red (1).png" alt="Boeing 727" className="h-4 w-auto object-contain opacity-70" />
-        <span className="text-[11px] font-bold text-slate-500">נבנה בהתנדבות על ידי קבוצת Boeing 727</span>
+        <span className="text-[11px] font-bold text-slate-500">{t('common.creditBuiltBy')}</span>
       </div>
 
     </div>
   );
 }
+
+export default function LoginPage() { return <LanguageProvider><LoginPageContent /></LanguageProvider>; }
