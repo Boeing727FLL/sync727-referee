@@ -15,6 +15,7 @@ import { MOTION } from './motion';
 import { legalFor } from '../../../legal/copy';
 import { auth } from '../../../lib/firebase/auth';
 import type { LanguageCode } from '../../../hooks/useLanguage';
+import type { RefereeDisplayUser } from '../types';
 
 /** Build stamp display: epoch millis read as a short local date-time; anything else passes through. */
 function formatBuildVersion(raw: unknown): string {
@@ -34,7 +35,7 @@ function initialsOf(name: string): string {
 }
 
 type Props = {
-  displayUser: { name?: string; email?: string; picture?: string };
+  displayUser: RefereeDisplayUser;
   gravatarPic: string;
   isOwner: boolean;
   t: (key: string) => string;

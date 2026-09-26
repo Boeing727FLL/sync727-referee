@@ -13,7 +13,7 @@ import { ChatQuotaExhaustedError, consumeChatQuota } from '../../../lib/chatQuot
 import { trackQuestion, logRefereeQA } from '../../../lib/analytics';
 import type { LanguageCode } from '../../../hooks/useLanguage';
 import type { createRulebookLoadBarrier } from '../rulebook/loadBarrier';
-import type { ChatMessage, RulebookFile } from '../types';
+import type { ChatMessage, RefereeDisplayUser, RulebookFile } from '../types';
 import { finalizeModelResponse, resolveResponseOutcome } from './finalizeResponse';
 import { safeUserFacingError } from './userFacingError';
 import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from './requestMachine';
@@ -36,7 +36,7 @@ type Params = {
   quotaMessage: (key: 'chat.quotaExhausted' | 'chat.quotaUnavailable', resetAtMs?: number | null) => string;
   maybePromptFeedback: () => void;
   isCurrentUserOwner: () => boolean;
-  displayUser: { name?: string | null } | null;
+  displayUser: RefereeDisplayUser | null;
   showToast: (message: string) => void;
 };
 
@@ -333,7 +333,7 @@ export default function useChatConversation({
               season: seasonName,
               language,
               uid: resolveRefereeUid(),
-              askerName: (displayUser as any)?.name || null,
+              askerName: displayUser?.name || null,
               model: 'gemini-3.6-flash',
               ok: outcome.answered,
             });
@@ -356,7 +356,7 @@ export default function useChatConversation({
               season: seasonName,
               language,
               uid: resolveRefereeUid(),
-              askerName: (displayUser as any)?.name || null,
+              askerName: displayUser?.name || null,
               model: 'gemini-3.6-flash',
               ok: false,
             });

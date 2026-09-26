@@ -14,7 +14,7 @@ const languages = [
 
 function renderMenu(overrides: Partial<Parameters<typeof UserMenu>[0]> = {}) {
   const props = {
-    displayUser: { name: 'יובל מרגלית', email: 'yuval@example.com' },
+    displayUser: { name: 'יובל מרגלית', email: 'yuval@example.com', picture: '' },
     gravatarPic: '',
     isOwner: false,
     t: heT,

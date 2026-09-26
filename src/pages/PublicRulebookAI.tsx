@@ -32,7 +32,7 @@ import { acceptedLocally, acceptedOnServer, recordAcceptance } from '../legal/te
 import ParticleBurst from '../components/ParticleBurst';
 import { isCurrentUserOwner } from '../lib/owner';
 import { subscribeChatQuota, type ChatQuotaStatus } from '../lib/chatQuota';
-import type { RulebookFile } from '../features/referee/types';
+import type { RefereeDisplayUser, RulebookFile } from '../features/referee/types';
 import { DAY_MS, ENTER_FLASH_MS, FEEDBACK_PROMPT_DELAY_MS, FEEDBACK_QUIET_AFTER_SUBMIT_DAYS, FEEDBACK_REPROMPT_DAYS } from '../features/referee/config';
 import {
   cancelDeletion,
@@ -129,16 +129,16 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // Firebase alone — real enforcement stays server-side in security rules.
   const sessionAlive = hasGoogleToken || !!user || hasSavedRefereeSession();
 
-  const displayUser = useMemo(() => {
+  const displayUser = useMemo<RefereeDisplayUser | null>(() => {
     if (user) return user;
     try {
-      const fb = auth.currentUser as any;
+      const fb = auth.currentUser;
       if (fb?.email || fb?.displayName) {
         return {
           name: fb.displayName || fb.email?.split('@')[0] || 'משתמש',
           picture: fb.photoURL || '',
           email: fb.email || '',
-        } as any;
+        };
       }
       const raw = localStorage.getItem('auth_user');
       if (raw) {
@@ -148,13 +148,13 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
             name: p.name || p.email?.split('@')[0] || 'משתמש',
             picture: p.picture || '',
             email: p.email || '',
-          } as any;
+          };
         }
       }
       const pic = localStorage.getItem('user_picture');
       const nm = localStorage.getItem('user_name');
       if (pic || nm) {
-        return { name: nm || 'משתמש', picture: pic || '', email: '' } as any;
+        return { name: nm || 'משתמש', picture: pic || '', email: '' };
       }
     } catch {}
     return null;
@@ -162,7 +162,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // Personal time-of-day greeting for the hero. Shown only with a real
   // name — generic fallbacks ('משתמש', email fragments) stay silent.
   const heroGreeting = useMemo(() => {
-    const raw = (displayUser as any)?.name || '';
+    const raw = displayUser?.name || '';
     const first = String(raw).trim().split(/\s+/)[0] || '';
     if (!first || first === 'משתמש' || first === 'חבר קבוצה' || /[@.]/.test(first)) return null;
     const h = new Date().getHours();
@@ -226,7 +226,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   // fresh device.
   useEffect(() => {
     try {
-      const pic = (displayUser as any)?.picture || '';
+      const pic = displayUser?.picture || '';
       if (pic && localStorage.getItem('user_picture') !== pic) {
         localStorage.setItem('user_picture', pic);
       }
@@ -239,8 +239,8 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   useEffect(() => {
     let cancelled = false;
     try {
-      if ((displayUser as any)?.picture || localStorage.getItem('user_picture') || gravatarPic) return;
-      const email = String((displayUser as any)?.email || '');
+      if (displayUser?.picture || localStorage.getItem('user_picture') || gravatarPic) return;
+      const email = displayUser?.email || '';
       if (!email.includes('@')) return;
       (async () => {
         const url = await gravatarUrlForEmail(email);
