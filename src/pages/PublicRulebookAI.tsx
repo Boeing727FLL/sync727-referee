@@ -972,12 +972,12 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
 
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         try {
-          const images = await convertPdfToImages
+          const images = await convertPdfToImages(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
           if (isNewSeason && images.length > 0) {
             // The season's cover is the strongest branding evidence: generate
             // and persist its badge identity once, right after upload.
             void ensureSeasonIdentity(extractedSeason, { imageBase64: await fileToBase64(images[0].data), mimeType: 'image/jpeg' }).catch(() => {});
-          }(new Blob([await file.arrayBuffer()], { type: 'application/pdf' }));
+          }
           let okCount = 0;
           for (let i = 0; i < images.length; i++) {
             const imgKey = `fll-rules-images/${file.name}/page_${i + 1}.jpg`;
