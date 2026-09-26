@@ -1,6 +1,6 @@
-/** Automatic season identity: generated once per season by Gemini (Google
+/** Automatic season identity: generated once per season by the AI model (Google
  *  Search grounding + the uploaded rulebook cover), persisted to Firestore,
- *  and read from cache/Firestore at runtime. Gemini never runs on page load
+ *  and read from cache/Firestore at runtime. The model never runs on page load
  *  for a season whose identity already exists. */
 import { useEffect, useState } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';

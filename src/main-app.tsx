@@ -10,7 +10,7 @@ import App from './App.tsx';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-// Test switch for the faster Gemini path (rule book pages by link + live
+// Test switch for the faster engine path (rule book pages by link + live
 // thought events): open the site with ?fast=1 to turn it on in this
 // browser, ?fast=0 to turn it off. On by default (verified 2026-09-24: Mission 4 answered 10/40/0 with pages by link).
 try {

@@ -5,7 +5,7 @@ export type ActiveRulebookSource = { name: string; key: string; url: string };
 
 /** Select every source for the displayed active season. Legacy UNKNOWN
  * installations retain every source because no reliable season boundary is
- * available. Result order is stable so Gemini receives deterministic context. */
+ * available. Result order is stable so the model receives deterministic context. */
 export function selectActiveRulebookSources(
   objects: ListedRulebookObject[],
   activeSeason: string,

@@ -1,5 +1,5 @@
 /**
- * keyVault.ts — client-side envelope decryption for the Gemini key pool.
+ * keyVault.ts — client-side envelope decryption for the referee API key pool.
  *
  * WHAT: pool entries in Firestore `secrets/api_keys` may be stored as
  * `ENC1.<base64url>` envelopes (AES-256-GCM, key hardened with PBKDF2-SHA256

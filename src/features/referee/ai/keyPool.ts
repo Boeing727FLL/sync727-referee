@@ -4,7 +4,7 @@
 import { db } from '../../../lib/firebase/firestore';
 import { KeyHealth } from './retryPolicy';
 
-let GEMINI_KEYS: string[] = [];
+let POOLED_KEYS: string[] = [];
 
 
 // Cooldowns persist across refreshes, stored under a short fingerprint of
@@ -58,7 +58,7 @@ function getEnvKey(): string | undefined {
 }
 
 export async function ensureKeysLoaded(): Promise<void> {
-  if (GEMINI_KEYS.length > 0) return;
+  if (POOLED_KEYS.length > 0) return;
   try {
     const { doc, getDoc } = await import('firebase/firestore');
     const docRef = doc(db, "secrets", "api_keys");
@@ -69,7 +69,7 @@ export async function ensureKeysLoaded(): Promise<void> {
       // Pool entries may be plaintext (legacy) or ENC1 vault envelopes — see src/lib/keyVault.ts.
       const { decryptPoolEntries } = await import('../../../lib/keyVault');
       const keys = await decryptPoolEntries(values);
-      if (keys.length) GEMINI_KEYS = keys;
+      if (keys.length) POOLED_KEYS = keys;
       console.log("Referee key pool loaded.");
     }
   } catch (err) {
@@ -80,7 +80,7 @@ export async function ensureKeysLoaded(): Promise<void> {
 export async function getAllApiKeys(): Promise<string[]> {
   await ensureKeysLoaded();
   const envKey = getEnvKey();
-  const list = [...GEMINI_KEYS];
+  const list = [...POOLED_KEYS];
   if (envKey && !list.includes(envKey)) list.push(envKey);
   if (list.length === 0) throw new Error("No API keys configured");
   return list;

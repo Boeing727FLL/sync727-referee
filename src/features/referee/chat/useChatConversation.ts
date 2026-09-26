@@ -86,7 +86,7 @@ export default function useChatConversation({
   const setRenderingResponse = typewriter.setRendering;
   const isAiBusy = loading || renderingResponse;
   /**
-   * Gemini-style Stop: abort the provider stream immediately, freeze the
+   * Stop behavior: abort the provider stream immediately, freeze the
    * typewriter on everything already received, and keep the partial answer
    * as the final message — copyable, replyable and history-safe. An answer
    * that never started leaves no bubble. Idempotent across rapid clicks and

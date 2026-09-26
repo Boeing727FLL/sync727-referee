@@ -2,7 +2,7 @@ import type { ChatMessage } from '../types';
 import { stripThinkBlocks } from './text.ts';
 
 /**
- * Gemini-style Stop: everything already received stays as the final partial
+ * Stop behavior: everything already received stays as the final partial
  * answer. An answer that never started (nothing streamed yet, or still
  * inside private thinking) is replaced by a short note saying the user
  * stopped it, so the question never hangs without a reply.

@@ -686,7 +686,7 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     t('chat.suggestion4')
   ];
   const heroActive = chatStarted && messages.length === 0 && !loading;
-  // Follow-up chips (v12 #9): Gemini suggests them inside the same answer
+  // Follow-up chips (v12 #9): the model suggests them inside the same answer
   // (a <followups> block, stripped from the visible text - no extra quota).
   // No block (old answer, failure text) means no chips - never canned ones.
   const lastMessage = messages[messages.length - 1];

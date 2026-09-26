@@ -1,4 +1,4 @@
-/** Browser PDF rendering kept separate from Gemini request orchestration. */
+/** Browser PDF rendering kept separate from the engine's request orchestration. */
 // --- PDF tools ---
 let mupdfLibPromise: Promise<typeof import('mupdf')> | null = null;
 

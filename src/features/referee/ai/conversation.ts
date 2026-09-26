@@ -20,7 +20,7 @@ export function buildHistory(history: HistoryMessage[]): LegacyMessage[] {
 }
 
 export type InteractionInputOptions = {
-  /** Send parts that carry both bytes and a public URL by URL: Gemini fetches
+  /** Send parts that carry both bytes and a public URL by URL: the model fetches
    *  the file itself, so the phone doesn't upload the rule book pages. */
   preferUri?: boolean;
 };
