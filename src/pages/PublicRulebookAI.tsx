@@ -17,10 +17,8 @@ import React, { Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Wrench, Check } from 'lucide-react';
-import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/firestore';
-import { rtdb } from '../lib/firebase/rtdb';
-import { remove as rtdbRemove, ref as rtdbRef } from 'firebase/database';
 import { getPublicUrl } from '../lib/r2Config';
 import { resetThinkCycle } from '../lib/thinkCycle';
 import { gravatarUrlForEmail, probeImage } from '../lib/avatar';
@@ -43,20 +41,12 @@ import { safeUserFacingError } from '../features/referee/chat/userFacingError';
 import { applyStop, beginSend, beginStream, completeStream, finishRender, initialRequestMachine, settle, type RequestMachine } from '../features/referee/chat/requestMachine';
 import { decideSendPreflight } from '../features/referee/chat/sendGuards';
 import {
-  beginDeletingAuth,
-  beginRemovingData,
-  beginReauth,
   cancelDeletion,
   clearDeletionError,
-  completeDeletion,
-  failDeletion,
-  initialAccountDeletion,
   isDeleting,
   isDeletionDialogOpen,
   openDeletionConfirm,
-  rejectDeletion,
   setDeletionPassword,
-  type AccountDeletionState,
 } from '../features/referee/session/accountDeletion';
 import {
   chatStarted as entryChatStarted,
@@ -80,6 +70,7 @@ import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/
 import { useVersionCheck } from '../features/referee/ui/useVersionCheck';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
 import useOverlays from '../features/referee/ui/useOverlays';
+import useAccountDeletion from '../features/referee/session/useAccountDeletion';
 import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
@@ -97,9 +88,9 @@ import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rule
 
 import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, PrivacyModal, RefereeLogsModal, SettingsModal } from '../features/referee/ui/lazyComponents';
 
-import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
+import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA } from '../lib/analytics';
 import { subscribeFeedbackReset, setMaintenance } from '../lib/refereeFlags';
-import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase/auth';
 
 
@@ -434,68 +425,17 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   };
 
   // ===== 4. Account deletion (password re-auth, then wipe everything).
-  // Account deletion as one staged machine (see accountDeletion.ts):
-  // every failure lands in the same legal state - dialog open, not busy,
-  // error shown.
-  const [deletion, setDeletion] = useState<AccountDeletionState>(initialAccountDeletion);
-
-  /**
-   * Delete the account after password re-authentication: user doc, RTDB
-   * traces, then the Auth user itself, then every local trace and a reset
-   * to the intro screen.
-   */
-  const handleDeleteAccount = async () => {
-    setDeletion(clearDeletionError);
-    const current = auth.currentUser;
-    if (!current || !current.email) {
-      setDeletion(s => rejectDeletion(s, t('account.errNoUser')));
-      return;
-    }
-    if (!deletion.password) {
-      setDeletion(s => rejectDeletion(s, t('account.errNeedPassword')));
-      return;
-    }
-    setDeletion(beginReauth);
-    try {
-      const cred = EmailAuthProvider.credential(current.email, deletion.password);
-      await reauthenticateWithCredential(current, cred);
-    } catch {
-      setDeletion(s => failDeletion(s, t('account.errWrongPassword')));
-      return;
-    }
-    const uid = current.uid;
-    setDeletion(beginRemovingData);
-    try {
-      await deleteDoc(doc(db, 'users', uid));
-    } catch (e) {
-      setDeletion(s => failDeletion(s, t('account.errDeleteDocFailed')));
-      return;
-    }
-    // RTDB cleanup must happen BEFORE deleteUser signs us out: afterwards
-    // there is no auth left and the server denies these writes, leaving
-    // stale session/stats entries behind.
-    try {
-      await rtdbRemove(rtdbRef(rtdb, `referee/sessions/${uid}`));
-    } catch { /* session may not exist */ }
-    await removeRefereeUser(uid);
-    setDeletion(beginDeletingAuth);
-    try {
-      await deleteUser(current);
-    } catch {
-      setDeletion(s => failDeletion(s, t('account.errDeleteFailed')));
-      return;
-    }
-    try { await logout(); } catch { /* ignore */ }
-    localStorage.removeItem('google_access_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('user_picture');
-    localStorage.removeItem('user_name');
-    clearAllChatStates();
-    setHasGoogleToken(false);
-    setDeletion(completeDeletion());
-    setEntry(exitToIntro());
-    navigate('/');
-  };
+  // The staged machine and its handler live in useAccountDeletion; after a
+  // successful wipe the caller resets the screen back to the intro.
+  const { deletion, setDeletion, handleDeleteAccount } = useAccountDeletion({
+    t,
+    onDeleted: () => {
+      clearAllChatStates();
+      setHasGoogleToken(false);
+      setEntry(exitToIntro());
+      navigate('/');
+    },
+  });
 
   const [sessionKicked, setSessionKicked] = useState(false);
 
