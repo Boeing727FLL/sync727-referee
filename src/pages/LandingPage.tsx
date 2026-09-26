@@ -1,7 +1,6 @@
 /** Lightweight public landing route. No Firebase or analytics imports. */
 import { Suspense, lazy, useState } from 'react';
 import V12Landing from '../features/v12/V12Landing';
-import { LandingLanguageProvider } from '../features/landing/language';
 import { LanguageProvider } from '../hooks/useLanguage';
 
 /**
@@ -86,7 +85,7 @@ export default function LandingPage() {
   // own useLanguage import, so this adds no bundle weight.
   return (
     <LanguageProvider>
-      <LandingLanguageProvider><LandingContent /></LandingLanguageProvider>
+      <LandingContent />
     </LanguageProvider>
   );
 }

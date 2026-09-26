@@ -5,9 +5,9 @@ import React from 'react';
 import { render, fireEvent, cleanup } from '@testing-library/react';
 import IntroScreen from '../src/components/IntroScreen.tsx';
 import { LanguageProvider } from '../src/hooks/useLanguage.tsx';
-import { landingTranslations } from '../src/features/landing/translations.ts';
+import { translations } from '../src/locales/index.ts';
 
-const heT = (key: string) => landingTranslations.he[key] || key;
+const heT = (key: string) => translations.he[key] || translations.en[key] || key;
 
 function renderIntro(overrides: Partial<Parameters<typeof IntroScreen>[0]> = {}) {
   const props = {
