@@ -54,7 +54,7 @@ export default function useRulebookUpload({ seasonName, t, setMessages, setRuleb
           Bucket: R2_BUCKET_NAME,
           Prefix: 'fll-rules',
         }));
-        oldCount = (resp.Contents || []).filter((f: any) =>
+        oldCount = (resp.Contents || []).filter((f) =>
           f.Key && f.Key !== `fll-rules/${file.name}` && f.Key !== 'fll-rules/').length;
       } catch {
         oldCount = 0;
@@ -141,8 +141,8 @@ export default function useRulebookUpload({ seasonName, t, setMessages, setRuleb
           // The prefix `fll-rules/<name>` also matches the new object itself,
           // and without this filter every upload ended with its own PDF deleted.
           const staleObjects = (listResp.Contents || [])
-            .map((o: any) => ({ Key: o.Key }))
-            .filter((o: any) => o.Key && o.Key !== fileName);
+            .map((o) => ({ Key: o.Key }))
+            .filter((o) => o.Key && o.Key !== fileName);
           if (staleObjects.length > 0) {
             await s3Client.send(new DeleteObjectsCommand({
               Bucket: R2_BUCKET_NAME,
@@ -181,8 +181,8 @@ export default function useRulebookUpload({ seasonName, t, setMessages, setRuleb
           const listResponse = await s3Client.send(command);
           if (listResponse.Contents && listResponse.Contents.length > 0) {
             const objectsToDelete = listResponse.Contents
-              .filter((f: any) => f.Key && f.Key !== fileName && !f.Key.startsWith(`fll-rules-images/${file.name}/`) && f.Key !== `fll-rules-text/${file.name}.txt` && f.Key !== 'fll-rules/')
-              .map((f: any) => ({ Key: f.Key }));
+              .filter((f) => f.Key && f.Key !== fileName && !f.Key.startsWith(`fll-rules-images/${file.name}/`) && f.Key !== `fll-rules-text/${file.name}.txt` && f.Key !== 'fll-rules/')
+              .map((f) => ({ Key: f.Key }));
               
             if (objectsToDelete.length > 0) {
               const deleteCommand = new DeleteObjectsCommand({
@@ -269,7 +269,7 @@ export default function useRulebookUpload({ seasonName, t, setMessages, setRuleb
         return newMsgs;
       });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Upload error:', error);
       // The dialog stays open with a clean inline error - no blocking
       // alert, no raw technical message.

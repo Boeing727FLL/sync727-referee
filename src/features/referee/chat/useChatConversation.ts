@@ -343,7 +343,7 @@ export default function useChatConversation({
           setMessages(prev => finalizeModelResponse(prev, response, t('chat.commError')));
           if (outcome.answered) maybePromptFeedback();
         }
-      } catch (error: any) {
+      } catch (error) {
         if (controller.signal.aborted) {
           if (requestRef.current.requestId === sendRequestId) handleStop();
         } else {
