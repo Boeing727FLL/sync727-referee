@@ -8,7 +8,7 @@ This guide explains where behavior lives and what must stay off the startup path
 2. `src/App.tsx` is a route shell. Any path the router does not own (`/`, `/index.html`, stray paths) renders `src/pages/LandingPage.tsx` with only language state; it deliberately does not initialize Firebase, the router, or app code.
 3. Router paths (`src/routePaths.ts`) lazy-load through `src/lib/lazyWithReload.ts`:
    - `/app` -> `src/pages/RefereeApp.tsx`, which installs language/auth providers around `src/pages/PublicRulebookAI.tsx`, the referee screen coordinator.
-   - `/login` -> `src/pages/LoginPage.tsx` (standalone sign-in for direct links).
+   - `/login` -> `src/RouterApp.tsx` redirects the legacy standalone-login URL to `/?login=1`, which opens the landing directly on its login stage.
    - `/privacy` and `/terms` -> `src/pages/PrivacyPage.tsx`.
 4. The landing page itself is one continuous surface: intro -> login -> disclaimer -> chat, built from `src/features/v12/` (V12Landing, V12AuthForm, Referee character, glyphs, v12.css) with the referee app embedded lazily via `src/features/landing/EmbeddedReferee.tsx`.
 5. A submitted question dynamically loads `src/features/referee/ai/refereeEngine.ts`, which reads the active rulebook pages and streams the model answer.
@@ -34,9 +34,9 @@ This guide explains where behavior lives and what must stay off the startup path
 - `src/lib/r2Config.ts`: public R2 URL helpers safe for the lightweight path.
 - `src/lib/r2.ts`: privileged R2 listing/upload/delete client. Import dynamically, never from an entry module.
 - `src/hooks/useAuth.tsx`, `src/hooks/useLanguage.tsx`: Firebase identity and locale state.
-- `src/locales/`: the canonical 12-language string registry. `src/features/landing/language.tsx` + `translations.ts` project a landing-only subset from that registry; never a second dictionary.
+- `src/locales/`: the canonical 12-language string registry; every surface (landing included) reads from it, never a second dictionary.
 - `src/legal/`: terms/privacy copy (`copy.ts`) and acceptance tracking (`termsAcceptance.ts`).
-- `src/components/*Modal.tsx`, `TermsGate.tsx`, `IntroScreen.tsx`, `MaintenanceScreen.tsx`, `ErrorBoundary.tsx`: optional screens, lazy-loaded where possible.
+- `src/features/referee/ui/` (modals, `TermsGate.tsx`, `IntroScreen.tsx`, `MaintenanceScreen.tsx`) and `src/components/ErrorBoundary.tsx`: optional screens, lazy-loaded where possible.
 
 ## Performance rules
 
