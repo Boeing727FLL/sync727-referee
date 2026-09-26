@@ -79,6 +79,7 @@ import { selectActiveRulebookSources } from '../features/referee/rulebook/active
 import { clearRefereeSessionStorage, hasSavedRefereeSession } from '../features/referee/session/storage';
 import { useVersionCheck } from '../features/referee/ui/useVersionCheck';
 import { useTransientToast } from '../features/referee/ui/useTransientToast';
+import useOverlays from '../features/referee/ui/useOverlays';
 import { copyText } from '../features/referee/ui/browser';
 import { buildMessageView, typewriterLength } from '../features/referee/chat/messageView';
 import { useTypewriter } from '../features/referee/chat/useTypewriter';
@@ -97,7 +98,7 @@ import { RulebookUploadDialog, SeasonWipeDialog } from '../features/referee/rule
 import { AdminAnalyticsModal, FeedbackAdminModal, FeedbackModal, JudgeCorrectionsModal, MaintenanceScreen, PrivacyModal, RefereeLogsModal, SettingsModal } from '../features/referee/ui/lazyComponents';
 
 import { trackQuestion, startPresence, trackRefereeUser, getDeviceId, registerSession, watchSession, logRefereeQA, removeRefereeUser } from '../lib/analytics';
-import { subscribeFeedbackReset, subscribeMaintenanceGate, setMaintenance } from '../lib/refereeFlags';
+import { subscribeFeedbackReset, setMaintenance } from '../lib/refereeFlags';
 import { signOut, deleteUser, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../lib/firebase/auth';
 
@@ -188,16 +189,20 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
   }, [displayUser, t, language]);
   // Force reload when a new version is deployed so cached outdated clients get App Check
   // ===== 2. Overlays, menus & toast: open/close state only, no data.
-  const [showPrivacy, setShowPrivacy] = useState<boolean>(false);
-  const [showTerms, setShowTerms] = useState<boolean>(false);
+  const {
+    showPrivacy, setShowPrivacy,
+    showTerms, setShowTerms,
+    showSettings, setShowSettings,
+    showSettingsFeedback, setShowSettingsFeedback,
+    maintenance,
+    showLogoutConfirm, setShowLogoutConfirm,
+    showAdminAnalytics, setShowAdminAnalytics,
+    showRefereeLogs, setShowRefereeLogs,
+    showJudgeCorrections, setShowJudgeCorrections,
+    showFeedback, setShowFeedback,
+  } = useOverlays();
   const [termsOk, setTermsOk] = useState<boolean>(() => acceptedLocally());
   useEffect(() => { if (!termsOk) void acceptedOnServer().then(ok => { if (ok) setTermsOk(true); }); }, [termsOk]);
-  const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [showSettingsFeedback, setShowSettingsFeedback] = useState<boolean>(false);
-  const [maintenance, setMaintenanceState] = useState<boolean>(false);
-  useEffect(() => {
-    return subscribeMaintenanceGate(setMaintenanceState);
-  }, []);
   // In-site toast (replaces blocking alert popups).
   const { toast, showToast } = useTransientToast();
 
@@ -229,11 +234,6 @@ export default function PublicRulebookAI({ entryStart, onNavigateOut }: { entryS
     const t = setTimeout(() => setEnterFlash(false), ENTER_FLASH_MS);
     return () => clearTimeout(t);
   }, [enterFlash]);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
-  const [showAdminAnalytics, setShowAdminAnalytics] = useState<boolean>(false);
-  const [showRefereeLogs, setShowRefereeLogs] = useState<boolean>(false);
-  const [showJudgeCorrections, setShowJudgeCorrections] = useState<boolean>(false);
-  const [showFeedback, setShowFeedback] = useState<boolean>(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Persist the Firebase-restored profile photo: the chat bubbles read
