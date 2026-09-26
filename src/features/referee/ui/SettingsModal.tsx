@@ -12,27 +12,14 @@ import { useLanguage } from '../../../hooks/useLanguage';
  * confirming tap within a few seconds.
  */
 
-import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import ModalScrim from './ModalScrim';
 import {
   X, Settings, Wrench, Upload, BarChart3, Database,
   MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft,
 } from 'lucide-react';
-import { resetQuestions } from '../../../lib/analytics';
-import { subscribeMaintenance, setMaintenance, resetFeedbackForAll } from '../../../lib/refereeFlags';
-import { isCurrentUserOwner } from '../../../lib/owner';
 import { useModalA11y } from '../../../lib/modalA11y';
-
-// ---------------------------------------------------------------------------
-// Configuration constants (no magic numbers in logic or JSX below)
-// ---------------------------------------------------------------------------
-
-/** How long a second confirming tap stays armed. */
-const CONFIRM_WINDOW_MS = 5000;
-
-/** How long the feedback-timer confirmation message stays visible. */
-const FB_MSG_MS = 5000;
+import useOwnerSettings from './useOwnerSettings';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -227,92 +214,12 @@ export default function SettingsModal({
 }: SettingsModalProps) {
   const { t, isRTL } = useLanguage();
   const a11yRef = useModalA11y(onClose);
-  const [owner] = useState(() => isCurrentUserOwner());
-  const [maintenance, setMaintenanceState] = useState(false);
-  const [toggling, setToggling] = useState(false);
-  const [confirmWorkMode, setConfirmWorkMode] = useState(false);
-  const [toggleError, setToggleError] = useState<string | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  const [fbMsg, setFbMsg] = useState<string | null>(null);
-  const [fbWorking, setFbWorking] = useState(false);
-  const [resetMsg, setResetMsg] = useState<string | null>(null);
-
-  // Every pending timer is tracked and cancelled on unmount/close, so a
-  // confirm window or message clear never fires into a dead tree.
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const later = (fn: () => void, ms: number) => {
-    timersRef.current.push(setTimeout(fn, ms));
-  };
-  useEffect(() => () => {
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
-  }, []);
-
-  // Fresh confirmations on every opening; maintenance stays live-subscribed.
-  useEffect(() => {
-    if (!isOpen) {
-      setConfirmWorkMode(false);
-      setConfirmReset(false);
-      setFbMsg(null);
-      setToggleError(null);
-      setResetMsg(null);
-      return;
-    }
-    return subscribeMaintenance(setMaintenanceState);
-  }, [isOpen]);
-
-  /** Work-mode toggle: enabling needs a second tap (it locks everyone out). */
-  const handleWorkModeToggle = async () => {
-    if (toggling) return;
-    if (!maintenance && !confirmWorkMode) {
-      setConfirmWorkMode(true);
-      later(() => setConfirmWorkMode(false), CONFIRM_WINDOW_MS);
-      return;
-    }
-    setConfirmWorkMode(false);
-    setToggleError(null);
-    setToggling(true);
-    try {
-      await setMaintenance(!maintenance);
-    } catch (e: any) {
-      console.warn('setMaintenance failed:', e);
-      setToggleError(t('owner.workFail'));
-    }
-    setToggling(false);
-  };
-
-  /** Two-tap wipe of the question counters, with an honest outcome line. */
-  const handleResetQuestions = async () => {
-    if (resetting) return;
-    if (!confirmReset) {
-      setConfirmReset(true);
-      later(() => setConfirmReset(false), CONFIRM_WINDOW_MS);
-      return;
-    }
-    setConfirmReset(false);
-    setResetting(true);
-    setResetMsg(null);
-    const ok = await resetQuestions();
-    setResetting(false);
-    setResetMsg(ok ? t('owner.resetDone') : t('owner.resetFail'));
-    later(() => setResetMsg(null), FB_MSG_MS);
-  };
-
-  /** Global feedback-timer reset (server flag every client obeys) + local keys. */
-  const handleResetFeedbackTimer = async () => {
-    if (fbWorking) return;
-    setFbWorking(true);
-    try {
-      await resetFeedbackForAll();
-      setFbMsg(t('owner.feedbackTimerDone'));
-    } catch (e) {
-      console.warn('resetFeedbackForAll failed:', e);
-      setFbMsg(t('owner.resetFail'));
-    }
-    setFbWorking(false);
-    later(() => setFbMsg(null), FB_MSG_MS);
-  };
+  const {
+    owner, maintenance,
+    toggling, confirmWorkMode, toggleError, handleWorkModeToggle,
+    confirmReset, resetting, resetMsg, handleResetQuestions,
+    fbMsg, fbWorking, handleResetFeedbackTimer,
+  } = useOwnerSettings(isOpen);
 
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
