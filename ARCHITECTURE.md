@@ -11,7 +11,7 @@ This guide explains where behavior lives and what must stay off the startup path
    - `/login` -> `src/pages/LoginPage.tsx` (standalone sign-in for direct links).
    - `/privacy` and `/terms` -> `src/pages/PrivacyPage.tsx`.
 4. The landing page itself is one continuous surface: intro -> login -> disclaimer -> chat, built from `src/features/v12/` (V12Landing, V12AuthForm, Referee character, glyphs, v12.css) with the referee app embedded lazily via `src/features/landing/EmbeddedReferee.tsx`.
-5. A submitted question dynamically loads `src/services/geminiService.ts`, which reads the active rulebook pages and streams the Gemini answer.
+5. A submitted question dynamically loads `src/features/referee/ai/refereeEngine.ts`, which reads the active rulebook pages and streams the model answer.
 6. PDF conversion (`mupdf`, including its WASM file), R2's S3 SDK, Markdown rendering and admin modals load only when that feature is used.
 
 ## Modules by responsibility
@@ -22,15 +22,15 @@ This guide explains where behavior lives and what must stay off the startup path
   - `chat/`: request machine, send guards, stop/refund, rate limit, typewriter, attachments, history, text sanitizing, error wording.
   - `ai/`: model chain, retry/cooldown policy, request plan, file plan, answer contract, conversation shaping.
   - `rulebook/`: season parsing, completeness checks, load barrier, PDF rendering, active file selection.
-  - `season/`: automatic season identity (colors/icon) via Gemini.
+  - `season/`: automatic season identity (colors/icon) via the AI model.
   - `session/`: entry flow, local session evidence, account deletion.
   - `logs/`, `feedback/`, `corrections/`: journal, feedback and referee-corrections models and views.
   - `ui/`: lazy component registry, backdrop, motion helpers, toasts, version check/reload.
-- `src/services/geminiService.ts` + `geminiPrompts.ts`: AI request, corrections and rulebook/PDF processing.
+- `src/features/referee/ai/refereeEngine.ts` + `refereePrompts.ts`: AI request, corrections and rulebook/PDF processing.
 - `src/lib/firebase/{app,auth,firestore,rtdb}.ts`: the one Firebase app and service singletons.
 - `src/lib/analytics.ts`: presence, usage counters, logs and maintenance flags.
 - `src/lib/chatQuota.ts` + `chatQuotaCore.ts`: server-enforced daily chat quota; pure policy split from the Firestore adapter.
-- `src/lib/keyVault.ts`: Gemini key pool stored in Firebase.
+- `src/lib/keyVault.ts`: referee API key pool stored in Firebase.
 - `src/lib/r2Config.ts`: public R2 URL helpers safe for the lightweight path.
 - `src/lib/r2.ts`: privileged R2 listing/upload/delete client. Import dynamically, never from an entry module.
 - `src/hooks/useAuth.tsx`, `src/hooks/useLanguage.tsx`: Firebase identity and locale state.
