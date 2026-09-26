@@ -13,7 +13,8 @@ import { useLanguage } from '../../../hooks/useLanguage';
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import ModalScrim from './ModalScrim';
 import {
   X, Settings, Wrench, Upload, BarChart3, Database,
   MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft,
@@ -316,17 +317,7 @@ export default function SettingsModal({
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9600] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-3"
-          dir={isRTL ? 'rtl' : 'ltr'}
-          onClick={onClose}
-        >
+    <ModalScrim isOpen={isOpen} isRTL={isRTL} layerClass="z-[9600] modal-safe-3" admin quickFade onClose={onClose}>
           <motion.div
             initial={{ scale: 0.94, opacity: 0, y: 24 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -426,8 +417,6 @@ export default function SettingsModal({
               )}
             </div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </ModalScrim>
   );
 }

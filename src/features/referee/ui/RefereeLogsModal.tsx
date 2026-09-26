@@ -15,7 +15,8 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import ModalScrim from './ModalScrim';
 import {
   X,
   Lock,
@@ -290,17 +291,7 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] v12-scrim flex items-center justify-center modal-safe-3"
-          dir="rtl"
-          onClick={onClose}
-        >
+    <ModalScrim isOpen={isOpen} isRTL layerClass="z-[9999] modal-safe-3" quickFade onClose={onClose}>
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 24 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -476,8 +467,6 @@ export default function RefereeLogsModal({ isOpen, onClose }: RefereeLogsModalPr
               )}
             </div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </ModalScrim>
   );
 }

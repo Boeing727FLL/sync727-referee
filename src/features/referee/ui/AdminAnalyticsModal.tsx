@@ -15,7 +15,8 @@ import { useLanguage } from '../../../hooks/useLanguage';
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import ModalScrim from './ModalScrim';
 import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
 import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../../../lib/analytics';
 import { isCurrentUserOwner } from '../../../lib/owner';
@@ -160,16 +161,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
    * to play the exit animation. */
   return (
     <>
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-4"
-          dir={isRTL ? 'rtl' : 'ltr'}
-          onClick={onClose}
-        >
+    <ModalScrim isOpen={isOpen} isRTL={isRTL} layerClass="z-[9999] modal-safe-4" admin onClose={onClose}>
           <motion.div
             initial={{ scale: 0.94, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -227,9 +219,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
               )}
             </div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </ModalScrim>
     </>
   );
 }

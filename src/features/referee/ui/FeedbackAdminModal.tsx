@@ -12,7 +12,8 @@ import { useLanguage } from '../../../hooks/useLanguage';
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import ModalScrim from './ModalScrim';
 import { X, MessageSquareHeart, RefreshCw, Trash2, Check } from 'lucide-react';
 import { onValue, get, remove, ref, update } from 'firebase/database';
 import { rtdb } from '../../../lib/firebase/rtdb';
@@ -184,17 +185,7 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
   // No early return on purpose: AnimatePresence needs the tree mounted
   // to play the exit animation.
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[10000] v12-scrim v12-admin-scrim flex items-center justify-center modal-safe-3"
-          dir={isRTL ? 'rtl' : 'ltr'}
-          onClick={onClose}
-        >
+    <ModalScrim isOpen={isOpen} isRTL={isRTL} layerClass="z-[10000] modal-safe-3" admin quickFade onClose={onClose}>
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 24 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -320,8 +311,6 @@ export default function FeedbackAdminModal({ isOpen, onClose }: FeedbackAdminMod
               )}
             </div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </ModalScrim>
   );
 }
