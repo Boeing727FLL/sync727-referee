@@ -15,7 +15,7 @@
  */
 
 import { motion } from 'framer-motion';
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 import { Wrench, Clock, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 

@@ -1,6 +1,6 @@
 /** Shared renderer for the Terms of Use and Privacy Policy (modal, pages and the terms gate). */
-import { legalFor, type LegalDoc } from '../legal/copy';
-import { useLanguage } from '../hooks/useLanguage';
+import { legalFor, type LegalDoc } from '../../../legal/copy';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 const MAIL = 'boeing727.il@gmail.com';
 

@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useLoginAuth } from '../auth/useLoginAuth';
 import { exitResetView, showResetView, toggleSignMode, type LoginView } from '../auth/loginFlow';
-import MaintenanceScreen from '../../components/MaintenanceScreen';
+import MaintenanceScreen from '../referee/ui/MaintenanceScreen';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { BuddyApi, SweepFn } from './V12Landing';
 

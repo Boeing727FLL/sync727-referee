@@ -1,4 +1,4 @@
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 /**
  * JudgeCorrectionsModal — owner-only editor for referee overrides.
  *
@@ -26,11 +26,11 @@ import {
   ListOrdered,
 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase/firestore';
-import { invalidateCorrectionsCache } from '../services/geminiService';
-import { isCurrentUserOwner } from '../lib/owner';
-import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from '../features/referee/corrections/model';
-import { useModalA11y } from '../lib/modalA11y';
+import { db } from '../../../lib/firebase/firestore';
+import { invalidateCorrectionsCache } from '../../../services/geminiService';
+import { isCurrentUserOwner } from '../../../lib/owner';
+import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from '../../../features/referee/corrections/model';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)

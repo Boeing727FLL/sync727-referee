@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, ShieldCheck, FileText } from 'lucide-react';
-import { LegalBody, useLegal } from '../components/LegalContent';
+import { LegalBody, useLegal } from '../features/referee/ui/LegalContent';
 import { LanguageProvider, useLanguage } from '../hooks/useLanguage';
 import '../features/v12/v12.css';
 

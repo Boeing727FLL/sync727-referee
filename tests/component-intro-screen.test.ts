@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { render, fireEvent, cleanup } from '@testing-library/react';
-import IntroScreen from '../src/components/IntroScreen.tsx';
+import IntroScreen from '../src/features/referee/ui/IntroScreen.tsx';
 import { LanguageProvider } from '../src/hooks/useLanguage.tsx';
 import { translations } from '../src/locales/index.ts';
 

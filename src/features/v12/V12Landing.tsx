@@ -8,7 +8,7 @@
  *
  * No Firebase here: the auth form is a lazy chunk (warmed during the intro).
  */
-import { TermsGateBody } from '../../components/TermsGate';
+import { TermsGateBody } from '../referee/ui/TermsGate';
 import { acceptedLocally, acceptedOnServer, recordAcceptance } from '../../legal/termsAcceptance';
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Referee, { type RefereePose } from './Referee';

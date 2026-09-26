@@ -1,4 +1,4 @@
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 /**
  * FeedbackAdminModal — owner-only floating viewer for user feedback.
  *
@@ -15,14 +15,14 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquareHeart, RefreshCw, Trash2, Check } from 'lucide-react';
 import { onValue, get, remove, ref, update } from 'firebase/database';
-import { rtdb } from '../lib/firebase/rtdb';
-import { feedbackQuery } from '../lib/analytics';
-import { resetFeedbackForAll } from '../lib/refereeFlags';
-import { isCurrentUserOwner } from '../lib/owner';
-import { feedbackStats, type FeedbackEntry } from '../features/referee/feedback/model';
-import { chunkedNullUpdates, feedbackEntries } from '../features/referee/data/snapshots';
-import { DangerButton, EmptyView, FeedbackCard, GhostButton, LoadingView, LockGate, StatTile } from '../features/referee/feedback/FeedbackViews';
-import { useModalA11y } from '../lib/modalA11y';
+import { rtdb } from '../../../lib/firebase/rtdb';
+import { feedbackQuery } from '../../../lib/analytics';
+import { resetFeedbackForAll } from '../../../lib/refereeFlags';
+import { isCurrentUserOwner } from '../../../lib/owner';
+import { feedbackStats, type FeedbackEntry } from '../../../features/referee/feedback/model';
+import { chunkedNullUpdates, feedbackEntries } from '../../../features/referee/data/snapshots';
+import { DangerButton, EmptyView, FeedbackCard, GhostButton, LoadingView, LockGate, StatTile } from '../../../features/referee/feedback/FeedbackViews';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)

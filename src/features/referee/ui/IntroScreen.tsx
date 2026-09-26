@@ -22,7 +22,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 import SpatialBackdrop from './SpatialBackdrop';
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 /**
  * SettingsModal — the owner-only control room (floating window).
  *
@@ -18,10 +18,10 @@ import {
   X, Settings, Wrench, Upload, BarChart3, Database,
   MessageSquareHeart, RotateCcw, Shield, Lock, Check, ChevronLeft,
 } from 'lucide-react';
-import { resetQuestions } from '../lib/analytics';
-import { subscribeMaintenance, setMaintenance, resetFeedbackForAll } from '../lib/refereeFlags';
-import { isCurrentUserOwner } from '../lib/owner';
-import { useModalA11y } from '../lib/modalA11y';
+import { resetQuestions } from '../../../lib/analytics';
+import { subscribeMaintenance, setMaintenance, resetFeedbackForAll } from '../../../lib/refereeFlags';
+import { isCurrentUserOwner } from '../../../lib/owner';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)

@@ -35,7 +35,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 import SpatialBackdrop from './SpatialBackdrop';
 
 // ---------------------------------------------------------------------------

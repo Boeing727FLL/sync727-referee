@@ -70,7 +70,7 @@ mock.module('../src/lib/owner.ts', {
   },
 });
 
-const { default: RefereeLogsModal } = await import('../src/components/RefereeLogsModal.tsx');
+const { default: RefereeLogsModal } = await import('../src/features/referee/ui/RefereeLogsModal.tsx');
 
 const NOW = 1_727_000_000_000;
 const LOGS = {

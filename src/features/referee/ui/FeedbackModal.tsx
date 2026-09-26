@@ -12,9 +12,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, MessageSquareHeart } from 'lucide-react';
-import { logRefereeFeedback } from '../lib/analytics';
-import { useLanguage } from '../hooks/useLanguage';
-import { useModalA11y } from '../lib/modalA11y';
+import { logRefereeFeedback } from '../../../lib/analytics';
+import { useLanguage } from '../../../hooks/useLanguage';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants & copy

@@ -13,8 +13,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ScrollText, X, ArrowRight } from 'lucide-react';
 import { PrivacyContent, TermsContent, useLegal } from './LegalContent';
-import { useLanguage } from '../hooks/useLanguage';
-import { useModalA11y } from '../lib/modalA11y';
+import { useLanguage } from '../../../hooks/useLanguage';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 export { PrivacyContent } from './LegalContent';
 

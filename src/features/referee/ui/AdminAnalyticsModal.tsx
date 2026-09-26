@@ -1,4 +1,4 @@
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 /**
  * AdminAnalyticsModal — owner-only floating dashboard (floating window).
  *
@@ -17,9 +17,9 @@ import { useLanguage } from '../hooks/useLanguage';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
-import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../lib/analytics';
-import { isCurrentUserOwner } from '../lib/owner';
-import { useModalA11y } from '../lib/modalA11y';
+import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../../../lib/analytics';
+import { isCurrentUserOwner } from '../../../lib/owner';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Types

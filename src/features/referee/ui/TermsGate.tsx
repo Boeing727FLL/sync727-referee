@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { LegalBody, useLegal } from './LegalContent';
-import { useLanguage } from '../hooks/useLanguage';
+import { useLanguage } from '../../../hooks/useLanguage';
 
 export function TermsGateBody({ onAccept }: { onAccept: () => void }) {
   const legal = useLegal();

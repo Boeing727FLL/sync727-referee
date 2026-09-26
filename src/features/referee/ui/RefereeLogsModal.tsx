@@ -26,15 +26,15 @@ import {
 } from 'lucide-react';
 import { onValue, remove, ref, set, serverTimestamp, update } from 'firebase/database';
 import { collection, getDocs } from 'firebase/firestore';
-import { rtdb } from '../lib/firebase/rtdb';
-import { auth } from '../lib/firebase/auth';
-import { db } from '../lib/firebase/firestore';
-import { logsQuery } from '../lib/analytics';
-import { isCurrentUserOwner } from '../lib/owner';
-import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter, type UserNameMap } from '../features/referee/logs/model';
-import { EmptyState, EntryRow, FilterChip, LoadingSkeleton, NoticeBanner } from '../features/referee/logs/LogViews';
-import { chunkedNullUpdates, logEntries } from '../features/referee/data/snapshots';
-import { useModalA11y } from '../lib/modalA11y';
+import { rtdb } from '../../../lib/firebase/rtdb';
+import { auth } from '../../../lib/firebase/auth';
+import { db } from '../../../lib/firebase/firestore';
+import { logsQuery } from '../../../lib/analytics';
+import { isCurrentUserOwner } from '../../../lib/owner';
+import { filterLogs, TIME_FILTERS, toDate, type LogEntry, type TimeFilter, type UserNameMap } from '../../../features/referee/logs/model';
+import { EmptyState, EntryRow, FilterChip, LoadingSkeleton, NoticeBanner } from '../../../features/referee/logs/LogViews';
+import { chunkedNullUpdates, logEntries } from '../../../features/referee/data/snapshots';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Configuration constants (no magic numbers in logic or JSX below)

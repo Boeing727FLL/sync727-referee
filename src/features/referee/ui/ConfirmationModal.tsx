@@ -11,8 +11,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
-import { useLanguage } from '../hooks/useLanguage';
-import { useModalA11y } from '../lib/modalA11y';
+import { useLanguage } from '../../../hooks/useLanguage';
+import { useModalA11y } from '../../../lib/modalA11y';
 
 // ---------------------------------------------------------------------------
 // Types
