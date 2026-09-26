@@ -8,7 +8,6 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MutableRefObject } from 'react';
-import { resetThinkCycle } from '../../../lib/thinkCycle';
 import { ChatQuotaExhaustedError, consumeChatQuota } from '../../../lib/chatQuota';
 import { trackQuestion, logRefereeQA } from '../../../lib/analytics';
 import type { LanguageCode } from '../../../hooks/useLanguage';
@@ -265,7 +264,6 @@ export default function useChatConversation({
 
       requestRef.current = beginStream(requestRef.current);
       setLoading(true);
-      resetThinkCycle();
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setRenderingResponse(false);

@@ -37,15 +37,7 @@ export function toInteractionInput(messages: LegacyMessage[], options: Interacti
   return messages.map(message => ({ type: message.role === 'model' ? 'model_output' : 'user_input', content: message.parts.flatMap(part => toInteractionParts(part, options)) }));
 }
 
-export function toInteractionTextOnly(messages: LegacyMessage[]): InteractionStep[] {
-  return messages.map(message => ({
-    type: message.role === 'model' ? 'model_output' as const : 'user_input' as const,
-    content: message.parts.filter(part => !part.fileData && !part.inlineData && !(part.text && /^Image \d+:\n---/.test(part.text)) && !(part.text && part.text.includes('--- HIGH RESOLUTION ZOOM'))).map(part => ({ type: 'text' as const, text: part.text ?? '' })).filter(part => part.text.trim()),
-  })).filter(message => message.content.length);
-}
-
 export function stepsToContents(steps: InteractionStep[]): LegacyMessage[] {
   return steps.map(step => ({ role: step.type === 'model_output' ? 'model' : 'user', parts: step.content.map(part => part.type === 'image' ? (part.uri && !part.data ? { fileData: { fileUri: part.uri, mimeType: part.mime_type || 'image/jpeg' } } : { inlineData: { data: part.data || '', mimeType: part.mime_type || 'image/jpeg' } }) : { text: part.text }) }));
 }
 
-export function textStep(type: InteractionStep['type'], text: string): InteractionStep { return { type, content: [{ type: 'text', text }] }; }

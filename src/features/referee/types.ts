@@ -21,7 +21,6 @@ export type ChatMessage = {
 };
 
 export type RulebookFile = { name: string; url: string };
-export type DeviceType = 'mobile' | 'desktop' | 'tablet';
 
 /** The signed-in referee as the header/menu/greeting sees them. */
 export type RefereeDisplayUser = { name: string; picture: string; email: string };
