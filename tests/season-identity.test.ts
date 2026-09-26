@@ -21,7 +21,7 @@ test('a valid generated identity parses and keeps its values', () => {
 
 test('wordmark is uppercased and falls back to the season name', () => {
   const parsed = parseSeasonIdentity(VALID, 'SUBMERGED');
-  assert.equal(parsed.wordmark, 'SUBMERGED');
+  assert.equal(parsed?.wordmark, 'SUBMERGED');
   const noWordmark = parseSeasonIdentity({ ...VALID, wordmark: '  ' }, 'SUBMERGED');
   assert.equal(noWordmark?.wordmark, 'SUBMERGED');
 });

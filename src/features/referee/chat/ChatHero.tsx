@@ -4,7 +4,7 @@ import Referee from '../../v12/Referee';
 import { ReplyGlyph } from '../../v12/glyphs';
 
 type Props = {
-  greeting: string;
+  greeting: string | null;
   compact?: boolean;
   questions: string[];
   disabled: boolean;

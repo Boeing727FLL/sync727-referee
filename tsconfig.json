@@ -26,6 +26,7 @@
       "vite/client"
     ],
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "strict": true
   }
 }

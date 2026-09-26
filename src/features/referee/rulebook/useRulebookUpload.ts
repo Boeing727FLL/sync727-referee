@@ -116,7 +116,7 @@ export default function useRulebookUpload({ seasonName, t, setMessages, setRuleb
       });
 
       upload.on("httpUploadProgress", (progress) => {
-        if (progress.total) {
+        if (progress.total && progress.loaded != null) {
           const percent = Math.round((progress.loaded / progress.total) * 100);
           setUploadProgress(percent);
         }
