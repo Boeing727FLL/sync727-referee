@@ -17,7 +17,7 @@ export default function App() {
   // Any path the router does not own (/, /index.html, stray or mistyped
   // paths) is the landing page, rendered without a router.
   const isLandingRoute = !isRouterPath(pathname);
-  const likelyPath = hasSavedSession() ? '/app' : '/login';
+  const likelyPath = hasSavedSession() ? '/app' : '/';
 
   useEffect(() => {
     const onPopState = () => startTransition(() => setPathname(window.location.pathname));

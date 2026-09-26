@@ -7,7 +7,6 @@
 const routeImports = {
   router: () => import('./RouterApp'),
   app: () => import('./pages/RefereeApp'),
-  login: () => import('./pages/LoginPage'),
   privacy: () => import('./pages/PrivacyPage'),
 };
 
@@ -27,7 +26,7 @@ export function warmIdleRoutes(likelyPath: string) {
   if (net?.saveData || net?.effectiveType === 'slow-2g' || net?.effectiveType === '2g') return;
 
   const warm = () => {
-    const publicRoutes = [routeImports.router(), routeImports.login(), routeImports.privacy()];
+    const publicRoutes = [routeImports.router(), routeImports.privacy()];
     if (likelyPath === '/app') publicRoutes.push(routeImports.app());
     void Promise.all(publicRoutes);
   };
