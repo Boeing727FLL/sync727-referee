@@ -140,7 +140,7 @@ let GEMINI_KEYS: string[] = [];
 // added to or removed from the pool; positions would not.
 const HEALTH_STORAGE = 'gemini_key_health_v2';
 let keyHealthInstance: KeyHealth | null = null;
-export function keyFingerprint(key: string): string {
+function keyFingerprint(key: string): string {
   // FNV-1a 32-bit: enough to tell ~100 keys apart, reveals nothing usable.
   let hash = 0x811c9dc5;
   for (let i = 0; i < key.length; i++) {
@@ -182,7 +182,7 @@ function keyHealthFor(keys: string[]): KeyHealth {
  *  on by default; ?fast=0 turns it off in a browser. */
 let pageUrlsWork = (() => { try { return localStorage.getItem('referee_page_urls') !== '0'; } catch { return false; } })();
 /** Errors that mean Google could not fetch a URL part (not overload/quota). */
-export function isUrlFetchError(error: unknown): boolean {
+function isUrlFetchError(error: unknown): boolean {
   const lower = errorText(error).toLowerCase();
   return /url_retrieval|retriev|fetch the (file|url|content)|unsupported (uri|url)|invalid (uri|url)|file_uri|cannot access|could not access/.test(lower);
 }
@@ -231,7 +231,7 @@ async function ensureKeysLoaded(): Promise<void> {
   }
 }
 
-export async function getAllApiKeys(): Promise<string[]> {
+async function getAllApiKeys(): Promise<string[]> {
   await ensureKeysLoaded();
   const envKey = getEnvKey();
   const list = [...GEMINI_KEYS];
