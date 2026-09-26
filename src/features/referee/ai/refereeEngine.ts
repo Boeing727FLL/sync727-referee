@@ -1,8 +1,11 @@
+/** The referee engine (מנוע השופט): orchestrates one ask end to end -
+ *  system prompt + owner corrections, rulebook/user file parts, then the
+ *  model chain over the key pool with stall watchdog, URL/inline fallback
+ *  and streaming. Key pool lives in ./keyPool, file handling in
+ *  ./fileParts, prompts in ./refereePrompts. */
 import { db } from '../../../lib/firebase/firestore';
-import { R2_PUBLIC_URL } from '../../../lib/r2Config';
-import { listRulebookImagePages } from '../../../lib/r2';
-import { convertPdfToImages, countPdfPages, fileToBase64 } from '../rulebook/pdfRendering';
-import { classifyFailure, errorText, KeyHealth } from './retryPolicy';
+import { convertPdfToImages, countPdfPages } from '../rulebook/pdfRendering';
+import { classifyFailure, errorText } from './retryPolicy';
 import { runModelChain, type AttemptReport } from './modelChain';
 import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from './conversation';
 import { activeSeason, buildQuestionText } from './requestPlan';
@@ -11,20 +14,14 @@ import { runModel } from './modelRunner';
 import { assertListedPagesComplete, RulebookIncompleteError } from '../rulebook/completeness';
 import { translateFor } from '../../../locales/index.ts';
 import { ASK_ABORTED, failureResult } from './askContract';
+import { ensureKeysLoaded, getAllApiKeys, keyHealthFor, randomStart } from './keyPool';
+import { appendBase64ImagePart, appendImagePart, fetchBlob, fetchR2ImageSet, getInlineBlob, type RequestFile, type UserFile } from './fileParts';
 
 // --- Configuration ---
-const R2_PROXY_PATH = '/api/r2/file/';
-const MIN_HTML_PROBE_BYTES = 500;
-const HTML_PROBE_BYTES = 100;
 const MODEL_MAX_OUTPUT_TOKENS = 65536;
 
 type RulebookFile = { name: string; url: string };
-type UserFile = { url: string; key: string; base64?: string; actualFile?: File };
 type ModelChainEntry = { name: string; kind: 'interactions' | 'generateContent'; config: Record<string, unknown> };
-type PageImage = { pageIndex: number; data: string; url: string };
-type RequestFile = UserFile & { isRulebook: boolean };
-type FetchedBlob = { data: Blob; mimeType: string };
-
 
 // thinking_summaries streams short thought events while the model thinks.
 // Without them the connection sits silent for 10-40s, and phone networks
@@ -45,137 +42,6 @@ const MODEL_CHAIN: ModelChainEntry[] = [
   // answers 429 "limit: 0"), so it only added failed requests.
   { name: 'gemini-3.5-flash-lite', kind: 'generateContent', config: { thinkingConfig: { thinkingLevel: 'HIGH' }, mediaResolution: 'MEDIA_RESOLUTION_HIGH' } },
 ];
-
-// --- File parts ---
-function resolveR2Url(url: string): string {
-  if (!url.includes(R2_PROXY_PATH)) return url;
-  const fileKey = url.substring(url.indexOf(R2_PROXY_PATH) + R2_PROXY_PATH.length);
-  return `${R2_PUBLIC_URL}/${fileKey}`;
-}
-
-async function fetchBlob(url: string, signal?: AbortSignal): Promise<FetchedBlob | null> {
-  try {
-    const response = await fetch(resolveR2Url(url), { signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return {
-      data: await response.blob(),
-      mimeType: response.headers.get('content-type') || 'image/jpeg',
-    };
-  } catch (error) {
-    console.error('Could not fetch blob:', url, error);
-    return null;
-  }
-}
-
-async function getInlineBlob(file: RequestFile, signal?: AbortSignal): Promise<Blob | File | null> {
-  if (file.actualFile) return file.actualFile;
-  if (file.base64) return (await fetch(file.base64, { signal })).blob();
-  if (file.url.startsWith('data:')) return (await fetch(file.url, { signal })).blob();
-  return null;
-}
-
-async function appendImagePart(
-  parts: LegacyPart[],
-  prefixText: string,
-  blob: Blob | File,
-  mimeType = 'image/jpeg',
-): Promise<void> {
-  parts.push({ text: prefixText });
-  parts.push({
-    inlineData: {
-      data: await fileToBase64(blob),
-      mimeType,
-    },
-  });
-}
-
-function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: string, mimeType = 'image/jpeg', url?: string): void {
-  parts.push({ text: prefixText });
-  // The public URL rides along: requests send the page by link (the model
-  // fetches it) and keep the bytes only for the inline fallback.
-  parts.push({ inlineData: { data, mimeType }, ...(url ? { fileData: { fileUri: url, mimeType } } : {}) });
-}
-
-async function fetchR2ImageSet(fileName: string, signal?: AbortSignal): Promise<{ pages: PageImage[]; listedPages: number[] }> {
-  let pageNumbers: number[];
-  try {
-    pageNumbers = await listRulebookImagePages(fileName);
-  } catch (error) {
-    throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page listing failed: ${error instanceof Error ? error.message : String(error)}` });
-  }
-  const results = await mapPool(pageNumbers, 6, async (pageIndex) => {
-    if (signal?.aborted) return null;
-    const encodedFileName = encodeURIComponent(fileName);
-    const imageUrl = `${R2_PUBLIC_URL}/fll-rules-images/${encodedFileName}/page_${pageIndex}.jpg`;
-    const response = await fetch(imageUrl, { signal });
-    if (!response.ok) throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page ${pageIndex} returned HTTP ${response.status}.` });
-    const imageData = await response.arrayBuffer();
-    const isHtmlError = imageData.byteLength < MIN_HTML_PROBE_BYTES &&
-      new TextDecoder().decode(new Uint8Array(imageData.slice(0, HTML_PROBE_BYTES))).includes('<html');
-    if (!imageData.byteLength || isHtmlError) throw new RulebookIncompleteError({ file: fileName, code: 'page-fetch', detail: `Rendered page ${pageIndex} is empty or corrupt.` });
-    return { pageIndex, url: imageUrl, data: await fileToBase64(new Blob([imageData], { type: 'image/jpeg' })) };
-  });
-  return { pages: results.filter((page): page is PageImage => page !== null), listedPages: pageNumbers };
-}
-
-/** Bounded-concurrency map that preserves input order. */
-async function mapPool<T, R>(items: T[], size: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  const workers = new Array(Math.min(Math.max(size, 1), Math.max(items.length, 1))).fill(0).map(async () => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i], i);
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
-
-// --- API key pool ---
-let GEMINI_KEYS: string[] = [];
-
-// Cooldowns persist across refreshes, stored under a short fingerprint of
-// each key (never the key value). Fingerprints stay correct when keys are
-// added to or removed from the pool; positions would not.
-const HEALTH_STORAGE = 'gemini_key_health_v2';
-let keyHealthInstance: KeyHealth | null = null;
-function keyFingerprint(key: string): string {
-  // FNV-1a 32-bit: enough to tell ~100 keys apart, reveals nothing usable.
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < key.length; i++) {
-    hash ^= key.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(36);
-}
-function keyHealthFor(keys: string[]): KeyHealth {
-  if (keyHealthInstance) return keyHealthInstance;
-  const storage = typeof localStorage !== 'undefined' ? localStorage : undefined;
-  // v1 stored pool positions, which shift when keys are removed.
-  try { storage?.removeItem('gemini_key_health_v1'); } catch { /* ignore */ }
-  const byFingerprint = new Map(keys.map(key => [keyFingerprint(key), key]));
-  const splitId = (id: string): [string, string | null] => {
-    const at = id.indexOf('\u0000');
-    return at < 0 ? [id, null] : [id.slice(0, at), id.slice(at + 1)];
-  };
-  keyHealthInstance = new KeyHealth(storage ? {
-    storage,
-    name: HEALTH_STORAGE,
-    idOf: id => {
-      const [head, model] = splitId(id);
-      const ref = head === '*' ? '*' : `#${keyFingerprint(head)}`;
-      return model === null ? ref : `${ref}\u0000${model}`;
-    },
-    fromId: stored => {
-      const [head, model] = splitId(stored);
-      const key = head === '*' ? '*' : byFingerprint.get(head.slice(1));
-      if (!key) return null;
-      return model === null ? key : `${key}\u0000${model}`;
-    },
-  } : undefined);
-  return keyHealthInstance;
-}
 
 /** Session flag: false once Google failed to fetch the rule book page URLs.
  *  URL mode:
@@ -202,43 +68,6 @@ function recordAttempt(report: AttemptReport): void {
   } catch { /* diagnostics only */ }
 }
 
-/** A random starting key spreads every user's questions over the whole pool. */
-function randomStart(size: number): number {
-  return size > 0 ? Math.floor(Math.random() * size) : 0;
-}
-
-function getEnvKey(): string | undefined {
-  return (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || import.meta.env?.VITE_GEMINI_API_KEY;
-}
-
-async function ensureKeysLoaded(): Promise<void> {
-  if (GEMINI_KEYS.length > 0) return;
-  try {
-    const { doc, getDoc } = await import('firebase/firestore');
-    const docRef = doc(db, "secrets", "api_keys");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const values = (Array.isArray(data.gemini_keys) ? data.gemini_keys : Object.values(data)) as unknown[];
-      // Pool entries may be plaintext (legacy) or ENC1 vault envelopes — see src/lib/keyVault.ts.
-      const { decryptPoolEntries } = await import('../../../lib/keyVault');
-      const keys = await decryptPoolEntries(values);
-      if (keys.length) GEMINI_KEYS = keys;
-      console.log("Referee key pool loaded.");
-    }
-  } catch (err) {
-    console.error("Error fetching referee keys from Firestore:", err);
-  }
-}
-
-async function getAllApiKeys(): Promise<string[]> {
-  await ensureKeysLoaded();
-  const envKey = getEnvKey();
-  const list = [...GEMINI_KEYS];
-  if (envKey && !list.includes(envKey)) list.push(envKey);
-  if (list.length === 0) throw new Error("No API keys configured");
-  return list;
-}
 
 // --- Referee corrections ---
 let REFEREE_CORRECTIONS: string | null = null;
@@ -258,19 +87,6 @@ async function getRefereeCorrections(): Promise<string> {
 
 export function invalidateCorrectionsCache(): void {
   REFEREE_CORRECTIONS = null;
-}
-
-/**
- * Health-aware round-robin over the pooled referee API keys. Shared by every
- * caller (ask path, season-identity generation) so no path pins keys[0] or
- * burns a cooled-down key. Returns null when every key is cooling or the
- * pool is empty; callers must treat null as "try later", never as fatal.
- */
-export async function acquireApiKey(): Promise<string | null> {
-  const keys = await getAllApiKeys();
-  const available = keyHealthFor(keys).available(keys);
-  if (!available.length) return null;
-  return available[randomStart(available.length)];
 }
 
 // --- Core AI logic ---
