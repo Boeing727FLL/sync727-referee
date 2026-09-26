@@ -14,13 +14,12 @@ import { useLanguage } from '../../../hooks/useLanguage';
  * hairline divider, pill actions — single soft shadow, no glow stacks.
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import ModalScrim from './ModalScrim';
 import { X, Lock, BarChart3, MessageSquareText, Users, Activity, RotateCcw, UserCheck } from 'lucide-react';
-import { subscribeAnalytics, resetQuestions, onOnlineUsersChange, type AnalyticsStats } from '../../../lib/analytics';
-import { isCurrentUserOwner } from '../../../lib/owner';
 import { useModalA11y } from '../../../lib/modalA11y';
+import useAdminAnalytics from './useAdminAnalytics';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,46 +115,10 @@ function LockGate({ onClose }: { onClose: () => void }) {
 export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
   const { t, isRTL } = useLanguage();
   const a11yRef = useModalA11y(onClose);
-  const [unlocked, setUnlocked] = useState(false);
-  const [stats, setStats] = useState<AnalyticsStats | null>(null);
-  const [onlineUsers, setOnlineUsers] = useState(0);
-  const [resetting, setResetting] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [resetFailed, setResetFailed] = useState(false);
-
-  // Fresh gate on every opening; online presence streams regardless.
-  useEffect(() => {
-    if (!isOpen) {
-      setUnlocked(false);
-      setConfirmReset(false);
-      return;
-    }
-    setUnlocked(isCurrentUserOwner());
-    const unsubOnline = onOnlineUsersChange(setOnlineUsers);
-    return () => unsubOnline();
-  }, [isOpen]);
-
-  // Counters stream only for the owner.
-  useEffect(() => {
-    if (!unlocked) return;
-    const unsubAnalytics = subscribeAnalytics(setStats);
-    return () => unsubAnalytics();
-  }, [unlocked]);
-
-  /** Two-tap counter wipe (first tap arms, second executes). */
-  const handleReset = async () => {
-    if (resetting) return;
-    if (!confirmReset) {
-      setConfirmReset(true);
-      return;
-    }
-    setResetting(true);
-    setResetFailed(false);
-    const ok = await resetQuestions();
-    setResetting(false);
-    setConfirmReset(false);
-    if (!ok) setResetFailed(true);
-  };
+  const {
+    unlocked, stats, onlineUsers,
+    resetting, confirmReset, resetFailed, handleReset,
+  } = useAdminAnalytics(isOpen);
 
   /** No early return on purpose: AnimatePresence needs the tree mounted
    * to play the exit animation. */
