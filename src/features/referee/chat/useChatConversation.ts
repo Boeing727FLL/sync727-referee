@@ -276,8 +276,8 @@ export default function useChatConversation({
       try {
         const finalPrompt = (replyContext || '') + userMessage + "\n\n(הנחיה לשופט: אם השאלה עוסקת במשימה חדשה או מצב חדש - התעלם מהמשימה שנדונה קודם לכן ואל תערבב בין חוקים או ניקודים של משימות שונות.)";
 
-        const { GeminiService } = await import('../../../services/geminiService');
-        const response = await GeminiService.askRulebook(
+        const { RefereeEngine } = await import('../ai/refereeEngine');
+        const response = await RefereeEngine.askRulebook(
           finalPrompt,
           withoutStopNotes(messages),
           requestRulebookFiles,

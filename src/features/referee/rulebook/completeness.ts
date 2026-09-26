@@ -1,7 +1,7 @@
 /**
  * Fail-closed rulebook completeness policy.
  *
- * The ask path (services/geminiService.ts) attaches the active rulebook to
+ * The ask path (ai/refereeEngine.ts) attaches the active rulebook to
  * every question, and answering from a partial rulebook is worse than not
  * answering: any gap throws RulebookIncompleteError, and the caller maps it
  * to the localized chat.rulebookIncomplete notice instead of an answer.

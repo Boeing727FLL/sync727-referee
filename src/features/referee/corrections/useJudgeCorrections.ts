@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/firestore';
 import { useLanguage } from '../../../hooks/useLanguage';
-import { invalidateCorrectionsCache } from '../../../services/geminiService';
+import { invalidateCorrectionsCache } from '../ai/refereeEngine';
 import { isCurrentUserOwner } from '../../../lib/owner';
 import { addCorrection, correctionCount, deleteCorrection, editCorrection, parseCorrections, serializeCorrections, visibleCorrections } from './model';
 

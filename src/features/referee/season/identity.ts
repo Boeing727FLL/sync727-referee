@@ -72,7 +72,7 @@ export function useSeasonIdentity(season: string): SeasonIdentity | null {
 async function generateSeasonIdentity(season: string, evidence?: SeasonIdentityEvidence): Promise<SeasonIdentity | null> {
   const [{ GoogleGenAI }, { acquireApiKey }] = await Promise.all([
     import('@google/genai'),
-    import('../../../services/geminiService'),
+    import('../ai/refereeEngine'),
   ]);
   const prompt = buildIdentityPrompt(season);
   const parts: Record<string, unknown>[] = [{ text: evidence?.imageBase64 ? `${prompt}\nThe season's rulebook cover is attached; prefer its branding over web results.` : prompt }];

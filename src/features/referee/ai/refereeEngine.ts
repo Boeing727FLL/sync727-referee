@@ -1,16 +1,16 @@
-import { db } from '../lib/firebase/firestore';
-import { R2_PUBLIC_URL } from '../lib/r2Config';
-import { listRulebookImagePages } from '../lib/r2';
-import { convertPdfToImages, countPdfPages, fileToBase64 } from '../features/referee/rulebook/pdfRendering';
-import { classifyFailure, errorText, KeyHealth } from '../features/referee/ai/retryPolicy';
-import { runModelChain, type AttemptReport } from '../features/referee/ai/modelChain';
-import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from '../features/referee/ai/conversation';
-import { activeSeason, buildQuestionText } from '../features/referee/ai/requestPlan';
-import { describeRequestFile, imageLabel, textRulebookLabel } from '../features/referee/ai/filePlan';
-import { runModel } from '../features/referee/ai/modelRunner';
-import { assertListedPagesComplete, RulebookIncompleteError } from '../features/referee/rulebook/completeness';
-import { translateFor } from '../locales/index.ts';
-import { ASK_ABORTED, failureResult } from '../features/referee/ai/askContract';
+import { db } from '../../../lib/firebase/firestore';
+import { R2_PUBLIC_URL } from '../../../lib/r2Config';
+import { listRulebookImagePages } from '../../../lib/r2';
+import { convertPdfToImages, countPdfPages, fileToBase64 } from '../rulebook/pdfRendering';
+import { classifyFailure, errorText, KeyHealth } from './retryPolicy';
+import { runModelChain, type AttemptReport } from './modelChain';
+import { buildHistory, toInteractionInput, type HistoryMessage as ChatHistoryMessage, type LegacyPart } from './conversation';
+import { activeSeason, buildQuestionText } from './requestPlan';
+import { describeRequestFile, imageLabel, textRulebookLabel } from './filePlan';
+import { runModel } from './modelRunner';
+import { assertListedPagesComplete, RulebookIncompleteError } from '../rulebook/completeness';
+import { translateFor } from '../../../locales/index.ts';
+import { ASK_ABORTED, failureResult } from './askContract';
 
 // --- Configuration ---
 const R2_PROXY_PATH = '/api/r2/file/';
@@ -91,7 +91,7 @@ async function appendImagePart(
 
 function appendBase64ImagePart(parts: LegacyPart[], prefixText: string, data: string, mimeType = 'image/jpeg', url?: string): void {
   parts.push({ text: prefixText });
-  // The public URL rides along: requests send the page by link (Gemini
+  // The public URL rides along: requests send the page by link (the model
   // fetches it) and keep the bytes only for the inline fallback.
   parts.push({ inlineData: { data, mimeType }, ...(url ? { fileData: { fileUri: url, mimeType } } : {}) });
 }
@@ -221,13 +221,13 @@ async function ensureKeysLoaded(): Promise<void> {
       const data = docSnap.data();
       const values = (Array.isArray(data.gemini_keys) ? data.gemini_keys : Object.values(data)) as unknown[];
       // Pool entries may be plaintext (legacy) or ENC1 vault envelopes — see src/lib/keyVault.ts.
-      const { decryptPoolEntries } = await import('../lib/keyVault');
+      const { decryptPoolEntries } = await import('../../../lib/keyVault');
       const keys = await decryptPoolEntries(values);
       if (keys.length) GEMINI_KEYS = keys;
-      console.log("Gemini key pool loaded.");
+      console.log("Referee key pool loaded.");
     }
   } catch (err) {
-    console.error("Error fetching Gemini keys from Firestore:", err);
+    console.error("Error fetching referee keys from Firestore:", err);
   }
 }
 
@@ -261,7 +261,7 @@ export function invalidateCorrectionsCache(): void {
 }
 
 /**
- * Health-aware round-robin over the pooled Gemini keys. Shared by every
+ * Health-aware round-robin over the pooled referee API keys. Shared by every
  * caller (ask path, season-identity generation) so no path pins keys[0] or
  * burns a cooled-down key. Returns null when every key is cooling or the
  * pool is empty; callers must treat null as "try later", never as fatal.
@@ -274,7 +274,7 @@ export async function acquireApiKey(): Promise<string | null> {
 }
 
 // --- Core AI logic ---
-export const GeminiService = {
+export const RefereeEngine = {
   /**
    * Ask the virtual referee. Result contract: see ai/askContract.ts -
    * resolves ASK_ABORTED when aborted, otherwise user-visible text
@@ -296,7 +296,7 @@ export const GeminiService = {
       console.log("Processing FLL Query directly on the client-side...");
       const [{ GoogleGenAI }, { buildSystemPrompt, addCorrections, COGNITIVE_PROMPT, ANSWER_PROMPT }] = await Promise.all([
         import('@google/genai'),
-        import('./geminiPrompts'),
+        import('./refereePrompts'),
       ]);
 
       const allFiles: RequestFile[] = [

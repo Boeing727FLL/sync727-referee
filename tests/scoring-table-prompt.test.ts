@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSystemPrompt } from '../src/services/geminiPrompts.ts';
+import { buildSystemPrompt } from '../src/features/referee/ai/refereePrompts.ts';
 
 test('system prompt teaches how to read a mission scoring table', () => {
   const prompt = buildSystemPrompt('he', 'BIOGLOW');
