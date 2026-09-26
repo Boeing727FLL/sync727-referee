@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React%20%2B%20TypeScript-0066B3?logo=react&logoColor=white" alt="React + TypeScript" /></a>
   <a href="https://firebase.google.com"><img src="https://img.shields.io/badge/Firebase-ED1C24?logo=firebase&logoColor=white" alt="Firebase" /></a>
-  <img src="https://img.shields.io/badge/tests-238%20passing-0066B3" alt="238 tests passing" />
+  <img src="https://img.shields.io/badge/tests-244%20passing-0066B3" alt="244 tests passing" />
 </p>
 
 <p align="center">
