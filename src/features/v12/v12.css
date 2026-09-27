@@ -330,10 +330,3 @@ html[data-v12carry=pending] [data-v12-hero-ref]{visibility:hidden}
 .v12-attachment-remove{position:absolute;top:-8px;inset-inline-end:-8px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
  color:#122D59;background:#F2F5FA;border:1px solid rgba(255,255,255,.85);box-shadow:0 4px 12px rgba(2,14,44,.4);cursor:pointer}
 .v12-attachment-remove:focus-visible{outline:3px solid #FFD21F;outline-offset:2px}
-
-/* Compact particle morph inside the existing referee glass answer card. */
-.v12-thinking-card{max-width:min(100%,480px)}
-.v12-thinking-card .v12-card2{overflow:hidden}
-.v12-thinking-morph{display:block;width:min(100%,260px);height:150px;margin:3px auto 0;pointer-events:none}
-@media(max-width:600px){.v12-thinking-morph{width:min(100%,240px);height:140px}}
-@media(prefers-reduced-motion:reduce){.v12-thinking-card .v12-edge,.v12-thinking-card .v12-bloom{animation:none}}
