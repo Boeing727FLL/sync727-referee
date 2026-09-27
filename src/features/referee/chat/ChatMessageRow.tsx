@@ -3,6 +3,7 @@ import { Suspense, memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Copy, FileText, Reply, ThumbsDown, ThumbsUp } from 'lucide-react';
 import Referee from '../../v12/Referee';
+import ThinkingMorph from './ThinkingMorph';
 import { MarkdownMessage } from '../ui/lazyComponents';
 import type { MessageView } from './messageView';
 import { MOTION } from '../ui/motion';
@@ -35,31 +36,29 @@ export function RefereeBadge({ thinking = false, happy = false }: { thinking?: b
   return <div className={`v12-ai-o ${thinking ? 'is-think' : ''}`}><Referee size={46} happy={happy} /></div>;
 }
 
-/** The thinking card: FIRST-colour edge light around the glass and only
- *  the status line in the header (the orb and the "thinking" label were
- *  removed on request). */
-export function ThinkingCard({ thinkContent, t }: { thinkContent?: string; t: (key: string) => string }) {
+/** A visual waiting state only: private model reasoning never reaches this card. */
+export function ThinkingCard({ t }: { t: (key: string) => string }) {
   return (
-    <div className="v12-cardx">
+    <div className="v12-cardx v12-thinking-card">
       <div className="v12-bloom" aria-hidden />
       <div className="v12-card2">
         <div className="v12-edge" aria-hidden />
         <div className="v12-ai-h">
-          <RefereeBadge thinking />
+          <RefereeBadge />
           <div><div className="v12-ai-nm">{t('chat.refereeTag')}</div><div className="v12-ai-st" role="status">{t('v12.thinking')}</div></div>
         </div>
-        {thinkContent && <div className="v12-think"><div className="text-[10px] md:text-xs font-mono text-white/45 whitespace-pre-wrap max-h-48 overflow-y-auto w-full">{thinkContent}</div></div>}
+        <ThinkingMorph />
       </div>
     </div>
   );
 }
 
 function ChatMessageRow({ view, userPicture: _userPicture, userName: _userName, onCopy, onReply, onRate, seen = false, latest = false, t }: Props) {
-  const { message, index, thinking, thinkContent, text, typewriting, liveAnswer } = view;
+  const { message, index, thinking, text, typewriting, liveAnswer } = view;
   const [rated, setRated] = useState<null | 'up' | 'down'>(null);
   if (thinking) return (
     <motion.div layout layoutId={`message-${index}`} initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.99 }} transition={MOTION.morph}>
-      <ThinkingCard thinkContent={thinkContent} t={t} />
+      <ThinkingCard t={t} />
     </motion.div>
   );
   if (message.stopped) return (
